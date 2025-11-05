@@ -1,0 +1,79 @@
+// This is your Prisma schema file.
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // This comes from Railway variables
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. THE USER TABLE
+// This is our 'users' table from the database plan
+model User {
+  id                    String    @id @default(uuid())
+  firstName             String    @map("first_name")
+  lastName              String    @map("last_name")
+  businessName          String?   @map("business_name")
+  address               String?
+  email                 String    @unique
+  phoneNumber           String    @unique @map("phone_number")
+  passwordHash          String    @map("password_hash")
+  role                  Role      @default(AGENT)
+  isPhoneVerified       Boolean   @default(false) @map("is_phone_verified")
+  isEmailVerified       Boolean   @default(false) @map("is_email_verified")
+  isIdentityVerified    Boolean   @default(false) @map("is_identity_verified")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  bvn                   String?
+  nin                   String?
+  
+  // Database relations (we'll build these)
+  wallet                Wallet?
+  virtualAccounts       VirtualAccount[]
+  transactions          Transaction[]
+}
+
+// 2. THE WALLET TABLE
+model Wallet {
+  id        String   @id @default(uuid())
+  balance   Decimal  @default(0.00)
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique @map("user_id")
+}
+
+// 3. THE VIRTUAL ACCOUNT TABLE
+model VirtualAccount {
+  id            String  @id @default(uuid())
+  bankName      String  @map("bank_name")
+  accountNumber String  @map("account_number")
+  accountName   String  @map("account_name")
+  accountType   String  @map("account_type")
+  reference     String  @unique
+
+  user          User    @relation(fields: [userId], references: [id])
+  userId        String  @map("user_id")
+}
+
+// 4. THE TRANSACTIONS TABLE
+model Transaction {
+  id          String   @id @default(uuid())
+  type        String
+  amount      Decimal
+  description String
+  reference   String   @unique
+  status      String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @map("user_id")
+}
+
+// This is an 'enum' for our user roles
+enum Role {
+  AGENT
+  AGGREGATOR
+  ADMIN
+}
