@@ -1,20 +1,11 @@
-"use client"; // We need state for the mobile sidebar
+"use client";
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './layout.module.css';
 
-// --- Define Icons (Placeholders) ---
-const IconDashboard = () => <span>🏠</span>;
-const IconWallet = () => <span>💰</span>;
-const IconServices = () => <span>⚙️</span>;
-const IconHistory = () => <span>🕒</span>;
-const IconProfile = () => <span>👤</span>;
-const IconUpgrade = () => <span>🚀</span>;
-const IconMenu = () => <span>☰</span>;
-const IconClose = () => <span>✕</span>;
-// -----------------------------------
+// --- REMOVED Emojis ---
 
 export default function DashboardLayout({
   children,
@@ -23,10 +14,22 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // --- NEW: State to manage the accordion ---
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
 
   const isActive = (path: string) => pathname === path;
 
-  // This is the actual sidebar content, shared by mobile and desktop
+  // --- NEW: Function to toggle the accordion ---
+  const toggleCategory = (category: string) => {
+    if (openCategory === category) {
+      setOpenCategory(null); // Close it if it's already open
+    } else {
+      setOpenCategory(category); // Open the new one
+    }
+  };
+
+  // This is the actual sidebar content
   const SidebarContent = () => (
     <>
       <div className={styles.sidebarHeader}>
@@ -35,44 +38,75 @@ export default function DashboardLayout({
         </Link>
       </div>
       <nav className={styles.sidebarNav}>
+        {/* --- Standard Links --- */}
         <Link
           href="/dashboard"
           className={`${styles.navLink} ${isActive('/dashboard') ? styles.active : ''}`}
-          onClick={() => setIsSidebarOpen(false)} // Close on click
+          onClick={() => setIsSidebarOpen(false)}
         >
-          <IconDashboard /> Dashboard
+          Dashboard
         </Link>
         <Link
           href="/dashboard/fund-wallet"
           className={`${styles.navLink} ${isActive('/dashboard/fund-wallet') ? styles.active : ''}`}
           onClick={() => setIsSidebarOpen(false)}
         >
-          <IconWallet /> Fund Wallet
+          Fund Wallet
         </Link>
-        
-        {/* Placeholder for future accordion menu */}
-        <div className={styles.navLink}>
-          <IconServices /> Services
-        </div>
 
+        {/* --- NEW: Unclickable Category Title --- */}
+        <span className={styles.categoryTitle}>All Services</span>
+
+        {/* --- NEW: Accordion for NIN Services --- */}
+        <button 
+          className={`${styles.navLink} ${styles.accordionButton} ${openCategory === 'nin' ? styles.open : ''}`}
+          onClick={() => toggleCategory('nin')}
+        >
+          NIN Services
+        </button>
+        {openCategory === 'nin' && (
+          <div className={styles.subLinkContainer}>
+            <Link href="/dashboard/services/nin-verification" className={styles.subLink}>NIN Verification</Link>
+            <Link href="/dashboard/services/ipe-clearance" className={styles.subLink}>IPE Clearance</Link>
+            {/* Add other NIN sub-links here */}
+          </div>
+        )}
+
+        {/* --- NEW: Accordion for BVN Services --- */}
+        <button 
+          className={`${styles.navLink} ${styles.accordionButton} ${openCategory === 'bvn' ? styles.open : ''}`}
+          onClick={() => toggleCategory('bvn')}
+        >
+          BVN Services
+        </button>
+        {openCategory === 'bvn' && (
+          <div className={styles.subLinkContainer}>
+            <Link href="/dashboard/services/bvn-verification" className={styles.subLink}>BVN Verification</Link>
+            {/* Add other BVN sub-links here */}
+          </div>
+        )}
+        
+        {/* (Add other service categories here in the same way) */}
+
+        {/* --- Standard Links --- */}
         <Link
           href="/dashboard/history"
           className={`${styles.navLink} ${isActive('/dashboard/history') ? styles.active : ''}`}
           onClick={() => setIsSidebarOpen(false)}
         >
-          <IconHistory /> Transaction History
+          Transaction History
         </Link>
         <Link
           href="/dashboard/profile"
           className={`${styles.navLink} ${isActive('/dashboard/profile') ? styles.active : ''}`}
           onClick={() => setIsSidebarOpen(false)}
         >
-          <IconProfile /> Profile Settings
+          Profile Settings
         </Link>
       </nav>
       <div className={styles.sidebarFooter}>
         <Link href="/dashboard/upgrade" className={styles.upgradeButton}>
-          <IconUpgrade /> Upgrade to Aggregator
+          Upgrade to Aggregator
         </Link>
       </div>
     </>
@@ -89,7 +123,7 @@ export default function DashboardLayout({
           className={styles.menuButton}
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         >
-          {isSidebarOpen ? <IconClose /> : <IconMenu />}
+          {isSidebarOpen ? '✕' : '☰'} {/* Removed Icon Components */}
         </button>
       </header>
 
