@@ -41,10 +41,11 @@
   width: 100%;
 }
 
+/* --- THIS IS THE STYLE FOR YOUR STANDARD INPUT BOX --- */
 .input {
   width: 100%;
   padding: 0.75rem 1rem;
-  font-size: 1rem;
+  font-size: 1rem; /* 16px */
   border: 1px solid #ccc;
   border-radius: 8px;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -82,37 +83,41 @@
   box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
 }
 
-/* --- NEW STYLES for Phone Input --- */
-/* This targets the 3rd-party component */
+/* --- UPDATED STYLES for Phone Input --- */
+
+/* This styles the WRAPPER box to match the .input box */
 .phoneInput {
-  width: 100%;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  transition: border-color 0.2s, box-shadow 0.2s;
   display: flex;
   align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem; /* <-- MATCHES .input PADDING */
+  font-size: 1rem; /* 16px */
+  border: 1px solid #ccc;
+  border-radius: 8px; /* <-- MATCHES .input BORDER RADIUS */
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+/* This styles the internal input field */
+.PhoneInputInput {
+  flex-grow: 1;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0; /* Remove default padding */
+  margin: 0;
+  font-size: 16px; /* <-- ZOOM FIX: Be explicit with 16px */
+}
+
+/* This styles the flag dropdown */
+.PhoneInputCountry {
+  margin-right: 0.5rem; /* Space between flag and number */
+}
+
+/* This styles the wrapper when it's focused */
 .phoneInput:focus-within {
   outline: none;
   border-color: #0070f3;
   box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
-}
-
-/* Style the internal input */
-.PhoneInputInput {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  padding: 0.75rem 0.5rem;
-  font-size: 1rem;
-  flex-grow: 1;
-}
-
-/* Style the flag dropdown */
-.PhoneInputCountry {
-  padding: 0 0.75rem;
 }
 /* ---------------------------------- */
 
