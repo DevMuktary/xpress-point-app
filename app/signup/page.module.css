@@ -4,7 +4,7 @@
   margin: 2rem auto;
   padding: 2rem;
   background-color: #ffffff;
-  border-radius: 12px; /* <-- More rounded */
+  border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
@@ -35,55 +35,86 @@
   font-size: 0.9rem;
 }
 
+/* --- NEW Wrapper for Password + Icon --- */
+.passwordWrapper {
+  position: relative;
+  width: 100%;
+}
+
 .input {
   width: 100%;
   padding: 0.75rem 1rem;
   font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 8px; /* <-- More rounded */
+  border-radius: 8px;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Special padding for password input to make room for the icon */
+.passwordInput {
+  padding-right: 3rem; /* Space for the "eye" icon */
+}
+
+/* --- NEW Style for the "eye" icon button --- */
+.eyeIcon {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  color: #777;
 }
 
 .input:focus {
   outline: none;
-  border-color: #0070f3; /* Xpress Point brand color */
+  border-color: #0070f3;
   box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
 }
 
-/* --- NEW STYLES FOR PASSWORD STRENGTH --- */
-.passwordStrength {
+/* --- NEW Password Strength CHECKLIST --- */
+.passwordChecklist {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 10px; /* Give it a defined height */
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding-left: 0.5rem;
 }
 
-.strengthBar {
-  flex-grow: 1;
-  height: 6px;
-  background-color: #eee;
-  border-radius: 3px;
-  overflow: hidden;
+.checklistItem {
+  font-size: 0.85rem;
+  color: #e74c3c; /* Red (invalid) by default */
+  transition: color 0.3s;
 }
 
-.strengthBarInner {
-  height: 100%;
-  transition: all 0.3s ease-out;
-  background-color: #ddd; /* Default/empty */
+.checklistItem.valid {
+  color: #2ecc71; /* Green (valid) */
 }
-/* The 3 strength levels */
-.strengthBarInner.weak { background-color: #e74c3c; width: 33%; }
-.strengthBarInner.medium { background-color: #f39c12; width: 66%; }
-.strengthBarInner.strong { background-color: #2ecc71; width: 100%; }
 
-.strengthText {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #555;
-  width: 60px; /* Keeps text aligned */
-  text-align: right;
+.checklistItem.valid::before {
+  content: '✔ '; /* Checkmark when valid */
+  font-weight: 700;
 }
-/* ------------------------------------- */
+
+.checklistItem.invalid::before {
+  content: '✖ '; /* X when invalid */
+  font-weight: 700;
+}
+
+/* --- NEW Helper text for password matching --- */
+.matchMessage {
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+.match {
+  color: #2ecc71; /* Green */
+}
+.noMatch {
+  color: #e74c3c; /* Red */
+}
 
 /* Terms and conditions */
 .terms {
@@ -116,14 +147,20 @@
   font-size: 1rem;
   font-weight: 700;
   color: #ffffff;
-  background-color: #0070f3; /* Xpress Point brand color */
+  background-color: #0070f3;
   border: none;
-  border-radius: 8px; /* <-- More rounded */
+  border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-top: 0.5rem; /* Give it some space */
+  margin-top: 0.5rem;
 }
 
 .button:hover {
   background-color: #005bb5;
+}
+
+/* Style for disabled button */
+.button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
