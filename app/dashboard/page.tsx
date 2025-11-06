@@ -13,16 +13,16 @@ export default function DashboardPage() {
   const isEmailVerified = false; 
 
   // --- UPDATED list of your services ---
-  // Using the new, cleaner filenames
+  // Now includes all 8 services from your blueprint
   const services = [
     { name: 'NIN Services', logo: '/logos/nin.png', href: '/dashboard/services/nin' },
     { name: 'BVN Services', logo: '/logos/bvn.png', href: '#' },
     { name: 'JAMB Services', logo: '/logos/jamb.png', href: '#' },
+    { name: 'JTB-TIN', logo: '/logos/tin.png', href: '#' },
     { name: 'Result Checker', logo: '/logos/waec.png', href: '#' },
-    { name: 'VTU Services', logo: '/logos/vtu.png', href: '#' },
     { name: 'CAC Services', logo: '/logos/cac.png', href: '#' },
+    { name: 'VTU Services', logo: '/logos/vtu.png', href: '#' },
     { name: 'Newspaper', logo: '/logos/news.png', href: '#' },
-    { name: 'More', logo: '/logos/more.png', href: '/dashboard/services' },
   ];
 
   return (
