@@ -98,7 +98,8 @@ export default function VerifyOtpPage() {
                 value={digit}
                 onChange={(e) => handleChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                ref={(el) => (inputRefs.current[index] = el)}
+                // --- THIS IS THE CORRECTED LINE ---
+                ref={(el) => { inputRefs.current[index] = el; }}
                 disabled={isLoading}
               />
             ))}
