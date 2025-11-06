@@ -1,21 +1,20 @@
-/* --- Dashboard Grid --- */
-.gridContainer {
-  display: grid;
-  grid-template-columns: 1fr; /* Single column on mobile */
-  gap: 1.5rem;
+.pageContainer {
+  width: 100%;
+  max-width: 1000px; /* Limit content width on large desktops */
+  margin: 0 auto;
 }
 
 /* --- Alert Card --- */
 .alertCard {
-  grid-column: 1 / -1; /* Full width */
   display: flex;
   align-items: center;
   gap: 1rem;
-  background-color: #fffbeb; /* Light yellow */
+  background-color: #fffbeb;
   border: 1px solid #fde68a;
   color: #92400e;
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
 }
 .alertCard span { font-size: 1.5rem; }
 .alertCard p { font-size: 0.9rem; margin-top: 0.25rem; }
@@ -26,37 +25,46 @@
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
-  margin-left: auto; /* Pushes button to the right */
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-/* --- Welcome Card --- */
-.welcomeCard {
-  background-color: #ffffff;
+/* --- New "App-Like" Wallet Card --- */
+.walletCard {
+  background: linear-gradient(135deg, #0070f3 0%, #005bb5 100%);
+  color: #ffffff;
   padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(0, 112, 243, 0.2);
+  margin-bottom: 2rem;
 }
-.welcomeCard h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
+.walletHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  opacity: 0.8;
 }
-.walletInfo {
-  margin: 1.5rem 0;
+.userName {
+  font-weight: 600;
+  font-size: 1.1rem;
 }
-.walletInfo p {
+.walletLabel {
   font-size: 0.9rem;
-  color: #555;
 }
-.walletInfo h3 {
-  font-size: 2rem;
+.walletBalance {
+  font-size: 2.25rem;
   font-weight: 700;
-  color: #111;
+  margin: 1rem 0;
 }
 .fundButton {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   text-align: center;
   padding: 0.75rem;
-  background-color: #0070f3;
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(5px);
   color: #ffffff;
   font-weight: 600;
   border-radius: 8px;
@@ -64,63 +72,70 @@
   transition: background-color 0.2s;
 }
 .fundButton:hover {
-  background-color: #005bb5;
+  background-color: rgba(255, 255, 255, 0.25);
+}
+.fundButton span {
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
-/* --- Services Card --- */
-.servicesCard {
-  background-color: #ffffff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-.servicesCard h3 {
+/* --- Section Title --- */
+.sectionTitle {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;
+  color: #333;
 }
+
+/* --- "Stunning" Service Grid --- */
 .serviceGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2 columns */
+  grid-template-columns: repeat(3, 1fr); /* 3 columns on mobile */
   gap: 1rem;
-}
-.serviceItem {
-  background-color: #f9fafb;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  text-decoration: none;
-  color: #333;
-  transition: box-shadow 0.2s, border-color 0.2s;
-}
-.serviceItem:hover {
-  border-color: #0070f3;
-  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
-}
-.serviceIcon {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 2rem;
 }
 
-/* --- History & Spending Cards --- */
-.historyHubCard, .spendingCard {
+.serviceItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem;
+  text-decoration: none;
+  color: #333;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease-out;
+}
+
+.serviceItem:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.07);
+  border-color: #0070f3;
+}
+
+.serviceIconWrapper {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%; /* Circular icon background */
+  background-color: #f4f7f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+/* --- Quick History Section --- */
+.spendingCard {
   background-color: #ffffff;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-.historyHubCard h3, .spendingCard h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-.historyLink {
-  display: block;
-  padding: 0.5rem 0;
-  text-decoration: none;
-  color: #0070f3;
-  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 .spendingList {
   list-style: none;
@@ -132,33 +147,15 @@
   padding: 1rem 0;
 }
 
-/* --- Responsive (Tablet/Desktop) --- */
+/* --- Responsive (Desktop) --- */
 @media (min-width: 768px) {
-  .gridContainer {
-    /* 2 equal columns */
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .alertCard, .servicesCard, .spendingCard {
-    grid-column: 1 / -1; /* Full width */
+  .serviceGrid {
+    grid-template-columns: repeat(4, 1fr); /* 4 columns on tablet */
   }
 }
 
 @media (min-width: 1024px) {
-  .gridContainer {
-    /* More complex grid */
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-  .alertCard, .servicesCard {
-    grid-column: 1 / 3; /* 2/3 width */
-  }
-  .welcomeCard {
-    grid-column: 3 / 4; /* 1/3 width */
-    grid-row: 1 / 3; /* Span 2 rows */
-  }
-  .historyHubCard {
-    grid-column: 1 / 2;
-  }
-  .spendingCard {
-    grid-column: 2 / 4;
+  .serviceGrid {
+    grid-template-columns: repeat(6, 1fr); /* 6 columns on desktop */
   }
 }
