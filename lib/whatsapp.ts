@@ -1,8 +1,8 @@
-import axios from 'axios'; // Sticking with axios as it's already in package.json
-
-// We'll use the environment variables we already set up
+// Get Meta API credentials from Railway environment variables
+// Using the names from your sample code
 const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const WHATSAPP_TEMPLATE_NAME = 'otp_verification'; // Or use process.env.META_TEMPLATE_NAME
 const WHATSAPP_API_VERSION = 'v19.0';
 
 /**
@@ -19,7 +19,7 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
 
   const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
-  // This payload is for a template with a BODY and a "Copy Code" button
+  // This payload is for a template with a BODY and a URL BUTTON
   const payload = {
     messaging_product: 'whatsapp',
     to: to,
@@ -27,8 +27,7 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
     template: {
       name: templateName,
       language: {
-        // --- THIS IS THE FIX ---
-        code: 'en_GB', // Changed from 'en_US' to 'English (UK)'
+        code: 'en_GB', // English (UK) as you requested
       },
       components: [
         // Component 1: The Body
@@ -42,16 +41,19 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
             },
           ],
         },
-        // Component 2: The "Copy Code" Button
-        // This MUST match the button in your Meta template
+        // Component 2: The URL Button
+        // This matches the template Meta expects
         {
           type: 'button',
-          sub_type: 'copy_code', // This is the correct type
+          sub_type: 'url', // <-- THIS IS THE FIX
           index: '0', // The first button
           parameters: [
             {
               type: 'text',
-              text: code, // This is the value that will be copied
+              // This is the variable part of the URL
+              // e.g., for a URL like "https://xpresspoint.net/copy/{{1}}"
+              // this 'code' fills the {{1}}
+              text: code,
             },
           ],
         },
@@ -60,14 +62,24 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
   };
 
   try {
-    // Using axios as it's already installed and working
-    await axios.post(url, payload, {
+    // Using fetch as in your example
+    const response = await fetch(url, {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
       },
+      body: JSON.stringify(payload),
     });
-    console.log(`WhatsApp OTP message sent to ${to}`);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Meta API Error:', data);
+    } else {
+      console.log('WhatsApp message sent successfully:', data);
+    }
+
   } catch (error: any) {
     console.error(
       'Error sending WhatsApp message:',
