@@ -7,10 +7,6 @@ import { cookies } from 'next/headers';
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1d'; // Login expires in 1 day
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -51,6 +47,15 @@ export async function POST(request: Request) {
     }
 
     // 3. Create a login token (JWT)
+    
+    // --- THIS IS THE FIX ---
+    // We must check for JWT_SECRET *inside* the function.
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET environment variable is not set.');
+      throw new Error('Server configuration error.');
+    }
+    // ----------------------
+
     const token = jwt.sign(
       { 
         userId: user.id,
@@ -58,7 +63,7 @@ export async function POST(request: Request) {
         role: user.role,
         firstName: user.firstName,
       },
-      JWT_SECRET,
+      JWT_SECRET, // TypeScript now knows this is a string
       { expiresIn: JWT_EXPIRES_IN }
     );
 
@@ -78,6 +83,10 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Login Error:', error);
+    // Don't leak server errors to the client
+    if (error instanceof Error && error.message.includes('Server configuration error')) {
+      return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
+    }
     return NextResponse.json(
       { error: 'An internal server error occurred' },
       { status: 500 }
