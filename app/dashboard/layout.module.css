@@ -1,6 +1,6 @@
 /* --- Main Layout --- */
 .dashboardContainer {
-  display: flex;
+  position: relative;
   min-height: 100vh;
   width: 100%;
   background-color: #f9fafb;
@@ -134,19 +134,16 @@
   background-color: #005bb5;
 }
 
-/* --- Main Content Area --- */
+/* --- Main Content Area (THIS IS THE FIX) --- */
 .mainContent {
-  /* --- THIS IS THE FIX --- */
-  flex: 1; /* Shorthand for flex-grow: 1, flex-shrink: 1, flex-basis: 0% */
-  min-width: 0; /* Prevents flex items from overflowing */
-  /* ----------------------- */
+  width: 100%; /* Take full width */
   padding: 1.5rem;
   padding-top: 6rem; /* Space for fixed mobile header */
 }
 
 /* --- Mobile Header --- */
 .mobileHeader {
-  display: flex;
+  display: flex; /* This is for mobile */
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
@@ -198,22 +195,23 @@
   transform: translateX(260px);
 }
 
-
 /* --- Responsive (Desktop) --- */
-/* Changed to 1024px to keep tablets in mobile view */
 @media (min-width: 1024px) {
   .mobileHeader,
   .mobileSidebarOverlay,
   .mobileSidebar {
-    display: none;
+    display: none; /* Hide all mobile elements */
   }
 
   .sidebar {
-    display: flex;
+    display: flex; /* Show desktop sidebar */
   }
 
+  /* This is the key: main content gets a margin */
   .mainContent {
     padding-top: 1.5rem;
     margin-left: 250px;
+    /* We must also set the width, or it will be 100% + 250px margin */
+    width: calc(100% - 250px);
   }
 }
