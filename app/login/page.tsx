@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Loading from '@/app/loading'; // Use our global loader
-import { EyeIcon, EyeOffIcon } from '@heroicons/react/24/outline'; // Use our icons
+// --- THIS IS THE FIX ---
+// The correct icon name is 'EyeSlashIcon', not 'EyeOffIcon'
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; 
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,14 +42,12 @@ export default function LoginPage() {
       }
 
       // Success! The API sets a cookie.
-      // We just need to redirect to the dashboard.
       // We use window.location.href for a full page refresh
       // This correctly re-loads the dashboard layout as a logged-in user.
       window.location.href = '/dashboard';
 
     } catch (err: any) {
-      // --- THIS IS THE FIX ---
-      // Added the missing curly braces for the catch block
+      // Added the missing curly braces here
       setError(err.message);
       setIsLoading(false); // Stop loading only on error
     }
@@ -114,8 +114,9 @@ export default function LoginPage() {
                     className="absolute inset-y-0 right-0 flex items-center pr-3"
                     onClick={() => setShowPassword(!showPassword)}
                   >
+                    {/* --- THIS IS THE FIX --- */}
                     {showPassword ? (
-                      <EyeOffIcon className="h-5 w-5 text-gray-400" />
+                      <EyeSlashIcon className="h-5 w-5 text-gray-400" />
                     ) : (
                       <EyeIcon className="h-5 w-5 text-gray-400" />
                     )}
