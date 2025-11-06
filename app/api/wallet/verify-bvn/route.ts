@@ -7,10 +7,27 @@ import axios from 'axios';
 const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
 const RAUDAH_ENDPOINT = 'https://raudah.com.ng/api/bvn/bvn';
 
+// --- THIS IS THE FIX ---
+// We add a check at the top of the file.
+// If the key is missing, we stop everything and log a clear error.
+if (!RAUDAH_API_KEY) {
+  console.error('CRITICAL: RAUDAH_API_KEY is not set in environment variables.');
+}
+// ----------------------
+
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // --- NEW: Check if the key exists *inside* the handler ---
+  // This will send a clean error to the user instead of crashing.
+  if (!RAUDAH_API_KEY) {
+    return NextResponse.json(
+      { error: 'Server configuration error. Please contact support.' },
+      { status: 500 }
+    );
   }
 
   if (user.isIdentityVerified) {
@@ -35,23 +52,20 @@ export async function POST(request: Request) {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': RAUDAH_API_KEY,
+          'Authorization': RAUDAH_API_KEY, // This is now safe to use
         },
       }
     );
 
     const data = response.data;
 
-    // --- 2. NEW ROBUST ERROR HANDLING ---
-    // This checks for all known success and failure formats
+    // --- 2. Robust Error Handling ---
     if (data.status === false || (data.data && data.data.status === false)) {
       let errorMessage = "BVN verification failed.";
       
-      // Check for the error format from your log: { status: false, message: { '0': '...error...' } }
       if (data.message && typeof data.message === 'object' && data.message['0']) {
         errorMessage = data.message['0'];
       }
-      // Check for other potential error formats
       else if (data.data && data.data.message) {
         errorMessage = data.data.message;
       }
@@ -61,9 +75,7 @@ export async function POST(request: Request) {
       
       throw new Error(errorMessage);
     }
-    // ------------------------------------
-
-    // This is now the "success" path
+    
     const bvnData = data.data.data;
 
     // --- 3. Validate Date of Birth ---
@@ -102,7 +114,6 @@ export async function POST(request: Request) {
     }
 
   } catch (error: any) {
-    // This now sends the *correct* error message to the frontend
     console.error('BVN Verification Error:', error.message);
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
