@@ -2,18 +2,31 @@
 
 import React from 'react';
 import Link from 'next/link';
-import styles from './page.module.css'; // We'll create this file next
+import Image from 'next/image'; // For your logos
+import styles from './page.module.css'; // This is the page-specific CSS
 
 export default function DashboardPage() {
   
-  // In the future, we will fetch user data here.
-  // For now, we'll use a placeholder name.
-  const userName = "Agent"; 
+  // In the future, we will fetch this data
+  const userName = "AgentName"; 
   const userBalance = "0.00";
-  const isEmailVerified = false; // We'll pretend email is not verified
+  const isEmailVerified = false; 
+
+  // --- Placeholder list of your services ---
+  // You will replace these with your actual logos
+  const services = [
+    { name: 'NIN Services', logo: '/logos/nin-logo.png', href: '/dashboard/services/nin' },
+    { name: 'BVN Services', logo: '/logos/bvn-logo.png', href: '#' },
+    { name: 'JAMB Services', logo: '/logos/jamb.png', href: '#' },
+    { name: 'Result Checker', logo: '/logos/waec-logo.png', href: '#' },
+    { name: 'VTU Services', logo: '/logos/vtu-logo.png', href: '#' },
+    { name: 'CAC Services', logo: '/logos/cac-logo.png', href: '#' },
+    { name: 'Newspaper', logo: '/logos/news-logo.png', href: '#' },
+    { name: 'More', logo: '/logos/more-logo.png', href: '/dashboard/services' },
+  ];
 
   return (
-    <div className={styles.gridContainer}>
+    <div className={styles.pageContainer}>
 
       {/* --- Email Verification Alert --- */}
       {!isEmailVerified && (
@@ -21,58 +34,49 @@ export default function DashboardPage() {
           <span>📧</span>
           <div>
             <strong>Verify Your Email</strong>
-            <p>To use services, please click the verification link we sent to your email.</p>
+            <p>Please click the verification link sent to your email to unlock services.</p>
           </div>
-          <button className={styles.resendButton}>Resend Email</button>
+          <button className={styles.resendButton}>Resend</button>
         </div>
       )}
 
-      {/* --- Welcome & Wallet Card --- */}
-      <div className={styles.welcomeCard}>
-        <h2>Welcome, {userName}!</h2>
-        <div className={styles.walletInfo}>
-          <p>Wallet Balance</p>
-          <h3>₦{userBalance}</h3>
+      {/* --- New "App-Like" Wallet Card --- */}
+      <div className={styles.walletCard}>
+        <div className={styles.walletHeader}>
+          <span className={styles.userName}>{userName}</span>
+          <span className={styles.walletLabel}>Total Balance</span>
         </div>
+        <h2 className={styles.walletBalance}>₦{userBalance}</h2>
         <Link href="/dashboard/fund-wallet" className={styles.fundButton}>
-          Fund Wallet
+          <span>+</span> Fund Wallet
         </Link>
       </div>
 
-      {/* --- Services Grid --- */}
-      <div className={styles.servicesCard}>
-        <h3>Our Services</h3>
-        <div className={styles.serviceGrid}>
-          {/* We'll just put NIN for now as a placeholder */}
-          <Link href="/dashboard/services/nin" className={styles.serviceItem}>
-            <div className={styles.serviceIcon}>[NIN]</div>
-            <p>NIN Services</p>
+      {/* --- "Our Services" Grid --- */}
+      <h3 className={styles.sectionTitle}>Our Services</h3>
+      <div className={styles.serviceGrid}>
+        {services.map((service) => (
+          <Link href={service.href} key={service.name} className={styles.serviceItem}>
+            <div className={styles.serviceIconWrapper}>
+              {/* We use next/image but with a placeholder for now.
+                You will need to upload your logos (e.g., jamb.png) to the /public/logos/ folder
+              */}
+              <Image 
+                src={service.logo} 
+                alt={`${service.name} Logo`} 
+                width={40} 
+                height={40}
+                onError={(e) => e.currentTarget.src = "/logos/default.png"} // Fallback logo
+              />
+            </div>
+            <span>{service.name}</span>
           </Link>
-          <div className={styles.serviceItem}>
-            <div className={styles.serviceIcon}>[BVN]</div>
-            <p>BVN Services</p>
-          </div>
-          <div className={styles.serviceItem}>
-            <div className={styles.serviceIcon}>[JAMB]</div>
-            <p>JAMB Services</p>
-          </div>
-        </div>
+        ))}
       </div>
-
-      {/* --- Service History Hub (as planned) --- */}
-      <div className={styles.historyHubCard}>
-        <h3>Service History</h3>
-        <Link href="/dashboard/history/nin" className={styles.historyLink}>
-          View NIN History →
-        </Link>
-        <Link href="/dashboard/history/bvn" className={styles.historyLink}>
-          View BVN History →
-        </Link>
-      </div>
-
-      {/* --- Recent Spending (as planned) --- */}
+      
+      {/* --- Quick History Section --- */}
+      <h3 className={styles.sectionTitle}>Recent Spending</h3>
       <div className={styles.spendingCard}>
-        <h3>Recent Spending</h3>
         <ul className={styles.spendingList}>
           {/* Placeholder for when it's empty */}
           <li className={styles.spendingItemEmpty}>
