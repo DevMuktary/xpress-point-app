@@ -1,134 +1,146 @@
-"use client";
+// This file is at: /app/dashboard/page.tsx
+// This is now a simple Server Component that fetches its own data.
 
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import styles from './page.module.css'; // This is the page-specific CSS
+import React from "react";
+import { redirect } from "next/navigation";
+import { getUserFromSession } from "@/lib/auth"; // We get the user to secure the page
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import ServiceCard from "@/components/ServiceCard";
+import { CreditCardIcon, PlusIcon, ArrowUpCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
 
-export default function DashboardPage() {
+// We use your logo names
+const allServices = [
+  { title: "NIN Services", description: "Verify NIN, print slips, and more.", logo: "/logos/nin.png", href: "/dashboard/services/nin" },
+  { title: "BVN Services", description: "Verify BVN and print slips.", logo: "/logos/bvn.png", href: "#" },
+  { title: "CAC Services", description: "Register business names.", logo: "/logos/cac.png", href: "#" },
+  { title: "JTB-TIN", description: "Register for personal & business TIN.", logo: "/logos/tin.png", href: "#" },
+  { title: "Data & Airtime (VTU)", description: "Buy cheap data, airtime, and pay bills.", logo: "/logos/vtu.png", href: "#" },
+  { title: "Exam Pins (WAEC/NECO)", description: "Get WAEC, NECO, and NABTEB result pins.", logo: "/logos/waec.png", href: "#" },
+  { title: "JAMB Services", description: "Print result slips, admission letters, etc.", logo: "/logos/jamb.png", href: "#" },
+  { title: "Newspaper Publication", description: "Publish change of name.", logo: "/logos/news.png", href: "#" },
+];
+
+export default async function DashboardPage() {
+  const user = await getUserFromSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Get their *real* wallet balance
+  const wallet = await prisma.wallet.findUnique({
+    where: { userId: user.id },
+  });
   
-  // Placeholder data
-  const userName = "AgentName"; 
-  const userBalance = "0.00";
-  const isEmailVerified = false; 
-
-  const services = [
-    { 
-      name: 'NIN Services', 
-      logo: '/logos/nin.png', 
-      href: '/dashboard/services/nin',
-      description: 'Verify NIN, print slips, and manage modifications.'
-    },
-    { 
-      name: 'BVN Services', 
-      logo: '/logos/bvn.png', 
-      href: '#',
-      description: 'Check BVN details, retrieve, and print verification.'
-    },
-    { 
-      name: 'JAMB Services', 
-      logo: '/logos/jamb.png', 
-      href: '#',
-      description: 'Print original results, admission letters, and more.'
-    },
-    { 
-      name: 'JTB-TIN', 
-      logo: '/logos/tin.png', 
-      href: '#',
-      description: 'Register and retrieve JTB-TIN certificates.'
-    },
-    { 
-      name: 'Result Checker', 
-      logo: '/logos/waec.png', 
-      href: '#',
-      description: 'Get WAEC, NECO, and NABTEB result pins.'
-    },
-    { 
-      name: 'CAC Services', 
-      logo: '/logos/cac.png', 
-      href: '#',
-      description: 'Register your business name with the CAC.'
-    },
-    { 
-      name: 'VTU Services', 
-      logo: '/logos/vtu.png', 
-      href: '#',
-      description: 'Buy airtime, data, and pay electricity bills.'
-    },
-    { 
-      name: 'Newspaper', 
-      logo: '/logos/news.png', 
-      href: '#',
-      description: 'Publish change of name and other notices.'
-    },
-  ];
+  // Create wallet if it doesn't exist
+  let finalWallet;
+  if (!wallet) {
+    finalWallet = await prisma.wallet.create({
+      data: {
+        userId: user.id,
+        balance: 0.00
+      }
+    });
+  } else {
+    finalWallet = wallet;
+  }
+  const walletBalance = finalWallet.balance;
 
   return (
-    <div className={styles.pageContainer}>
+    // This container is centered and has a max-width,
+    // which fixes your alignment problem.
+    <div className="w-full max-w-5xl mx-auto">
+      
+      {/* Email Verification Alert */}
+      {!user.isEmailVerified && (
+        <div className="mb-6 flex items-start gap-3 rounded-lg bg-yellow-100 p-4 text-yellow-800">
+          <span className="text-xl">📧</span>
+          <div className="flex-1">
+            <h3 className="font-bold">Verify Your Email</h3>
+            <p className="text-sm">Please click the verification link sent to your email to unlock services.</p>
+          </div>
+          <button className="text-sm font-bold underline">Resend</button>
+        </div>
+      )}
 
-      {/* --- THIS IS YOUR NEW topRow WRAPPER --- */}
-      <div className={styles.topRow}>
+      {/* ROW 1: WALLET CARD */}
+      <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 p-6 text-white shadow-xl">
+        <p className="text-sm font-medium uppercase text-blue-200">
+          Available Balance
+        </p>
+        <p className="mt-2 text-3xl font-bold">
+          ₦{Number(walletBalance).toFixed(2)}
+        </p>
+        <div className="mt-8 flex items-center justify-between">
+          <span className="text-base font-medium text-blue-100">
+            {user.firstName} {user.lastName}
+          </span>
+          <CreditCardIcon className="h-10 w-10 text-blue-300/50" />
+        </div>
+      </div>
 
-        {/* --- Email Verification Alert --- */}
-        {!isEmailVerified && (
-          <div className={styles.alertCard}>
-            <span>📧</span>
-            <div>
-              <strong>Verify Your Email</strong>
-              <p>Please click the verification link sent to your email to unlock services.</p>
+      {/* ROW 2: QUICK ACTIONS */}
+      <div className="mb-8">
+        <h2 className="mb-4 text-xl font-bold text-gray-900">
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <Link
+            href="/dashboard/fund-wallet"
+            className="flex transform flex-col items-center justify-center rounded-2xl 
+                       bg-white p-6 shadow-lg transition-transform hover:scale-105 hover:shadow-xl"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <PlusIcon className="h-6 w-6 text-blue-600" />
             </div>
-            <button className={styles.resendButton}>Resend</button>
-          </div>
-        )}
-
-        {/* --- "App-Like" Wallet Card --- */}
-        <div className={styles.walletCard}>
-          <div className={styles.walletHeader}>
-            <span className={styles.userName}>{userName}</span>
-            <span className={styles.walletLabel}>Total Balance</span>
-          </div>
-          <h2 className={styles.walletBalance}>₦{userBalance}</h2>
-          <Link href="/dashboard/fund-wallet" className={styles.fundButton}>
-            <span>+</span> Fund Wallet
+            <span className="mt-3 text-sm font-semibold text-gray-900">
+              Fund Wallet
+            </span>
+          </Link>
+          <Link
+            href="/dashboard/upgrade"
+            className="flex transform flex-col items-center justify-center rounded-2xl 
+                       bg-white p-6 shadow-lg transition-transform hover:scale-105 hover:shadow-xl"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <ArrowUpCircleIcon className="h-6 w-6 text-blue-600" />
+            </div>
+            <span className="mt-3 text-sm font-semibold text-gray-900">
+              Upgrade
+            </span>
+          </Link>
+          <Link
+            href="/dashboard/history"
+            className="flex transform flex-col items-center justify-center rounded-2xl 
+                       bg-white p-6 shadow-lg transition-transform hover:scale-105 hover:shadow-xl"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+              <ClockIcon className="h-6 w-6 text-gray-600" />
+            </div>
+            <span className="mt-3 text-sm font-semibold text-gray-900">
+              History
+            </span>
           </Link>
         </div>
+      </div>
 
-      </div> {/* --- End of topRow --- */}
-      
-      {/* --- "Our Services" Grid --- */}
-      <div className={styles.servicesCard}>
-        <h3 className={styles.sectionTitle}>Our Services</h3>
-        <div className={styles.serviceGrid}>
-          {services.map((service) => (
-            <Link href={service.href} key={service.name} className={styles.serviceItem}>
-              <div className={styles.serviceIconWrapper}>
-                <Image 
-                  src={service.logo} 
-                  alt={`${service.name} Logo`} 
-                  width={36} 
-                  height={36}
-                  onError={(e) => e.currentTarget.src = "/logos/default.png"} // Fallback
-                />
-              </div>
-              <div className={styles.serviceText}>
-                <strong>{service.name}</strong>
-                <p className={styles.serviceDescription}>{service.description}</p>
-              </div>
-            </Link>
+      {/* ROW 3: ALL SERVICES */}
+      <div>
+        <h2 className="mb-4 text-xl font-bold text-gray-900">
+          All Services
+        </h2>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {allServices.map((service) => (
+            <ServiceCard
+              key={service.title}
+              title={service.title}
+              description={service.description}
+              logo={service.logo}
+              href={service.href}
+            />
           ))}
         </div>
       </div>
-      
-      {/* --- Quick History Section --- */}
-      <div className={styles.spendingCard}>
-        <h3 className={styles.sectionTitle}>Recent Spending</h3>
-        <ul className={styles.spendingList}>
-          <li className={styles.spendingItemEmpty}>
-            Your recent wallet transactions will appear here.
-          </li>
-        </ul>
-      </div>
-
     </div>
   );
 }
