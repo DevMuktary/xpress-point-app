@@ -1,182 +1,223 @@
-/* This container is now a simple vertical stack */
-.pageContainer {
+/* --- Main Layout --- */
+.dashboardContainer {
+  position: relative;
+  min-height: 100vh;
   width: 100%;
-  max-width: 1000px; /* Limit content width on large desktops */
-  margin: 0 auto; /* THIS IS THE FIX. It centers the content. */
+  background-color: #f9fafb;
+}
+
+/* --- Desktop Sidebar (Fixed Left) --- */
+.sidebar {
+  display: none; /* Hidden on mobile/tablet */
+  flex-direction: column;
+  width: 250px;
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+}
+
+.sidebarHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111;
+  text-decoration: none;
+}
+
+.sidebarNav {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; /* Creates space between cards */
+  padding: 1rem;
+  flex-grow: 1;
+  overflow-y: auto;
 }
 
-/* --- Alert Card --- */
-.alertCard {
+.categoryTitle {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #777;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 1rem;
+}
+
+.navLink {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  background-color: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-  padding: 1rem;
-  border-radius: 12px;
-}
-.alertCard span { font-size: 1.5rem; }
-.alertCard p { font-size: 0.9rem; margin-top: 0.25rem; }
-.resendButton {
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #555;
+  font-weight: 500;
+  transition: all 0.2s;
   background: none;
   border: none;
-  color: #92400e;
-  font-weight: 600;
-  text-decoration: underline;
+  width: 100%;
+  text-align: left;
   cursor: pointer;
-  margin-left: auto;
-  flex-shrink: 0;
+}
+.navLink:hover {
+  background-color: #f4f7f6;
+  color: #333;
+}
+.navLink.active {
+  background-color: #eef5ff;
+  color: #0070f3;
+  font-weight: 600;
 }
 
-/* --- "App-Like" Wallet Card --- */
-.walletCard {
-  background: linear-gradient(135deg, #0070f3 0%, #005bb5 100%);
-  color: #ffffff;
-  padding: 1.5rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 20px rgba(0, 112, 243, 0.2);
-}
-.walletHeader {
+.accordionButton {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  opacity: 0.8;
 }
-.userName {
-  font-weight: 600;
-  font-size: 1.1rem;
+.accordionButton::after {
+  content: '▼';
+  font-size: 0.75rem;
+  transition: transform 0.2s;
 }
-.walletLabel {
-  font-size: 0.9rem;
-}
-.walletBalance {
-  font-size: 2.25rem;
-  font-weight: 700;
-  margin: 1rem 0;
-}
-.fundButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  text-align: center;
-  padding: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(5px);
-  color: #ffffff;
-  font-weight: 600;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: background-color 0.2s;
-}
-.fundButton:hover {
-  background-color: rgba(255, 255, 255, 0.25);
-}
-.fundButton span {
-  font-size: 1.25rem;
-  font-weight: 700;
+.accordionButton.open::after {
+  transform: rotate(180deg);
 }
 
-/* --- Section Title --- */
-.sectionTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-}
-
-/* --- "Stunning" Service Grid --- */
-.servicesCard {
-  background-color: #ffffff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-.serviceGrid {
-  display: grid;
-  /* --- 2 COLUMNS ON MOBILE (as requested) --- */
-  grid-template-columns: repeat(2, 1fr); 
-  gap: 1rem;
-  margin-top: 1rem; /* Space from the title */
-}
-
-.serviceItem {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 1rem;
-  text-decoration: none;
-  color: #333;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s ease-out;
-}
-
-.serviceItem:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.07);
-  border-color: #0070f3;
-}
-
-.serviceIconWrapper {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: #eef5ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.serviceText {
+.subLinkContainer {
+  padding-left: 2rem;
   display: flex;
   flex-direction: column;
-  text-align: left;
 }
-.serviceText strong {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.serviceDescription {
-  font-size: 0.8rem;
-  color: #555;
-  margin-top: 2px;
-}
-
-/* --- Quick History Section --- */
-.spendingCard {
-  background-color: #ffffff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-.spendingList {
-  list-style: none;
-}
-.spendingItemEmpty {
-  text-align: center;
-  color: #777;
+.subLink {
+  padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
-  padding: 1rem 0;
+  color: #555;
+  text-decoration: none;
+  border-radius: 6px;
+}
+.subLink:hover {
+  background-color: #f4f7f6;
+}
+.subLink.active {
+  color: #0070f3;
+  font-weight: 500;
 }
 
-/* --- Responsive (Tablet/Desktop) --- */
-/* We only change the service grid, not the page layout */
-@media (min-width: 768px) {
-  .serviceGrid {
-    grid-template-columns: repeat(3, 1fr); /* 3 columns on tablet */
-  }
+.sidebarFooter {
+  padding: 1.5rem 1rem;
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
 }
 
+.upgradeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #ffffff;
+  background-color: #0070f3;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+.upgradeButton:hover {
+  background-color: #005bb5;
+}
+
+/* --- Main Content Area (THIS IS THE FIX) --- */
+.mainContent {
+  /* This is now a simple block element. */
+  /* It is no longer a flex-child, which fixes the overflow/alignment bug. */
+  width: 100%;
+  /* Use box-sizing to keep padding from breaking the layout */
+  box-sizing: border-box; 
+  min-height: 100vh;
+  padding: 1.5rem;
+  padding-top: 80px; /* Space for fixed mobile header (70px + 10px) */
+}
+
+/* --- Mobile Header --- */
+.mobileHeader {
+  display: flex; /* This is for mobile */
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  z-index: 99;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  cursor: pointer;
+  z-index: 1001; /* Above overlay */
+  color: #333;
+}
+
+/* --- Mobile Sidebar (Slide-in) --- */
+.mobileSidebarOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.mobileSidebar {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: -260px; /* Start hidden off-screen */
+  bottom: 0;
+  width: 250px;
+  background-color: #ffffff;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: transform 0.3s ease-out;
+}
+
+.mobileSidebarOpen {
+  transform: translateX(260px); /* Slide in */
+}
+
+
+/* --- Responsive (Desktop) --- */
+/* We change to desktop view ONLY on large screens */
 @media (min-width: 1024px) {
-  .serviceGrid {
-    grid-template-columns: repeat(4, 1fr); /* 4 columns on desktop */
+  .mobileHeader,
+  .mobileSidebarOverlay,
+  .mobileSidebar {
+    display: none; /* Hide all mobile elements */
+  }
+
+  .sidebar {
+    display: flex; /* Show desktop sidebar */
+  }
+
+  /* Main content gets a margin to make space */
+  .mainContent {
+    padding-top: 1.5rem;
+    margin-left: 250px;
+    width: calc(100% - 250px); /* Set width explicitly */
   }
 }
