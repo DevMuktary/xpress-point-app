@@ -27,7 +27,6 @@ export default function BvnModal() {
     setError(null);
 
     try {
-      // Call the API we planned
       const response = await fetch('/api/wallet/verify-bvn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,12 +38,9 @@ export default function BvnModal() {
         throw new Error(data.error || 'BVN verification failed.');
       }
 
-      // Check the response
       if (data.status === 'NIN_REQUIRED') {
-        // Go to Step 2: NIN Fallback
         setStep(2);
       } else if (data.status === 'IDENTITY_VERIFIED') {
-        // Success! Now we call the next API to create the account
         await handleCreateAccount(data.nin);
       }
 
@@ -65,7 +61,6 @@ export default function BvnModal() {
       if (nin.length !== 11) {
         throw new Error('Please enter a valid 11-digit NIN.');
       }
-      // Call the account creation API with the manually entered NIN
       await handleCreateAccount(nin);
 
     } catch (err: any) {
@@ -78,7 +73,7 @@ export default function BvnModal() {
   // --- Step 3: Call the Account Creation API ---
   const handleCreateAccount = async (verifiedNin: string) => {
     setError(null);
-    setIsLoading(true); // Show loader for the final step
+    setIsLoading(true);
 
     try {
       const response = await fetch('/api/wallet/create-virtual-account', {
@@ -92,17 +87,12 @@ export default function BvnModal() {
         throw new Error(data.error || 'Failed to create virtual account.');
       }
 
-      // --- SUCCESS! ---
-      // Close the modal and refresh the entire page.
-      // This will cause the Server Component to re-run
-      // and show the new account numbers.
       setIsOpen(false);
       router.refresh();
 
     } catch (err: any) {
-      // Handle the error (e.g., "Failed to create account")
       setError(err.message);
-      setIsLoading(false); // Stop loading so user can see the error
+      setIsLoading(false);
     }
   };
 
@@ -118,15 +108,22 @@ export default function BvnModal() {
 
       {/* --- The Modal --- */}
       {isOpen && (
+        // This overlay is the main container
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          
+          {/* --- THIS IS THE FIX --- */}
+          {/* We put the loader *inside* the overlay */}
           {isLoading && <Loading />}
           
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          {/* We hide the form while loading to prevent double-clicks */}
+          <div 
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            style={{ display: isLoading ? 'none' : 'block' }} // Hide form when loading
+          >
             {/* Close Button */}
             <button
               onClick={() => setIsOpen(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
-              disabled={isLoading}
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -174,8 +171,7 @@ export default function BvnModal() {
                 {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="mt-6 flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                  className="mt-6 flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700"
                 >
                   Verify
                 </button>
@@ -210,8 +206,7 @@ export default function BvnModal() {
                 {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="mt-6 flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                  className="mt-6 flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700"
                 >
                   Create Wallet
                 </button>
