@@ -12,8 +12,6 @@ export default function DashboardPage() {
   const userBalance = "0.00";
   const isEmailVerified = false; 
 
-  // --- UPDATED list of your services ---
-  // Now includes descriptions and removed "More"
   const services = [
     { 
       name: 'NIN Services', 
@@ -92,31 +90,33 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* --- "Our Services" Grid --- */}
-      <h3 className={styles.sectionTitle}>Our Services</h3>
-      <div className={styles.serviceGrid}>
-        {services.map((service) => (
-          <Link href={service.href} key={service.name} className={styles.serviceItem}>
-            <div className={styles.serviceIconWrapper}>
-              <Image 
-                src={service.logo} 
-                alt={`${service.name} Logo`} 
-                width={36} 
-                height={36}
-                onError={(e) => e.currentTarget.src = "/logos/default.png"} // Fallback
-              />
-            </div>
-            <div className={styles.serviceText}>
-              <strong>{service.name}</strong>
-              <p className={styles.serviceDescription}>{service.description}</p>
-            </div>
-          </Link>
-        ))}
+      {/* --- "Our Services" Grid (now wrapped in a card) --- */}
+      <div className={styles.servicesCard}>
+        <h3 className={styles.sectionTitle}>Our Services</h3>
+        <div className={styles.serviceGrid}>
+          {services.map((service) => (
+            <Link href={service.href} key={service.name} className={styles.serviceItem}>
+              <div className={styles.serviceIconWrapper}>
+                <Image 
+                  src={service.logo} 
+                  alt={`${service.name} Logo`} 
+                  width={36} 
+                  height={36}
+                  onError={(e) => e.currentTarget.src = "/logos/default.png"} // Fallback
+                />
+              </div>
+              <div className={styles.serviceText}>
+                <strong>{service.name}</strong>
+                <p className={styles.serviceDescription}>{service.description}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
       
       {/* --- Quick History Section --- */}
-      <h3 className={styles.sectionTitle}>Recent Spending</h3>
       <div className={styles.spendingCard}>
+        <h3 className={styles.sectionTitle}>Recent Spending</h3>
         <ul className={styles.spendingList}>
           <li className={styles.spendingItemEmpty}>
             Your recent wallet transactions will appear here.
