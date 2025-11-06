@@ -38,20 +38,28 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Call Raudah BVN API ---
-    const raudahResponse = await axios.post(
-      RAUDAH_ENDPOINT,
-      { value: bvn }, // 'ref' is optional, so we removed it
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': RAUDAH_API_KEY,
-        },
-      }
-    );
+    let raudahResponse;
+    try {
+      raudahResponse = await axios.post(
+        RAUDAH_ENDPOINT,
+        { value: bvn }, // 'ref' is optional
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': RAUDAH_API_KEY,
+          },
+        }
+      );
+    } catch (apiError: any) {
+      // This catches if Raudah's server itself is down (e.g., 503)
+      console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
+      throw new Error("The verification service is currently unavailable. Please try again later.");
+    }
 
     const data = raudahResponse.data;
 
-    // --- 2. Robust Error Handling ---
+    // --- THIS IS THE FIX ---
+    // We check for an error response FIRST and immediately exit.
     if (data.status === false || data.success === false) {
       let errorMessage = "BVN verification failed.";
       if (data.message && typeof data.message === 'object' && data.message['0']) {
@@ -59,21 +67,22 @@ export async function POST(request: Request) {
       } else if (data.message && typeof data.message === 'string') {
         errorMessage = data.message;
       }
+      // This throws the error, which is caught by the catch block
       throw new Error(errorMessage);
     }
+
+    // --- IF WE ARE HERE, THE API CALL WAS SUCCESSFUL ---
     
-    // --- THIS IS THE FIX ---
-    // Get the data from their correct locations based on your log
-    const bvnData = data.data;           // The nested data object
-    const bvnFirstName = data.firstName;  // The root first name
-    const bvnLastName = data.lastName;    // The root last name
-    // ----------------------
+    // 2. Parse the successful response
+    const bvnData = data.data;
+    const bvnFirstName = data.firstName;
+    const bvnLastName = data.lastName;
 
     if (!bvnData || bvnData.status !== 'found' || !bvnFirstName || !bvnLastName) {
       throw new Error("BVN record not found or response was incomplete.");
     }
 
-    // --- 3. Validate Date of Birth ---
+    // 3. Validate Date of Birth
     const bvnDob = bvnData.dateOfBirth; 
 
     if (bvnDob !== dob) {
@@ -83,33 +92,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // --- 4. Update User in Database ---
+    // 4. Update User in Database
     const verifiedNin = bvnData.nin || null; 
     
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        firstName: bvnFirstName, // Use the correct variable
-        lastName: bvnLastName,   // Use the correct variable
+        firstName: bvnFirstName,
+        lastName: bvnLastName,
         bvn: bvn,
         nin: verifiedNin,
         isIdentityVerified: true,
       },
     });
 
-    // --- 5. Send Response ---
+    // 5. Send Response
     if (verifiedNin) {
       return NextResponse.json({ status: 'IDENTITY_VERIFIED', nin: verifiedNin });
     } else {
-      // This will now trigger the NIN fallback
       return NextResponse.json({ status: 'NIN_REQUIRED' }); 
     }
 
   } catch (error: any) {
+    // This catch block now receives the clean error message
     console.error('BVN Verification Error:', error.message);
+    
+    // We send a 400 (Bad Request) for known errors, not 500
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
