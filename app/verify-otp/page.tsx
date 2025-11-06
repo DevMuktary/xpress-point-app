@@ -67,9 +67,6 @@ export default function VerifyOtpPage() {
       }
 
       // Success! We will log the user in.
-      // Next.js doesn't have a simple "login" function.
-      // We will handle this by setting a cookie, which the API will do.
-      // For now, let's just redirect to the dashboard.
       router.push('/dashboard'); // We will create this page next.
 
     } catch (err: any) {
