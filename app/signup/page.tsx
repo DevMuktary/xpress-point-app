@@ -199,9 +199,10 @@ export default function SignUpPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {/* --- THIS IS THE CORRECTED LINE --- */}
               <button type="button" className={styles.eyeIcon} onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-              </Togglegle>
+              </button>
             </div>
             {password.length > 0 && (
               <ul className={styles.passwordChecklist}>
