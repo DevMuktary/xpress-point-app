@@ -3,14 +3,9 @@ import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken'; // For creating login tokens
 import { cookies } from 'next/headers'; // For setting the cookie
 
-// This is our secret key for signing tokens.
-// We MUST add this to our Railway variables!
+// Get the secret from Railway variables
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1d'; // Login expires in 1 day
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
 
 export async function POST(request: Request) {
   try {
@@ -58,13 +53,23 @@ export async function POST(request: Request) {
     });
 
     // 4. Create a login token (JWT)
+    
+    // --- THIS IS THE FIX ---
+    // We must check for JWT_SECRET *inside* the function.
+    // This proves to TypeScript that it is a string before we use it.
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET environment variable is not set.');
+      throw new Error('Server configuration error.');
+    }
+    // ----------------------
+
     const token = jwt.sign(
       { 
         userId: user.id,
         email: user.email,
         role: user.role,
       },
-      JWT_SECRET,
+      JWT_SECRET, // TypeScript now knows this is a string
       { expiresIn: JWT_EXPIRES_IN }
     );
 
@@ -84,6 +89,10 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('OTP Verification Error:', error);
+    // Don't leak server errors to the client
+    if (error instanceof Error && error.message.includes('Server configuration error')) {
+      return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
+    }
     return NextResponse.json(
       { error: 'An internal server error occurred' },
       { status: 500 }
