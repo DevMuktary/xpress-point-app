@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // Our Prisma client
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { sendWhatsAppMessage } from '@/lib/whatsapp'; // <-- Import our new function
 
-// We'll create this file next - it's a placeholder for the WhatsApp API
-// import { sendWhatsAppOTP } from '@/lib/whatsapp'; 
+/**
+ * Generates a 6-digit numeric OTP.
+ */
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export async function POST(request: Request) {
   try {
@@ -61,18 +66,31 @@ export async function POST(request: Request) {
         phoneNumber,
         passwordHash,
       },
-      // We only select the ID to send back, for security.
       select: {
-        id: true, 
-        phoneNumber: true
-      }
+        id: true,
+        phoneNumber: true,
+      },
     });
 
-    // --- Send WhatsApp OTP ---
-    // TODO: We will build this logic next.
-    // For now, we simulate success.
-    // const otp = "123456"; // A real OTP would be generated
-    // await sendWhatsAppOTP(user.phoneNumber, otp);
+    // --- NEW: Generate and Send WhatsApp OTP ---
+    const otpCode = generateOTP();
+    const tenMinutesFromNow = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
+
+    // 1. Save the OTP to our new 'otps' table
+    await prisma.otp.create({
+      data: {
+        code: otpCode,
+        userId: user.id,
+        expiresAt: tenMinutesFromNow,
+      },
+    });
+
+    // 2. Send the OTP via WhatsApp
+    // IMPORTANT: You must create a template in your Meta account named 'otp_verification'
+    // This template should look like: "Your Xpress Point verification code is {{1}}."
+    await sendWhatsAppMessage(user.phoneNumber, 'otp_verification', otpCode);
+    
+    // ------------------------------------------
 
     return NextResponse.json(
       { message: 'User registered successfully. OTP sent.', userId: user.id },
