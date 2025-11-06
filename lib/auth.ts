@@ -22,6 +22,8 @@ export async function getUserFromSession() {
     // Get the user from the database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
+      // --- THIS IS THE FIX ---
+      // We must select all the fields we need, including bvn and phoneNumber
       select: {
         id: true,
         email: true,
@@ -29,7 +31,9 @@ export async function getUserFromSession() {
         lastName: true,
         role: true,
         isEmailVerified: true,
-        isIdentityVerified: true
+        isIdentityVerified: true,
+        bvn: true,              // <-- ADDED
+        phoneNumber: true       // <-- ADDED
       }
     });
 
