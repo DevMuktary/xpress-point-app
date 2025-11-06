@@ -1,4 +1,4 @@
-/* --- Mobile-First Main Layout --- */
+/* --- Main Layout --- */
 .dashboardContainer {
   position: relative;
   min-height: 100vh;
@@ -6,22 +6,19 @@
   background-color: #f9fafb;
 }
 
-/* --- Main Content Area (THIS IS THE FIX) --- */
-/* This is now a simple block element. 
-  It is no longer a flex-child, which fixes the overflow/alignment bug.
-*/
+/* --- Main Content Area (THE FIX) --- */
+/* We remove padding and let the page itself handle it */
 .mainContent {
-  width: 100%;
-  /* Use box-sizing to keep padding from breaking the layout */
-  box-sizing: border-box; 
+  width: 100%; 
+  box-sizing: border-box;
   min-height: 100vh;
-  padding: 1.5rem;
-  padding-top: 80px; /* Space for fixed mobile header (70px + 10px) */
+  /* Add padding-top to account for the fixed header */
+  padding-top: 70px; /* Height of mobile header */
 }
 
 /* --- Mobile Header (Fixed Top) --- */
 .mobileHeader {
-  display: flex; /* This is for mobile */
+  display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
@@ -47,7 +44,7 @@
   border: none;
   font-size: 1.75rem;
   cursor: pointer;
-  z-index: 1001; /* Above overlay */
+  z-index: 1001;
   color: #333;
 }
 
@@ -67,7 +64,7 @@
   flex-direction: column;
   position: fixed;
   top: 0;
-  left: -260px; /* Start hidden off-screen */
+  left: -260px;
   bottom: 0;
   width: 250px;
   background-color: #ffffff;
@@ -77,7 +74,7 @@
 }
 
 .mobileSidebarOpen {
-  transform: translateX(260px); /* Slide in */
+  transform: translateX(260px);
 }
 
 /* --- Desktop Sidebar (Fixed Left) --- */
@@ -204,24 +201,21 @@
   background-color: #005bb5;
 }
 
-
 /* --- Responsive (Desktop) --- */
-/* We change to desktop view ONLY on large screens */
 @media (min-width: 1024px) {
   .mobileHeader,
   .mobileSidebarOverlay,
   .mobileSidebar {
-    display: none; /* Hide all mobile elements */
+    display: none;
   }
 
   .sidebar {
-    display: flex; /* Show desktop sidebar */
+    display: flex;
   }
 
-  /* Main content gets a margin to make space */
   .mainContent {
-    padding-top: 1.5rem;
-    margin-left: 250px;
-    width: calc(100% - 250px); /* Set width explicitly */
+    padding-top: 1.5rem; /* Reset padding for desktop */
+    margin-left: 250px; /* Make space for sidebar */
+    width: calc(100% - 250px);
   }
 }
