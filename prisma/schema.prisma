@@ -33,6 +33,7 @@ model User {
   virtualAccounts       VirtualAccount[]
   transactions          Transaction[]
   ninVerifications      NinVerification[]
+  otps                  Otp[] // <-- ADD THIS RELATION
 
   @@map("users")
 }
@@ -94,6 +95,21 @@ model NinVerification {
   user            User     @relation(fields: [userId], references: [id])
 
   @@map("nin_verifications")
+}
+
+// --- NEW OTP TABLE ---
+// This stores the 6-digit codes
+model Otp {
+  id        String   @id @default(uuid())
+  code      String
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // --- Relation ---
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otps")
 }
 
 // Enum for User Roles
