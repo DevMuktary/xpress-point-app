@@ -1,129 +1,182 @@
-"use client";
+/* This container is now a simple vertical stack */
+.pageContainer {
+  width: 100%;
+  max-width: 1000px; /* Limit content width on large desktops */
+  margin: 0 auto; /* THIS IS THE FIX. It centers the content. */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Creates space between cards */
+}
 
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import styles from './page.module.css'; // This is the page-specific CSS
+/* --- Alert Card --- */
+.alertCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  padding: 1rem;
+  border-radius: 12px;
+}
+.alertCard span { font-size: 1.5rem; }
+.alertCard p { font-size: 0.9rem; margin-top: 0.25rem; }
+.resendButton {
+  background: none;
+  border: none;
+  color: #92400e;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+}
 
-export default function DashboardPage() {
-  
-  // Placeholder data
-  const userName = "AgentName"; 
-  const userBalance = "0.00";
-  const isEmailVerified = false; 
+/* --- "App-Like" Wallet Card --- */
+.walletCard {
+  background: linear-gradient(135deg, #0070f3 0%, #005bb5 100%);
+  color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(0, 112, 243, 0.2);
+}
+.walletHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  opacity: 0.8;
+}
+.userName {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.walletLabel {
+  font-size: 0.9rem;
+}
+.walletBalance {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin: 1rem 0;
+}
+.fundButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(5px);
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+.fundButton:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+.fundButton span {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
 
-  const services = [
-    { 
-      name: 'NIN Services', 
-      logo: '/logos/nin.png', 
-      href: '/dashboard/services/nin',
-      description: 'Verify NIN, print slips, and manage modifications.'
-    },
-    { 
-      name: 'BVN Services', 
-      logo: '/logos/bvn.png', 
-      href: '#',
-      description: 'Check BVN details, retrieve, and print verification.'
-    },
-    { 
-      name: 'JAMB Services', 
-      logo: '/logos/jamb.png', 
-      href: '#',
-      description: 'Print original results, admission letters, and more.'
-    },
-    { 
-      name: 'JTB-TIN', 
-      logo: '/logos/tin.png', 
-      href: '#',
-      description: 'Register and retrieve JTB-TIN certificates.'
-    },
-    { 
-      name: 'Result Checker', 
-      logo: '/logos/waec.png', 
-      href: '#',
-      description: 'Get WAEC, NECO, and NABTEB result pins.'
-    },
-    { 
-      name: 'CAC Services', 
-      logo: '/logos/cac.png', 
-      href: '#',
-      description: 'Register your business name with the CAC.'
-    },
-    { 
-      name: 'VTU Services', 
-      logo: '/logos/vtu.png', 
-      href: '#',
-      description: 'Buy airtime, data, and pay electricity bills.'
-    },
-    { 
-      name: 'Newspaper', 
-      logo: '/logos/news.png', 
-      href: '#',
-      description: 'Publish change of name and other notices.'
-    },
-  ];
+/* --- Section Title --- */
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
 
-  return (
-    <div className={styles.pageContainer}>
+/* --- "Stunning" Service Grid --- */
+.servicesCard {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.serviceGrid {
+  display: grid;
+  /* --- 2 COLUMNS ON MOBILE (as requested) --- */
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 1rem;
+  margin-top: 1rem; /* Space from the title */
+}
 
-      {/* --- Email Verification Alert --- */}
-      {!isEmailVerified && (
-        <div className={styles.alertCard}>
-          <span>📧</span>
-          <div>
-            <strong>Verify Your Email</strong>
-            <p>Please click the verification link sent to your email to unlock services.</p>
-          </div>
-          <button className={styles.resendButton}>Resend</button>
-        </div>
-      )}
+.serviceItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem;
+  text-decoration: none;
+  color: #333;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease-out;
+}
 
-      {/* --- "App-Like" Wallet Card --- */}
-      <div className={styles.walletCard}>
-        <div className={styles.walletHeader}>
-          <span className={styles.userName}>{userName}</span>
-          <span className={styles.walletLabel}>Total Balance</span>
-        </div>
-        <h2 className={styles.walletBalance}>₦{userBalance}</h2>
-        <Link href="/dashboard/fund-wallet" className={styles.fundButton}>
-          <span>+</span> Fund Wallet
-        </Link>
-      </div>
+.serviceItem:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.07);
+  border-color: #0070f3;
+}
 
-      {/* --- "Our Services" Grid (now wrapped in a card) --- */}
-      <div className={styles.servicesCard}>
-        <h3 className={styles.sectionTitle}>Our Services</h3>
-        <div className={styles.serviceGrid}>
-          {services.map((service) => (
-            <Link href={service.href} key={service.name} className={styles.serviceItem}>
-              <div className={styles.serviceIconWrapper}>
-                <Image 
-                  src={service.logo} 
-                  alt={`${service.name} Logo`} 
-                  width={36} 
-                  height={36}
-                  onError={(e) => e.currentTarget.src = "/logos/default.png"} // Fallback
-                />
-              </div>
-              <div className={styles.serviceText}>
-                <strong>{service.name}</strong>
-                <p className={styles.serviceDescription}>{service.description}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-      
-      {/* --- Quick History Section --- */}
-      <div className={styles.spendingCard}>
-        <h3 className={styles.sectionTitle}>Recent Spending</h3>
-        <ul className={styles.spendingList}>
-          <li className={styles.spendingItemEmpty}>
-            Your recent wallet transactions will appear here.
-          </li>
-        </ul>
-      </div>
+.serviceIconWrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #eef5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 
-    </div>
-  );
+.serviceText {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.serviceText strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.serviceDescription {
+  font-size: 0.8rem;
+  color: #555;
+  margin-top: 2px;
+}
+
+/* --- Quick History Section --- */
+.spendingCard {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.spendingList {
+  list-style: none;
+}
+.spendingItemEmpty {
+  text-align: center;
+  color: #777;
+  font-size: 0.9rem;
+  padding: 1rem 0;
+}
+
+/* --- Responsive (Tablet/Desktop) --- */
+/* We only change the service grid, not the page layout */
+@media (min-width: 768px) {
+  .serviceGrid {
+    grid-template-columns: repeat(3, 1fr); /* 3 columns on tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .serviceGrid {
+    grid-template-columns: repeat(4, 1fr); /* 4 columns on desktop */
+  }
 }
