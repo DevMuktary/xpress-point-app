@@ -8,20 +8,19 @@ const WHATSAPP_API_VERSION = 'v19.0'; // Use a current API version
 /**
  * Sends a WhatsApp message using the Meta Cloud API.
  * @param to - The recipient's full international phone number (e.g., "+23480...")
- * @param templateName - The name of the approved template in your Meta account (e.g., "otp_verification")
+ * @param templateName - The name of the approved template (e.g., "otp_verification")
  * @param code - The 6-digit OTP code to send.
  */
 export async function sendWhatsAppMessage(to: string, templateName: string, code: string) {
   if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
     console.error('WhatsApp credentials are not set in environment variables.');
-    // In production, we just fail silently so we don't leak info
-    // In development, you might want to throw an error
     return; 
   }
 
   const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
-  // This is the standard Meta API payload for a template message
+  // --- THIS IS THE UPDATED PAYLOAD ---
+  // It now includes *two* components: the 'body' and the 'button'
   const payload = {
     messaging_product: 'whatsapp',
     to: to,
@@ -32,12 +31,25 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
         code: 'en_US', // Or the language of your template
       },
       components: [
+        // Component 1: The Body
         {
           type: 'body',
           parameters: [
             {
               type: 'text',
               text: code,
+            },
+          ],
+        },
+        // Component 2: The "Copy Code" Button
+        {
+          type: 'button',
+          sub_type: 'copy_code', // This tells Meta it's a "Copy Code" button
+          index: '0', // This is the first button
+          parameters: [
+            {
+              type: 'text',
+              text: code, // This is the value that will be copied
             },
           ],
         },
@@ -58,7 +70,5 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
       'Error sending WhatsApp message:',
       error.response ? error.response.data : error.message
     );
-    // We don't throw an error to the user, as the account was still created.
-    // They can use a "resend" button later.
   }
 }
