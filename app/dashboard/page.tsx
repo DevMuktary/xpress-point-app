@@ -12,17 +12,17 @@ export default function DashboardPage() {
   const userBalance = "0.00";
   const isEmailVerified = false; 
 
-  // --- Placeholder list of your services ---
-  // You will replace these with your actual logos
+  // --- UPDATED list of your services ---
+  // Using the new, cleaner filenames
   const services = [
-    { name: 'NIN Services', logo: '/logos/nin-logo.png', href: '/dashboard/services/nin' },
-    { name: 'BVN Services', logo: '/logos/bvn-logo.png', href: '#' },
+    { name: 'NIN Services', logo: '/logos/nin.png', href: '/dashboard/services/nin' },
+    { name: 'BVN Services', logo: '/logos/bvn.png', href: '#' },
     { name: 'JAMB Services', logo: '/logos/jamb.png', href: '#' },
-    { name: 'Result Checker', logo: '/logos/waec-logo.png', href: '#' },
-    { name: 'VTU Services', logo: '/logos/vtu-logo.png', href: '#' },
-    { name: 'CAC Services', logo: '/logos/cac-logo.png', href: '#' },
-    { name: 'Newspaper', logo: '/logos/news-logo.png', href: '#' },
-    { name: 'More', logo: '/logos/more-logo.png', href: '/dashboard/services' },
+    { name: 'Result Checker', logo: '/logos/waec.png', href: '#' },
+    { name: 'VTU Services', logo: '/logos/vtu.png', href: '#' },
+    { name: 'CAC Services', logo: '/logos/cac.png', href: '#' },
+    { name: 'Newspaper', logo: '/logos/news.png', href: '#' },
+    { name: 'More', logo: '/logos/more.png', href: '/dashboard/services' },
   ];
 
   return (
@@ -58,9 +58,6 @@ export default function DashboardPage() {
         {services.map((service) => (
           <Link href={service.href} key={service.name} className={styles.serviceItem}>
             <div className={styles.serviceIconWrapper}>
-              {/* We use next/image but with a placeholder for now.
-                You will need to upload your logos (e.g., jamb.png) to the /public/logos/ folder
-              */}
               <Image 
                 src={service.logo} 
                 alt={`${service.name} Logo`} 
