@@ -6,7 +6,31 @@ import { useRouter } from 'next/navigation';
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
-// A helper type for our strength checks
+// --- NEW IMPORTS for Phone Input ---
+import 'react-phone-number-input/style.css'; // Import the default styles
+import PhoneInput from 'react-phone-number-input';
+import { E164Number } from 'libphonenumber-js/core';
+
+// --- NEW SVG ICONS ---
+// "Eye" icon
+const EyeIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+// "Eye-Off" (slashed) icon
+const EyeOffIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+    <line x1="2" x2="22" y1="2" y2="22" />
+  </svg>
+);
+
+// Helper type for our strength checks
 type StrengthChecks = {
   hasLower: boolean;
   hasUpper: boolean;
@@ -24,7 +48,9 @@ export default function SignUpPage() {
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  // --- UPDATED Phone Number State ---
+  const [phoneNumber, setPhoneNumber] = useState<E164Number | undefined>();
+  
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -46,12 +72,10 @@ export default function SignUpPage() {
     };
   }, [password]);
 
-  // Check if all rules are met
   const isPasswordStrong = Object.values(strengthChecks).every(Boolean);
 
   // --- Real-time Password Match Validation ---
   const passwordsMatch = useMemo(() => {
-    // Only show match status if confirmPassword is not empty
     if (confirmPassword.length === 0) return null;
     return password === confirmPassword;
   }, [password, confirmPassword]);
@@ -66,6 +90,10 @@ export default function SignUpPage() {
       setError("Please agree to the Terms of Service.");
       return;
     }
+    if (!phoneNumber) {
+      setError("Please enter your WhatsApp phone number.");
+      return;
+    }
     if (!isPasswordStrong) {
       setError("Please ensure your password meets all the requirements.");
       return;
@@ -74,7 +102,6 @@ export default function SignUpPage() {
       setError("Passwords do not match.");
       return;
     }
-    // ------------------------------------
 
     setIsLoading(true);
 
@@ -88,7 +115,7 @@ export default function SignUpPage() {
           businessName,
           address,
           email,
-          phoneNumber,
+          phoneNumber: phoneNumber, // Send the full international number
           password,
         }),
       });
@@ -97,7 +124,7 @@ export default function SignUpPage() {
       if (!response.ok) throw new Error(data.error || 'Something went wrong');
 
       // Success! Redirect to the OTP page.
-      router.push(`/verify-otp?phone=${phoneNumber}`);
+      router.push(`/verify-otp?phone=${encodeURIComponent(phoneNumber)}`);
 
     } catch (err: any) {
       setError(err.message);
@@ -105,7 +132,6 @@ export default function SignUpPage() {
     }
   };
   
-  // Helper to render checklist items with correct style
   const renderChecklistItem = (text: string, isValid: boolean) => (
     <li className={`${styles.checklistItem} ${isValid ? styles.valid : styles.invalid}`}>
       {text}
@@ -146,12 +172,22 @@ export default function SignUpPage() {
             <input id="email" type="email" className={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
 
+          {/* --- UPDATED PHONE INPUT --- */}
           <div className={styles.formGroup}>
-            <label htmlFor="phone" className={styles.label}>WhatsApp Phone Number (+234...)</label>
-            <input id="phone" type="tel" className={styles.input} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+            <label htmlFor="phone" className={styles.label}>WhatsApp Phone Number</label>
+            <PhoneInput
+              id="phone"
+              international
+              defaultCountry="NG" /* Defaults to Nigeria 🇳🇬 */
+              value={phoneNumber}
+              onChange={setPhoneNumber}
+              className={styles.phoneInput} /* Apply wrapper style */
+              inputClassName={styles.PhoneInputInput} /* Apply internal input style */
+              countrySelectProps={{ className: styles.PhoneInputCountry }}
+            />
           </div>
 
-          {/* --- NEW Password with Icon --- */}
+          {/* --- UPDATED Password with SVG Icon --- */}
           <div className={styles.formGroup}>
             <label htmlFor="password" className={styles.label}>Create Password</label>
             <div className={styles.passwordWrapper}>
@@ -164,10 +200,9 @@ export default function SignUpPage() {
                 required
               />
               <button type="button" className={styles.eyeIcon} onClick={() => setShowPassword(!showPassword)}>
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </Togglegle>
             </div>
-            {/* Real-time Checklist */}
             {password.length > 0 && (
               <ul className={styles.passwordChecklist}>
                 {renderChecklistItem("At least 8 characters", strengthChecks.isLengthOk)}
@@ -179,7 +214,7 @@ export default function SignUpPage() {
             )}
           </div>
           
-          {/* --- NEW Confirm Password with Icon --- */}
+          {/* --- UPDATED Confirm Password with SVG Icon --- */}
           <div className={styles.formGroup}>
             <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
             <div className={styles.passwordWrapper}>
@@ -192,10 +227,9 @@ export default function SignUpPage() {
                 required
               />
               <button type="button" className={styles.eyeIcon} onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                {showConfirmPassword ? 'Hide' : 'Show'}
+                {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
             </div>
-            {/* Real-time Match Message */}
             {passwordsMatch === true && (
               <p className={`${styles.matchMessage} ${styles.match}`}>✔ Passwords match</p>
             )}
@@ -204,7 +238,6 @@ export default function SignUpPage() {
             )}
           </div>
 
-          {/* --- THIS IS THE CORRECTED LINE --- */}
           <div className={styles.terms}>
             <input
               id="terms"
