@@ -1,0 +1,145 @@
+/* --- Main Layout --- */
+.dashboardContainer {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* --- Desktop Sidebar --- */
+.sidebar {
+  width: 250px;
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  display: none; /* Hidden on mobile by default */
+}
+
+.sidebarHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111;
+  text-decoration: none;
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.navLink:hover {
+  background-color: #f4f7f6;
+  color: #0070f3;
+}
+
+.upgradeButtonWrapper {
+  margin-top: 2rem;
+  padding: 0 1rem;
+}
+
+.upgradeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #ffffff;
+  background-color: #0070f3;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.upgradeButton:hover {
+  background-color: #005bb5;
+}
+
+/* --- Main Content Area --- */
+.mainContent {
+  flex-grow: 1;
+  background-color: #f9fafb; /* Lighter bg for content */
+  padding: 1.5rem;
+  width: 100%;
+}
+
+/* --- Mobile Header --- */
+.mobileHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* This is a spacer to push content below the fixed mobile header */
+.mainContent {
+  padding-top: 5rem; /* 1.5rem + 1rem (header) + 1.5rem (original padding) */
+}
+
+/* --- Mobile Sidebar (Overlay) --- */
+.mobileSidebarOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.mobileSidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  background-color: #ffffff;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+  padding-top: 4rem; /* Space for a close button */
+}
+
+/* --- Responsive (Desktop) --- */
+@media (min-width: 768px) {
+  .mobileHeader {
+    display: none; /* Hide mobile header */
+  }
+  .sidebar {
+    display: block; /* Show desktop sidebar */
+  }
+  .mobileSidebarOverlay {
+    display: none; /* Hide mobile overlay */
+  }
+  .mainContent {
+    padding: 1.5rem; /* Reset padding */
+  }
+}
