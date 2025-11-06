@@ -4,9 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Loading from '@/app/loading'; // Use our global loader
-// --- THIS IS THE FIX ---
-// The correct icon name is 'EyeSlashIcon', not 'EyeOffIcon'
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; 
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; // Corrected icon name
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,9 +45,12 @@ export default function LoginPage() {
       window.location.href = '/dashboard';
 
     } catch (err: any) {
-      // Added the missing curly braces here
-      setError(err.message);
-      setIsLoading(false); // Stop loading only on error
+      // --- THIS IS THE FIX ---
+      // Added the missing curly braces for the catch block
+      {
+        setError(err.message);
+        setIsLoading(false); // Stop loading only on error
+      }
     }
   };
 
@@ -114,7 +115,6 @@ export default function LoginPage() {
                     className="absolute inset-y-0 right-0 flex items-center pr-3"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {/* --- THIS IS THE FIX --- */}
                     {showPassword ? (
                       <EyeSlashIcon className="h-5 w-5 text-gray-400" />
                     ) : (
