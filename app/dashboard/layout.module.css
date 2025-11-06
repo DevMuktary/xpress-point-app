@@ -1,9 +1,83 @@
-/* --- Main Layout --- */
+/* --- Mobile-First Main Layout --- */
 .dashboardContainer {
   position: relative;
   min-height: 100vh;
   width: 100%;
   background-color: #f9fafb;
+}
+
+/* --- Main Content Area (THIS IS THE FIX) --- */
+/* This is now a simple block element. 
+  It is no longer a flex-child, which fixes the overflow/alignment bug.
+*/
+.mainContent {
+  width: 100%;
+  /* Use box-sizing to keep padding from breaking the layout */
+  box-sizing: border-box; 
+  min-height: 100vh;
+  padding: 1.5rem;
+  padding-top: 80px; /* Space for fixed mobile header (70px + 10px) */
+}
+
+/* --- Mobile Header (Fixed Top) --- */
+.mobileHeader {
+  display: flex; /* This is for mobile */
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  z-index: 99;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111;
+  text-decoration: none;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  cursor: pointer;
+  z-index: 1001; /* Above overlay */
+  color: #333;
+}
+
+/* --- Mobile Sidebar (Slide-in) --- */
+.mobileSidebarOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.mobileSidebar {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: -260px; /* Start hidden off-screen */
+  bottom: 0;
+  width: 250px;
+  background-color: #ffffff;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: transform 0.3s ease-out;
+}
+
+.mobileSidebarOpen {
+  transform: translateX(260px); /* Slide in */
 }
 
 /* --- Desktop Sidebar (Fixed Left) --- */
@@ -20,16 +94,11 @@
   z-index: 100;
 }
 
+/* --- Sidebar Content Styles (Shared) --- */
 .sidebarHeader {
   padding: 1.5rem;
   border-bottom: 1px solid #e0e0e0;
-}
-
-.logo {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #111;
-  text-decoration: none;
+  flex-shrink: 0;
 }
 
 .sidebarNav {
@@ -114,6 +183,7 @@
   padding: 1.5rem 1rem;
   border-top: 1px solid #e0e0e0;
   background: #fff;
+  flex-shrink: 0;
 }
 
 .upgradeButton {
@@ -134,68 +204,9 @@
   background-color: #005bb5;
 }
 
-/* --- Main Content Area (THIS IS THE FIX) --- */
-.mainContent {
-  width: 100%; /* Take full width */
-  padding: 1.5rem;
-  padding-top: 6rem; /* Space for fixed mobile header */
-}
-
-/* --- Mobile Header --- */
-.mobileHeader {
-  display: flex; /* This is for mobile */
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 70px;
-  z-index: 99;
-}
-
-.menuButton {
-  background: none;
-  border: none;
-  font-size: 1.75rem;
-  cursor: pointer;
-  z-index: 1001;
-  color: #333;
-}
-
-/* --- Mobile Sidebar (Slide-in) --- */
-.mobileSidebarOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 999;
-}
-
-.mobileSidebar {
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: -260px;
-  bottom: 0;
-  width: 250px;
-  background-color: #ffffff;
-  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  transition: transform 0.3s ease-out;
-}
-
-.mobileSidebarOpen {
-  transform: translateX(260px);
-}
 
 /* --- Responsive (Desktop) --- */
+/* We change to desktop view ONLY on large screens */
 @media (min-width: 1024px) {
   .mobileHeader,
   .mobileSidebarOverlay,
@@ -207,11 +218,10 @@
     display: flex; /* Show desktop sidebar */
   }
 
-  /* This is the key: main content gets a margin */
+  /* Main content gets a margin to make space */
   .mainContent {
     padding-top: 1.5rem;
     margin-left: 250px;
-    /* We must also set the width, or it will be 100% + 250px margin */
-    width: calc(100% - 250px);
+    width: calc(100% - 250px); /* Set width explicitly */
   }
 }
