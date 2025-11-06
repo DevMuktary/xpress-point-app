@@ -1,6 +1,6 @@
 .pageContainer {
   width: 100%;
-  max-width: 1000px; /* Limit content width on large desktops */
+  max-width: 1000px; /* Limit content width */
   margin: 0 auto;
 }
 
@@ -29,7 +29,7 @@
   flex-shrink: 0;
 }
 
-/* --- New "App-Like" Wallet Card --- */
+/* --- "App-Like" Wallet Card --- */
 .walletCard {
   background: linear-gradient(135deg, #0070f3 0%, #005bb5 100%);
   color: #ffffff;
@@ -90,25 +90,22 @@
 /* --- "Stunning" Service Grid --- */
 .serviceGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 columns on mobile */
+  /* --- 2 COLUMNS ON MOBILE --- */
+  grid-template-columns: repeat(2, 1fr); 
   gap: 1rem;
   margin-bottom: 2rem;
 }
 
 .serviceItem {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: center; /* Aligns icon and text */
+  gap: 1rem; /* Space between icon and text */
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   padding: 1rem;
   text-decoration: none;
   color: #333;
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
   transition: all 0.2s ease-out;
 }
@@ -120,14 +117,30 @@
 }
 
 .serviceIconWrapper {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%; /* Circular icon background */
-  background-color: #f4f7f6;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #eef5ff; /* Light blue background */
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.75rem;
+  flex-shrink: 0; /* Prevents icon from shrinking */
+}
+
+.serviceText {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.serviceText strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.serviceDescription {
+  font-size: 0.8rem;
+  color: #555;
+  margin-top: 2px;
 }
 
 /* --- Quick History Section --- */
@@ -147,15 +160,15 @@
   padding: 1rem 0;
 }
 
-/* --- Responsive (Desktop) --- */
+/* --- Responsive (Tablet/Desktop) --- */
 @media (min-width: 768px) {
   .serviceGrid {
-    grid-template-columns: repeat(4, 1fr); /* 4 columns on tablet */
+    grid-template-columns: repeat(3, 1fr); /* 3 columns on tablet */
   }
 }
 
 @media (min-width: 1024px) {
   .serviceGrid {
-    grid-template-columns: repeat(6, 1fr); /* 6 columns on desktop */
+    grid-template-columns: repeat(4, 1fr); /* 4 columns on desktop */
   }
 }
