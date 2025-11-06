@@ -1,7 +1,12 @@
+/* --- THIS IS THE FIX --- */
+/* This container is now a simple vertical stack */
 .pageContainer {
   width: 100%;
-  max-width: 1000px; /* Limit content width */
+  max-width: 1000px; /* Limit content width on desktop */
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* This creates the space between cards */
 }
 
 /* --- Alert Card --- */
@@ -14,7 +19,6 @@
   color: #92400e;
   padding: 1rem;
   border-radius: 12px;
-  margin-bottom: 1.5rem;
 }
 .alertCard span { font-size: 1.5rem; }
 .alertCard p { font-size: 0.9rem; margin-top: 0.25rem; }
@@ -36,7 +40,6 @@
   padding: 1.5rem;
   border-radius: 16px;
   box-shadow: 0 10px 20px rgba(0, 112, 243, 0.2);
-  margin-bottom: 2rem;
 }
 .walletHeader {
   display: flex;
@@ -83,23 +86,29 @@
 .sectionTitle {
   font-size: 1.25rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin-bottom: 0; /* Handled by container gap */
   color: #333;
 }
 
 /* --- "Stunning" Service Grid --- */
+/* This is now a CARD itself, not a separate grid */
+.servicesCard {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
 .serviceGrid {
   display: grid;
   /* --- 2 COLUMNS ON MOBILE --- */
   grid-template-columns: repeat(2, 1fr); 
   gap: 1rem;
-  margin-bottom: 2rem;
 }
 
 .serviceItem {
   display: flex;
-  align-items: center; /* Aligns icon and text */
-  gap: 1rem; /* Space between icon and text */
+  align-items: center;
+  gap: 1rem;
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 12px;
@@ -120,11 +129,11 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background-color: #eef5ff; /* Light blue background */
+  background-color: #eef5ff;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0; /* Prevents icon from shrinking */
+  flex-shrink: 0;
 }
 
 .serviceText {
@@ -161,6 +170,7 @@
 }
 
 /* --- Responsive (Tablet/Desktop) --- */
+/* We only change the service grid, not the page layout */
 @media (min-width: 768px) {
   .serviceGrid {
     grid-template-columns: repeat(3, 1fr); /* 3 columns on tablet */
