@@ -2,27 +2,67 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // For your logos
+import Image from 'next/image';
 import styles from './page.module.css'; // This is the page-specific CSS
 
 export default function DashboardPage() {
   
-  // In the future, we will fetch this data
+  // Placeholder data
   const userName = "AgentName"; 
   const userBalance = "0.00";
   const isEmailVerified = false; 
 
   // --- UPDATED list of your services ---
-  // Now includes all 8 services from your blueprint
+  // Now includes descriptions and removed "More"
   const services = [
-    { name: 'NIN Services', logo: '/logos/nin.png', href: '/dashboard/services/nin' },
-    { name: 'BVN Services', logo: '/logos/bvn.png', href: '#' },
-    { name: 'JAMB Services', logo: '/logos/jamb.png', href: '#' },
-    { name: 'JTB-TIN', logo: '/logos/tin.png', href: '#' },
-    { name: 'Result Checker', logo: '/logos/waec.png', href: '#' },
-    { name: 'CAC Services', logo: '/logos/cac.png', href: '#' },
-    { name: 'VTU Services', logo: '/logos/vtu.png', href: '#' },
-    { name: 'Newspaper', logo: '/logos/news.png', href: '#' },
+    { 
+      name: 'NIN Services', 
+      logo: '/logos/nin.png', 
+      href: '/dashboard/services/nin',
+      description: 'Verify NIN, print slips, and manage modifications.'
+    },
+    { 
+      name: 'BVN Services', 
+      logo: '/logos/bvn.png', 
+      href: '#',
+      description: 'Check BVN details, retrieve, and print verification.'
+    },
+    { 
+      name: 'JAMB Services', 
+      logo: '/logos/jamb.png', 
+      href: '#',
+      description: 'Print original results, admission letters, and more.'
+    },
+    { 
+      name: 'JTB-TIN', 
+      logo: '/logos/tin.png', 
+      href: '#',
+      description: 'Register and retrieve JTB-TIN certificates.'
+    },
+    { 
+      name: 'Result Checker', 
+      logo: '/logos/waec.png', 
+      href: '#',
+      description: 'Get WAEC, NECO, and NABTEB result pins.'
+    },
+    { 
+      name: 'CAC Services', 
+      logo: '/logos/cac.png', 
+      href: '#',
+      description: 'Register your business name with the CAC.'
+    },
+    { 
+      name: 'VTU Services', 
+      logo: '/logos/vtu.png', 
+      href: '#',
+      description: 'Buy airtime, data, and pay electricity bills.'
+    },
+    { 
+      name: 'Newspaper', 
+      logo: '/logos/news.png', 
+      href: '#',
+      description: 'Publish change of name and other notices.'
+    },
   ];
 
   return (
@@ -40,7 +80,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* --- New "App-Like" Wallet Card --- */}
+      {/* --- "App-Like" Wallet Card --- */}
       <div className={styles.walletCard}>
         <div className={styles.walletHeader}>
           <span className={styles.userName}>{userName}</span>
@@ -61,12 +101,15 @@ export default function DashboardPage() {
               <Image 
                 src={service.logo} 
                 alt={`${service.name} Logo`} 
-                width={40} 
-                height={40}
-                onError={(e) => e.currentTarget.src = "/logos/default.png"} // Fallback logo
+                width={36} 
+                height={36}
+                onError={(e) => e.currentTarget.src = "/logos/default.png"} // Fallback
               />
             </div>
-            <span>{service.name}</span>
+            <div className={styles.serviceText}>
+              <strong>{service.name}</strong>
+              <p className={styles.serviceDescription}>{service.description}</p>
+            </div>
           </Link>
         ))}
       </div>
@@ -75,7 +118,6 @@ export default function DashboardPage() {
       <h3 className={styles.sectionTitle}>Recent Spending</h3>
       <div className={styles.spendingCard}>
         <ul className={styles.spendingList}>
-          {/* Placeholder for when it's empty */}
           <li className={styles.spendingItemEmpty}>
             Your recent wallet transactions will appear here.
           </li>
