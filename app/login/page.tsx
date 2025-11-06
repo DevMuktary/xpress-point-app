@@ -45,7 +45,9 @@ export default function LoginPage() {
       // This correctly re-loads the dashboard layout as a logged-in user.
       window.location.href = '/dashboard';
 
-    } catch (err: any)
+    } catch (err: any) {
+      // --- THIS IS THE FIX ---
+      // Added the missing curly braces for the catch block
       setError(err.message);
       setIsLoading(false); // Stop loading only on error
     }
