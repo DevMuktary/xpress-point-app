@@ -1,3 +1,5 @@
+"use client"; // <-- THIS IS THE FIX. It marks this as a Client Component.
+
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,6 +26,7 @@ export default function ServiceCard({ title, description, logo, href }: ServiceC
           alt={`${title} logo`} 
           width={32} 
           height={32}
+          // This interactive prop is now allowed
           onError={(e) => e.currentTarget.src = "/logos/default.png"}
         />
       </div>
