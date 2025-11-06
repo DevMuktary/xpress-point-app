@@ -7,13 +7,10 @@ import axios from 'axios';
 const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
 const RAUDAH_ENDPOINT = 'https://raudah.com.ng/api/bvn/bvn';
 
-// --- THIS IS THE FIX ---
-// We add a check at the top of the file.
-// If the key is missing, we stop everything and log a clear error.
+// This checks if the variable is missing when the server starts
 if (!RAUDAH_API_KEY) {
   console.error('CRITICAL: RAUDAH_API_KEY is not set in environment variables.');
 }
-// ----------------------
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -21,9 +18,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // --- NEW: Check if the key exists *inside* the handler ---
-  // This will send a clean error to the user instead of crashing.
+  // --- THIS IS THE FIX ---
+  // This check prevents the server from crashing if the key is missing
   if (!RAUDAH_API_KEY) {
+    console.error('BVN Verification Error: RAUDAH_API_KEY is missing.');
     return NextResponse.json(
       { error: 'Server configuration error. Please contact support.' },
       { status: 500 }
@@ -36,33 +34,39 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { bvn, dob } = body; // dob is in 'YYYY-MM-DD'
+    const { bvn, dob } = body; 
 
     if (!bvn || !dob) {
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
     // --- 1. Call Raudah BVN API ---
-    const response = await axios.post(
-      RAUDAH_ENDPOINT,
-      {
-        value: bvn,
-        ref: `XPRESSPOINT_${user.id}_${Date.now()}` // Unique ref
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': RAUDAH_API_KEY, // This is now safe to use
+    let raudahResponse;
+    try {
+      raudahResponse = await axios.post(
+        RAUDAH_ENDPOINT,
+        {
+          value: bvn,
+          ref: `XPRESSPOINT_${user.id}_${Date.now()}`
         },
-      }
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': RAUDAH_API_KEY, // This is now safe to use
+          },
+        }
+      );
+    } catch (apiError: any) {
+      // This catches if Raudah's server is down or the key is wrong
+      console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
+      throw new Error("The verification service is currently unavailable. Please try again later.");
+    }
 
-    const data = response.data;
+    const data = raudahResponse.data;
 
-    // --- 2. Robust Error Handling ---
+    // --- 2. Robust Error Handling (from your logs) ---
     if (data.status === false || (data.data && data.data.status === false)) {
       let errorMessage = "BVN verification failed.";
-      
       if (data.message && typeof data.message === 'object' && data.message['0']) {
         errorMessage = data.message['0'];
       }
@@ -72,7 +76,6 @@ export async function POST(request: Request) {
       else if (data.message && typeof data.message === 'string') {
         errorMessage = data.message;
       }
-      
       throw new Error(errorMessage);
     }
     
@@ -91,7 +94,6 @@ export async function POST(request: Request) {
 
     // --- 4. Update User in Database ---
     const verifiedNin = bvnData.nin || null;
-
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -105,15 +107,13 @@ export async function POST(request: Request) {
 
     // --- 5. Send Response ---
     if (verifiedNin) {
-      return NextResponse.json({
-        status: 'IDENTITY_VERIFIED',
-        nin: verifiedNin,
-      });
+      return NextResponse.json({ status: 'IDENTITY_VERIFIED', nin: verifiedNin });
     } else {
       return NextResponse.json({ status: 'NIN_REQUIRED' });
     }
 
   } catch (error: any) {
+    // This will now return the error (e.g., "BVN not found") to the modal
     console.error('BVN Verification Error:', error.message);
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
