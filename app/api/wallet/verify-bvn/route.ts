@@ -38,9 +38,11 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Call Raudah BVN API ---
-    let raudahResponse;
+    let data: any; // Define data in the outer scope
+
     try {
-      raudahResponse = await axios.post(
+      // This is the "happy path"
+      const raudahResponse = await axios.post(
         RAUDAH_ENDPOINT,
         { value: bvn }, // 'ref' is optional
         {
@@ -50,16 +52,27 @@ export async function POST(request: Request) {
           },
         }
       );
+      data = raudahResponse.data; // Assign if 2xx status
+      
     } catch (apiError: any) {
-      // This catches if Raudah's server itself is down (e.g., 503)
-      console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
-      throw new Error("The verification service is currently unavailable. Please try again later.");
+      // --- THIS IS THE FIX ---
+      // This block runs if the HTTP status is 4xx or 5xx
+      console.log("Raudah API returned an error status, checking payload...");
+      
+      if (apiError.response && apiError.response.data && apiError.response.data.success === true) {
+        // This is the scenario from your log:
+        // The API failed (e.g., 500 status) BUT sent a success payload.
+        // We will trust the payload and treat it as a success.
+        console.log("...Payload contains 'success: true'. Treating as success.");
+        data = apiError.response.data;
+      } else {
+        // This is a *real* failure (e.g., server down, auth failed)
+        console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
+        throw new Error("The verification service is currently unavailable. Please try again later.");
+      }
     }
 
-    const data = raudahResponse.data;
-
-    // --- THIS IS THE FIX ---
-    // We check for an error response FIRST and immediately exit.
+    // --- 2. Robust Error Handling ---
     if (data.status === false || data.success === false) {
       let errorMessage = "BVN verification failed.";
       if (data.message && typeof data.message === 'object' && data.message['0']) {
@@ -67,13 +80,10 @@ export async function POST(request: Request) {
       } else if (data.message && typeof data.message === 'string') {
         errorMessage = data.message;
       }
-      // This throws the error, which is caught by the catch block
       throw new Error(errorMessage);
     }
 
-    // --- IF WE ARE HERE, THE API CALL WAS SUCCESSFUL ---
-    
-    // 2. Parse the successful response
+    // --- 3. Parse the successful response ---
     const bvnData = data.data;
     const bvnFirstName = data.firstName;
     const bvnLastName = data.lastName;
@@ -82,7 +92,7 @@ export async function POST(request: Request) {
       throw new Error("BVN record not found or response was incomplete.");
     }
 
-    // 3. Validate Date of Birth
+    // 4. Validate Date of Birth
     const bvnDob = bvnData.dateOfBirth; 
 
     if (bvnDob !== dob) {
@@ -92,7 +102,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Update User in Database
+    // 5. Update User in Database
     const verifiedNin = bvnData.nin || null; 
     
     await prisma.user.update({
@@ -106,7 +116,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // 5. Send Response
+    // 6. Send Response
     if (verifiedNin) {
       return NextResponse.json({ status: 'IDENTITY_VERIFIED', nin: verifiedNin });
     } else {
@@ -114,13 +124,10 @@ export async function POST(request: Request) {
     }
 
   } catch (error: any) {
-    // This catch block now receives the clean error message
     console.error('BVN Verification Error:', error.message);
-    
-    // We send a 400 (Bad Request) for known errors, not 500
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
-      { status: 400 }
+      { status: 400 } // Send 400, not 500, as it's a handled error
     );
   }
 }
