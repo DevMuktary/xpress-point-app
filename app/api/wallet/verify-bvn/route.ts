@@ -11,6 +11,36 @@ if (!RAUDAH_API_KEY) {
   console.error('CRITICAL: RAUDAH_API_KEY is not set in environment variables.');
 }
 
+/**
+ * NEW: A robust parser to find the data
+ * This handles all the inconsistent API responses.
+ */
+function parseBvnData(data: any): {
+  firstName: string | null;
+  lastName: string | null;
+  dateOfBirth: string | null;
+  nin: string | null;
+} {
+  // 1. Get the core data object
+  // (From your log, it's data.data. For documentation, it's data.data.data)
+  const coreData = data.data?.data || data.data;
+
+  // 2. Find the names
+  // (From your log, it's data.firstName. For documentation, it's coreData.firstname)
+  const firstName = data.firstName || coreData?.firstname || coreData?.firstName || null;
+  const lastName = data.lastName || coreData?.surname || coreData?.lastName || null;
+
+  // 3. Find the DOB
+  // (From your log, it's coreData.dateOfBirth. For documentation, it's coreData.birthdate)
+  const dateOfBirth = coreData?.dateOfBirth || coreData?.birthdate || null;
+  
+  // 4. Find the NIN
+  const nin = coreData?.nin || null;
+
+  return { firstName, lastName, dateOfBirth, nin };
+}
+
+
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) {
@@ -20,8 +50,7 @@ export async function POST(request: Request) {
   if (!RAUDAH_API_KEY) {
     console.error('BVN Verification Error: RAUDAH_API_KEY is missing.');
     return NextResponse.json(
-      { error: 'Server configuration error. Please contact support.' },
-      { status: 500 }
+      { error: 'Server configuration error. Please contact support.' }, { status: 500 }
     );
   }
 
@@ -38,35 +67,25 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Call Raudah BVN API ---
-    let data: any; // Define data in the outer scope
+    let data: any; 
 
     try {
-      // This is the "happy path"
       const raudahResponse = await axios.post(
-        RAUDAH_ENDPOINT,
-        { value: bvn }, // 'ref' is optional
-        {
+        RAUDAH_ENDPOINT, { value: bvn }, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': RAUDAH_API_KEY,
           },
         }
       );
-      data = raudahResponse.data; // Assign if 2xx status
+      data = raudahResponse.data; 
       
     } catch (apiError: any) {
-      // --- THIS IS THE FIX ---
-      // This block runs if the HTTP status is 4xx or 5xx
-      console.log("Raudah API returned an error status, checking payload...");
-      
-      if (apiError.response && apiError.response.data && apiError.response.data.success === true) {
-        // This is the scenario from your log:
-        // The API failed (e.g., 500 status) BUT sent a success payload.
-        // We will trust the payload and treat it as a success.
-        console.log("...Payload contains 'success: true'. Treating as success.");
+      if (apiError.response && apiError.response.data && (apiError.response.data.success === true || apiError.response.data.status === true)) {
+        // This is our special case: API "failed" but sent success data
+        console.log("Raudah API returned an error status, but payload contains 'success: true'. Treating as success.");
         data = apiError.response.data;
       } else {
-        // This is a *real* failure (e.g., server down, auth failed)
         console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
         throw new Error("The verification service is currently unavailable. Please try again later.");
       }
@@ -82,18 +101,27 @@ export async function POST(request: Request) {
       }
       throw new Error(errorMessage);
     }
+    
+    // --- 3. Use the NEW Bulletproof Parser ---
+    const { firstName, lastName, dateOfBirth, nin } = parseBvnData(data);
 
-    // --- 3. Parse the successful response ---
-    const bvnData = data.data;
-    const bvnFirstName = data.firstName;
-    const bvnLastName = data.lastName;
-
-    if (!bvnData || bvnData.status !== 'found' || !bvnFirstName || !bvnLastName) {
+    if (!firstName || !lastName || !dateOfBirth) {
       throw new Error("BVN record not found or response was incomplete.");
     }
 
     // 4. Validate Date of Birth
-    const bvnDob = bvnData.dateOfBirth; 
+    // The parser handles DD-MM-YYYY or YYYY-MM-DD
+    let bvnDob = dateOfBirth;
+    if (bvnDob.includes('-') && bvnDob.length === 10) {
+      const parts = bvnDob.split('-');
+      if (parts[0].length === 4) {
+        // It's YYYY-MM-DD, which is what we need
+        bvnDob = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      } else {
+        // It's DD-MM-YYYY, convert it
+        bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
 
     if (bvnDob !== dob) {
       return NextResponse.json(
@@ -103,13 +131,13 @@ export async function POST(request: Request) {
     }
 
     // 5. Update User in Database
-    const verifiedNin = bvnData.nin || null; 
+    const verifiedNin = nin || null; 
     
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        firstName: bvnFirstName,
-        lastName: bvnLastName,
+        firstName: firstName,
+        lastName: lastName,
         bvn: bvn,
         nin: verifiedNin,
         isIdentityVerified: true,
@@ -127,7 +155,7 @@ export async function POST(request: Request) {
     console.error('BVN Verification Error:', error.message);
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
-      { status: 400 } // Send 400, not 500, as it's a handled error
+      { status: 400 }
     );
   }
 }
