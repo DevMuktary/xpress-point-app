@@ -2,17 +2,22 @@
 .dashboardContainer {
   display: flex;
   min-height: 100vh;
-  background-color: #f9fafb; /* Main background */
+  width: 100%;
+  background-color: #f9fafb;
 }
 
-/* --- Desktop Sidebar (Hidden by default) --- */
+/* --- Desktop Sidebar --- */
 .sidebar {
-  display: none; /* Hide on mobile */
+  display: none; /* Hidden on mobile */
   flex-direction: column;
   width: 250px;
   background-color: #ffffff;
   border-right: 1px solid #e0e0e0;
-  flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
 }
 
 .sidebarHeader {
@@ -31,7 +36,8 @@
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  flex-grow: 1; /* Pushes footer down */
+  flex-grow: 1;
+  overflow-y: auto; /* Allows scrolling if many links */
 }
 
 .navLink {
@@ -41,7 +47,7 @@
   padding: 0.75rem 1rem;
   border-radius: 8px;
   text-decoration: none;
-  color: #555; /* Muted color for non-active */
+  color: #555;
   font-weight: 500;
   transition: all 0.2s;
 }
@@ -52,14 +58,15 @@
 }
 
 .navLink.active {
-  background-color: #eef5ff; /* Light blue */
-  color: #0070f3; /* Brand color */
+  background-color: #eef5ff;
+  color: #0070f3;
   font-weight: 600;
 }
 
 .sidebarFooter {
   padding: 1.5rem 1rem;
   border-top: 1px solid #e0e0e0;
+  background: #fff; /* Ensures it's on top of scrolling content */
 }
 
 .upgradeButton {
@@ -84,58 +91,81 @@
 /* --- Main Content Area --- */
 .mainContent {
   flex-grow: 1;
+  width: 100%;
   padding: 1.5rem;
-  /* Add padding at the bottom to avoid the mobile nav */
-  padding-bottom: 80px; /* Space for bottom nav */
+  /* Add padding at the top to avoid the fixed mobile header */
+  padding-top: 6rem; /* 70px header + 1.5rem padding */
 }
 
-/* --- Mobile Bottom Nav (Shown by default) --- */
-.bottomNav {
+/* --- Mobile Header --- */
+.mobileHeader {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
   position: fixed;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
-  height: 65px; /* Standard app-like height */
-  background-color: #ffffff;
-  border-top: 1px solid #e0e0e0;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
-  z-index: 1000;
+  height: 70px; /* Taller, more modern header */
+  z-index: 99;
 }
 
-.bottomNavLink {
+.menuButton {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  cursor: pointer;
+  z-index: 1001; /* Above overlay */
+  color: #333;
+}
+
+/* --- Mobile Sidebar (Slide-in) --- */
+.mobileSidebarOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.mobileSidebar {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: #777; /* Muted color */
-  font-size: 0.75rem;
-  padding: 0.5rem;
-  flex-grow: 1;
-  transition: color 0.2s;
+  position: fixed;
+  top: 0;
+  left: -260px; /* Start hidden off-screen */
+  bottom: 0;
+  width: 250px;
+  background-color: #ffffff;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: transform 0.3s ease-out;
 }
 
-.bottomNavLink span {
-  margin-top: 2px;
+.mobileSidebarOpen {
+  transform: translateX(260px); /* Slide in */
 }
 
-.bottomNavLink.active {
-  color: #0070f3; /* Brand color */
-  font-weight: 600;
-}
 
-/* --- Responsive (Tablet/Desktop) --- */
+/* --- Responsive (Desktop) --- */
 @media (min-width: 768px) {
-  .bottomNav {
-    display: none; /* Hide bottom nav */
+  .mobileHeader,
+  .mobileSidebarOverlay,
+  .mobileSidebar {
+    display: none; /* Hide all mobile elements */
   }
+
   .sidebar {
     display: flex; /* Show desktop sidebar */
   }
+
   .mainContent {
-    padding-bottom: 1.5rem; /* Reset bottom padding */
+    padding-top: 1.5rem; /* Reset padding */
+    margin-left: 250px; /* Make space for the fixed sidebar */
   }
 }
