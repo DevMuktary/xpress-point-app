@@ -5,7 +5,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './layout.module.css';
 
-// --- REMOVED Emojis ---
+// --- (SVG Icons would go here, using text for now) ---
+const IconDashboard = () => <span>🏠</span>;
+const IconWallet = () => <span>💰</span>;
+const IconServices = () => <span>⚙️</span>;
+const IconHistory = () => <span>🕒</span>;
+const IconProfile = () => <span>👤</span>;
+const IconUpgrade = () => <span>🚀</span>;
+const IconMenu = () => <span>☰</span>;
+const IconClose = () => <span>✕</span>;
+// -----------------------------------
 
 export default function DashboardLayout({
   children,
@@ -14,19 +23,12 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  // --- NEW: State to manage the accordion ---
   const [openCategory, setOpenCategory] = useState<string | null>(null);
 
   const isActive = (path: string) => pathname === path;
 
-  // --- NEW: Function to toggle the accordion ---
   const toggleCategory = (category: string) => {
-    if (openCategory === category) {
-      setOpenCategory(null); // Close it if it's already open
-    } else {
-      setOpenCategory(category); // Open the new one
-    }
+    setOpenCategory(openCategory === category ? null : category);
   };
 
   // This is the actual sidebar content
@@ -38,7 +40,6 @@ export default function DashboardLayout({
         </Link>
       </div>
       <nav className={styles.sidebarNav}>
-        {/* --- Standard Links --- */}
         <Link
           href="/dashboard"
           className={`${styles.navLink} ${isActive('/dashboard') ? styles.active : ''}`}
@@ -54,11 +55,10 @@ export default function DashboardLayout({
           Fund Wallet
         </Link>
 
-        {/* --- NEW: Unclickable Category Title --- */}
         <span className={styles.categoryTitle}>All Services</span>
 
-        {/* --- NEW: Accordion for NIN Services --- */}
-        <button 
+        {/* Accordion for NIN Services */}
+        <button
           className={`${styles.navLink} ${styles.accordionButton} ${openCategory === 'nin' ? styles.open : ''}`}
           onClick={() => toggleCategory('nin')}
         >
@@ -68,12 +68,11 @@ export default function DashboardLayout({
           <div className={styles.subLinkContainer}>
             <Link href="/dashboard/services/nin-verification" className={styles.subLink}>NIN Verification</Link>
             <Link href="/dashboard/services/ipe-clearance" className={styles.subLink}>IPE Clearance</Link>
-            {/* Add other NIN sub-links here */}
           </div>
         )}
 
-        {/* --- NEW: Accordion for BVN Services --- */}
-        <button 
+        {/* Accordion for BVN Services */}
+        <button
           className={`${styles.navLink} ${styles.accordionButton} ${openCategory === 'bvn' ? styles.open : ''}`}
           onClick={() => toggleCategory('bvn')}
         >
@@ -82,13 +81,11 @@ export default function DashboardLayout({
         {openCategory === 'bvn' && (
           <div className={styles.subLinkContainer}>
             <Link href="/dashboard/services/bvn-verification" className={styles.subLink}>BVN Verification</Link>
-            {/* Add other BVN sub-links here */}
           </div>
         )}
-        
-        {/* (Add other service categories here in the same way) */}
 
-        {/* --- Standard Links --- */}
+        {/* (Add other service categories here) */}
+
         <Link
           href="/dashboard/history"
           className={`${styles.navLink} ${isActive('/dashboard/history') ? styles.active : ''}`}
@@ -123,7 +120,7 @@ export default function DashboardLayout({
           className={styles.menuButton}
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         >
-          {isSidebarOpen ? '✕' : '☰'} {/* Removed Icon Components */}
+          {isSidebarOpen ? <IconClose /> : <IconMenu />}
         </button>
       </header>
 
@@ -134,9 +131,9 @@ export default function DashboardLayout({
 
       {/* --- Mobile Sidebar (Slide-in) --- */}
       {isSidebarOpen && (
-        <div 
-          className={styles.mobileSidebarOverlay} 
-          onClick={() => setIsSidebarOpen(false)} 
+        <div
+          className={styles.mobileSidebarOverlay}
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
       <aside className={`${styles.mobileSidebar} ${isSidebarOpen ? styles.mobileSidebarOpen : ''}`}>
