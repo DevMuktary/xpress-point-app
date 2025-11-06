@@ -9,6 +9,18 @@ const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
 const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
 const PAYVESSEL_ENDPOINT = 'https://api.payvessel.com/pms/api/external/request/customerReservedAccount/';
 
+/**
+ * --- THIS IS THE FIX ---
+ * Converts a '+234...' number to an '0...' number.
+ * e.g., "+2348012345678" -> "08012345678"
+ */
+function formatPhoneForPayvessel(internationalPhone: string): string {
+  if (internationalPhone.startsWith('+234')) {
+    return '0' + internationalPhone.substring(4);
+  }
+  return internationalPhone; // Fallback
+}
+
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user || !user.isIdentityVerified) {
@@ -30,7 +42,8 @@ export async function POST(request: Request) {
     const payload = {
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
-      phoneNumber: user.phoneNumber,
+      // --- THIS IS THE FIX ---
+      phoneNumber: formatPhoneForPayvessel(user.phoneNumber), // Use the formatted number
       bankcode: ["999991", "120001"], // PalmPay, 9Payment
       account_type: "STATIC",
       businessid: PAYVESSEL_BUSINESS_ID,
@@ -53,7 +66,8 @@ export async function POST(request: Request) {
     const data = response.data;
 
     if (!data.status || !data.banks || data.banks.length === 0) {
-      throw new Error('Failed to create virtual accounts from provider.');
+      // This will catch any errors from Payvessel
+      throw new Error(data.message || 'Failed to create virtual accounts from provider.');
     }
 
     // --- 2. Save Accounts to Database ---
@@ -76,7 +90,8 @@ export async function POST(request: Request) {
     console.error('Create Account Error:', error.response ? error.response.data : error.message);
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
-      { status: 500 }
+      // Send a 400 (Bad Request) so the frontend can display the error
+      { status: 400 }
     );
   }
 }
