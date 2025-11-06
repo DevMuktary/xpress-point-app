@@ -4,7 +4,7 @@
   margin: 2rem auto;
   padding: 2rem;
   background-color: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px; /* <-- More rounded */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
@@ -40,7 +40,7 @@
   padding: 0.75rem 1rem;
   font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 8px; /* <-- More rounded */
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -49,6 +49,41 @@
   border-color: #0070f3; /* Xpress Point brand color */
   box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
 }
+
+/* --- NEW STYLES FOR PASSWORD STRENGTH --- */
+.passwordStrength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 10px; /* Give it a defined height */
+}
+
+.strengthBar {
+  flex-grow: 1;
+  height: 6px;
+  background-color: #eee;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.strengthBarInner {
+  height: 100%;
+  transition: all 0.3s ease-out;
+  background-color: #ddd; /* Default/empty */
+}
+/* The 3 strength levels */
+.strengthBarInner.weak { background-color: #e74c3c; width: 33%; }
+.strengthBarInner.medium { background-color: #f39c12; width: 66%; }
+.strengthBarInner.strong { background-color: #2ecc71; width: 100%; }
+
+.strengthText {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #555;
+  width: 60px; /* Keeps text aligned */
+  text-align: right;
+}
+/* ------------------------------------- */
 
 /* Terms and conditions */
 .terms {
@@ -64,7 +99,17 @@
   height: 16px;
 }
 
-/* The main sign-up button */
+/* This is for your clickable link */
+.terms a {
+  color: #0070f3;
+  text-decoration: none;
+  font-weight: 600;
+}
+.terms a:hover {
+  text-decoration: underline;
+}
+
+/* The main sign-up button ("smartly") */
 .button {
   width: 100%;
   padding: 0.85rem;
@@ -73,9 +118,10 @@
   color: #ffffff;
   background-color: #0070f3; /* Xpress Point brand color */
   border: none;
-  border-radius: 6px;
+  border-radius: 8px; /* <-- More rounded */
   cursor: pointer;
   transition: background-color 0.2s;
+  margin-top: 0.5rem; /* Give it some space */
 }
 
 .button:hover {
