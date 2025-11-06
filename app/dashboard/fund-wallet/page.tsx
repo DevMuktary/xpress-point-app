@@ -4,6 +4,7 @@ import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import BvnModal from './BvnModal'; // The client component we will create
 import { BanknotesIcon } from '@heroicons/react/24/outline';
+import { VirtualAccount } from '@prisma/client'; // <-- STEP 1: IMPORT THE TYPE
 
 // Helper function to get user's virtual accounts
 async function getVirtualAccounts(userId: string) {
@@ -20,7 +21,9 @@ export default async function FundWalletPage() {
     redirect('/login');
   }
 
-  let virtualAccounts = [];
+  // --- STEP 2: DEFINE THE TYPE ---
+  let virtualAccounts: VirtualAccount[] = [];
+
   if (user.isIdentityVerified) {
     // If user is verified, fetch their accounts
     virtualAccounts = await getVirtualAccounts(user.id);
