@@ -31,15 +31,14 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { bvn, dob } = body; // dob is in 'YYYY-MM-DD'
+    const { bvn, dob } = body; 
 
     if (!bvn || !dob) {
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
     // --- 1. Call Raudah BVN API ---
-    // (We removed the inner try...catch as it's no longer needed)
-    const response = await axios.post(
+    const raudahResponse = await axios.post(
       RAUDAH_ENDPOINT,
       { value: bvn }, // 'ref' is optional, so we removed it
       {
@@ -50,9 +49,9 @@ export async function POST(request: Request) {
       }
     );
 
-    const data = response.data;
+    const data = raudahResponse.data;
 
-    // --- 2. Robust Error Handling (for 'status: false' or 'success: false') ---
+    // --- 2. Robust Error Handling ---
     if (data.status === false || data.success === false) {
       let errorMessage = "BVN verification failed.";
       if (data.message && typeof data.message === 'object' && data.message['0']) {
@@ -64,15 +63,17 @@ export async function POST(request: Request) {
     }
     
     // --- THIS IS THE FIX ---
-    // The data is at data.data, not data.data.data
-    const bvnData = data.data; 
+    // Get the data from their correct locations based on your log
+    const bvnData = data.data;           // The nested data object
+    const bvnFirstName = data.firstName;  // The root first name
+    const bvnLastName = data.lastName;    // The root last name
+    // ----------------------
 
-    if (!bvnData || bvnData.status !== 'found') {
-      throw new Error("BVN record not found.");
+    if (!bvnData || bvnData.status !== 'found' || !bvnFirstName || !bvnLastName) {
+      throw new Error("BVN record not found or response was incomplete.");
     }
 
     // --- 3. Validate Date of Birth ---
-    // The field is 'dateOfBirth' and format is 'YYYY-MM-DD'
     const bvnDob = bvnData.dateOfBirth; 
 
     if (bvnDob !== dob) {
@@ -83,14 +84,13 @@ export async function POST(request: Request) {
     }
 
     // --- 4. Update User in Database ---
-    // Use the correct field names: 'firstName', 'lastName', and 'nin'
     const verifiedNin = bvnData.nin || null; 
     
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        firstName: bvnData.firstName,
-        lastName: bvnData.lastName,
+        firstName: bvnFirstName, // Use the correct variable
+        lastName: bvnLastName,   // Use the correct variable
         bvn: bvn,
         nin: verifiedNin,
         isIdentityVerified: true,
@@ -98,15 +98,14 @@ export async function POST(request: Request) {
     });
 
     // --- 5. Send Response ---
-    // The log shows 'nin: null', so this will trigger the fallback
     if (verifiedNin) {
       return NextResponse.json({ status: 'IDENTITY_VERIFIED', nin: verifiedNin });
     } else {
-      return NextResponse.json({ status: 'NIN_REQUIRED' }); // This is what we expect
+      // This will now trigger the NIN fallback
+      return NextResponse.json({ status: 'NIN_REQUIRED' }); 
     }
 
   } catch (error: any) {
-    // This will now only catch *real* errors
     console.error('BVN Verification Error:', error.message);
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
