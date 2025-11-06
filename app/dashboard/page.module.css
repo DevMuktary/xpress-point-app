@@ -1,11 +1,11 @@
 /* This container is now a simple vertical stack */
 .pageContainer {
   width: 100%;
-  max-width: 1000px; /* Limit content width */
-  margin: 0 auto; /* This will now center it */
+  max-width: 1000px; /* Limit content width on large desktops */
+  margin: 0 auto; /* THIS IS THE FIX. It centers the content. */
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.5rem; /* Creates space between cards */
 }
 
 /* --- Alert Card --- */
@@ -97,9 +97,10 @@
 }
 .serviceGrid {
   display: grid;
+  /* --- 2 COLUMNS ON MOBILE (as requested) --- */
   grid-template-columns: repeat(2, 1fr); 
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 1rem; /* Space from the title */
 }
 
 .serviceItem {
@@ -167,6 +168,7 @@
 }
 
 /* --- Responsive (Tablet/Desktop) --- */
+/* We only change the service grid, not the page layout */
 @media (min-width: 768px) {
   .serviceGrid {
     grid-template-columns: repeat(3, 1fr); /* 3 columns on tablet */
