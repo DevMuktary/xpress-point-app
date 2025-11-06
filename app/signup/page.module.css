@@ -45,7 +45,7 @@
 .input {
   width: 100%;
   padding: 0.75rem 1rem;
-  font-size: 1rem; /* 16px */
+  font-size: 1rem; /* This is 16px */
   border: 1px solid #ccc;
   border-radius: 8px;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -95,6 +95,7 @@
   border: 1px solid #ccc;
   border-radius: 8px; /* <-- MATCHES .input BORDER RADIUS */
   transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: #fff; /* Ensure it has a background */
 }
 
 /* This styles the internal input field */
@@ -106,6 +107,7 @@
   padding: 0; /* Remove default padding */
   margin: 0;
   font-size: 16px; /* <-- ZOOM FIX: Be explicit with 16px */
+  background-color: transparent; /* Inherit background */
 }
 
 /* This styles the flag dropdown */
