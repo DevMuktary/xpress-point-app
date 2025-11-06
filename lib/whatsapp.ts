@@ -1,9 +1,9 @@
-import axios from 'axios';
+import axios from 'axios'; // Sticking with axios as it's already in package.json
 
-// Get Meta API credentials from Railway environment variables
+// We'll use the environment variables we already set up
 const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const WHATSAPP_API_VERSION = 'v19.0'; // Use a current API version
+const WHATSAPP_API_VERSION = 'v19.0';
 
 /**
  * Sends a WhatsApp message using the Meta Cloud API.
@@ -14,13 +14,12 @@ const WHATSAPP_API_VERSION = 'v19.0'; // Use a current API version
 export async function sendWhatsAppMessage(to: string, templateName: string, code: string) {
   if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
     console.error('WhatsApp credentials are not set in environment variables.');
-    return; 
+    return;
   }
 
   const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
-  // --- THIS IS THE UPDATED PAYLOAD ---
-  // It now includes *two* components: the 'body' and the 'button'
+  // This payload is for a template with a BODY and a "Copy Code" button
   const payload = {
     messaging_product: 'whatsapp',
     to: to,
@@ -32,6 +31,7 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
       },
       components: [
         // Component 1: The Body
+        // This corresponds to the {{1}} in "Your code is {{1}}"
         {
           type: 'body',
           parameters: [
@@ -42,10 +42,11 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
           ],
         },
         // Component 2: The "Copy Code" Button
+        // This MUST match the button in your Meta template
         {
           type: 'button',
-          sub_type: 'copy_code', // This tells Meta it's a "Copy Code" button
-          index: '0', // This is the first button
+          sub_type: 'copy_code', // <-- THIS IS THE CORRECT TYPE
+          index: '0', // The first button
           parameters: [
             {
               type: 'text',
@@ -58,6 +59,7 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
   };
 
   try {
+    // Using axios as it's already installed and working
     await axios.post(url, payload, {
       headers: {
         'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
