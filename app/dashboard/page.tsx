@@ -66,31 +66,36 @@ export default function DashboardPage() {
   return (
     <div className={styles.pageContainer}>
 
-      {/* --- Email Verification Alert --- */}
-      {!isEmailVerified && (
-        <div className={styles.alertCard}>
-          <span>📧</span>
-          <div>
-            <strong>Verify Your Email</strong>
-            <p>Please click the verification link sent to your email to unlock services.</p>
+      {/* --- THIS IS YOUR NEW topRow WRAPPER --- */}
+      <div className={styles.topRow}>
+
+        {/* --- Email Verification Alert --- */}
+        {!isEmailVerified && (
+          <div className={styles.alertCard}>
+            <span>📧</span>
+            <div>
+              <strong>Verify Your Email</strong>
+              <p>Please click the verification link sent to your email to unlock services.</p>
+            </div>
+            <button className={styles.resendButton}>Resend</button>
           </div>
-          <button className={styles.resendButton}>Resend</button>
-        </div>
-      )}
+        )}
 
-      {/* --- "App-Like" Wallet Card --- */}
-      <div className={styles.walletCard}>
-        <div className={styles.walletHeader}>
-          <span className={styles.userName}>{userName}</span>
-          <span className={styles.walletLabel}>Total Balance</span>
+        {/* --- "App-Like" Wallet Card --- */}
+        <div className={styles.walletCard}>
+          <div className={styles.walletHeader}>
+            <span className={styles.userName}>{userName}</span>
+            <span className={styles.walletLabel}>Total Balance</span>
+          </div>
+          <h2 className={styles.walletBalance}>₦{userBalance}</h2>
+          <Link href="/dashboard/fund-wallet" className={styles.fundButton}>
+            <span>+</span> Fund Wallet
+          </Link>
         </div>
-        <h2 className={styles.walletBalance}>₦{userBalance}</h2>
-        <Link href="/dashboard/fund-wallet" className={styles.fundButton}>
-          <span>+</span> Fund Wallet
-        </Link>
-      </div>
 
-      {/* --- "Our Services" Grid (now wrapped in a card) --- */}
+      </div> {/* --- End of topRow --- */}
+      
+      {/* --- "Our Services" Grid --- */}
       <div className={styles.servicesCard}>
         <h3 className={styles.sectionTitle}>Our Services</h3>
         <div className={styles.serviceGrid}>
