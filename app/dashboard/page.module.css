@@ -1,20 +1,24 @@
-/* This container is now centered and has padding */
+/* Center the whole page and keep consistent spacing */
 .pageContainer {
   width: 100%;
   max-width: 1000px;
-  margin: 0 auto; /* This centers the content */
-  padding: 1.5rem; /* This provides space from the screen edge */
+  margin: 0 auto;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
+  align-items: center; /* Center everything horizontally */
   gap: 1.5rem;
-  box-sizing: border-box; /* Ensures padding is included in width */
+  box-sizing: border-box;
 }
 
-/* --- YOUR NEW .topRow STYLE --- */
+/* --- TOP ROW (Alert + Wallet) --- */
 .topRow {
   display: flex;
-  flex-direction: column; /* Stack on mobile by default */
+  flex-direction: column; /* Stack vertically by default */
+  align-items: stretch;
+  justify-content: center;
   gap: 1.5rem;
+  width: 100%;
 }
 
 /* --- Alert Card --- */
@@ -27,6 +31,8 @@
   color: #92400e;
   padding: 1rem;
   border-radius: 12px;
+  flex: 1;
+  box-sizing: border-box;
 }
 .alertCard span { font-size: 1.5rem; }
 .alertCard p { font-size: 0.9rem; margin-top: 0.25rem; }
@@ -41,13 +47,15 @@
   flex-shrink: 0;
 }
 
-/* --- "App-Like" Wallet Card --- */
+/* --- Wallet Card --- */
 .walletCard {
   background: linear-gradient(135deg, #0070f3 0%, #005bb5 100%);
   color: #ffffff;
   padding: 1.5rem;
   border-radius: 16px;
   box-shadow: 0 10px 20px rgba(0, 112, 243, 0.2);
+  flex: 1;
+  box-sizing: border-box;
 }
 .walletHeader {
   display: flex;
@@ -97,16 +105,18 @@
   color: #333;
 }
 
-/* --- "Stunning" Service Grid --- */
+/* --- Services Card --- */
 .servicesCard {
   background-color: #ffffff;
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  width: 100%;
+  box-sizing: border-box;
 }
 .serviceGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); 
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-top: 1rem;
 }
@@ -157,12 +167,14 @@
   margin-top: 2px;
 }
 
-/* --- Quick History Section --- */
+/* --- Spending Section --- */
 .spendingCard {
   background-color: #ffffff;
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  width: 100%;
+  box-sizing: border-box;
 }
 .spendingList {
   list-style: none;
@@ -174,18 +186,17 @@
   padding: 1rem 0;
 }
 
-/* --- Responsive (Tablet/Desktop) --- */
+/* --- Responsive --- */
 @media (min-width: 768px) {
-  /* On tablets, make the top row side-by-side */
   .topRow {
-    flex-direction: row; /* Go side-by-side */
+    flex-direction: row; /* Side by side on tablets and above */
     align-items: stretch;
+    justify-content: center;
   }
-  .alertCard {
-    flex: 1; /* Take half the space */
-  }
+  .alertCard,
   .walletCard {
-    flex: 1; /* Take the other half */
+    flex: 1;
+    max-width: 480px;
   }
   .serviceGrid {
     grid-template-columns: repeat(3, 1fr);
