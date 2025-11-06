@@ -27,7 +27,8 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
     template: {
       name: templateName,
       language: {
-        code: 'en_US', // Or the language of your template
+        // --- THIS IS THE FIX ---
+        code: 'en_GB', // Changed from 'en_US' to 'English (UK)'
       },
       components: [
         // Component 1: The Body
@@ -45,7 +46,7 @@ export async function sendWhatsAppMessage(to: string, templateName: string, code
         // This MUST match the button in your Meta template
         {
           type: 'button',
-          sub_type: 'copy_code', // <-- THIS IS THE CORRECT TYPE
+          sub_type: 'copy_code', // This is the correct type
           index: '0', // The first button
           parameters: [
             {
