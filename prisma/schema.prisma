@@ -1,16 +1,16 @@
 // This is your Prisma schema file.
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL") // This comes from Railway variables
-}
+// It tells Prisma what your database looks like.
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// 1. THE USER TABLE
-// This is our 'users' table from the database plan
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. USERS TABLE
 model User {
   id                    String    @id @default(uuid())
   firstName             String    @map("first_name")
@@ -28,50 +28,75 @@ model User {
   bvn                   String?
   nin                   String?
   
-  // Database relations (we'll build these)
+  // --- Relations ---
   wallet                Wallet?
   virtualAccounts       VirtualAccount[]
   transactions          Transaction[]
+  ninVerifications      NinVerification[]
+
+  @@map("users")
 }
 
-// 2. THE WALLET TABLE
+// 2. WALLETS TABLE
 model Wallet {
   id        String   @id @default(uuid())
-  balance   Decimal  @default(0.00)
-  updatedAt DateTime @updatedAt
-  
-  user      User     @relation(fields: [userId], references: [id])
   userId    String   @unique @map("user_id")
+  balance   Decimal  @default(0.00)
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // --- Relation ---
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("wallets")
 }
 
-// 3. THE VIRTUAL ACCOUNT TABLE
+// 3. VIRTUAL ACCOUNTS TABLE
 model VirtualAccount {
-  id            String  @id @default(uuid())
-  bankName      String  @map("bank_name")
-  accountNumber String  @map("account_number")
-  accountName   String  @map("account_name")
-  accountType   String  @map("account_type")
-  reference     String  @unique
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  bankName       String   @map("bank_name")
+  accountNumber  String   @unique @map("account_number")
+  accountName    String   @map("account_name")
+  accountType    String   @default("STATIC") @map("account_type")
+  reference      String   @unique
 
-  user          User    @relation(fields: [userId], references: [id])
-  userId        String  @map("user_id")
+  // --- Relation ---
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@map("virtual_accounts")
 }
 
-// 4. THE TRANSACTIONS TABLE
+// 4. TRANSACTIONS TABLE
 model Transaction {
   id          String   @id @default(uuid())
-  type        String
+  userId      String   @map("user_id")
+  type        String   // "DEPOSIT", "SERVICE_CHARGE", "UPGRADE_FEE"
   amount      Decimal
   description String
   reference   String   @unique
-  status      String
+  status      String   // "COMPLETED", "PENDING", "FAILED"
   createdAt   DateTime @default(now()) @map("created_at")
 
+  // --- Relation ---
   user        User     @relation(fields: [userId], references: [id])
-  userId      String   @map("user_id")
+
+  @@map("transactions")
 }
 
-// This is an 'enum' for our user roles
+// 5. NIN VERIFICATIONS TABLE (For Phase 3)
+model NinVerification {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  data            Json     // Stores the full JSON from Robosttech
+  expiresAt       DateTime @map("expires_at")
+  
+  // --- Relation ---
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@map("nin_verifications")
+}
+
+// Enum for User Roles
 enum Role {
   AGENT
   AGGREGATOR
