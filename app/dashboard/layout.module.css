@@ -40,7 +40,6 @@
   overflow-y: auto;
 }
 
-/* --- NEW Unclickable Category Title --- */
 .categoryTitle {
   padding: 0.75rem 1rem;
   font-size: 0.75rem;
@@ -51,7 +50,6 @@
   margin-top: 1rem;
 }
 
-/* --- Main Nav Links (Dashboard, Fund Wallet) --- */
 .navLink {
   display: flex;
   align-items: center;
@@ -78,25 +76,22 @@
   font-weight: 600;
 }
 
-/* --- NEW Accordion Button (e.g., "NIN Services") --- */
 .accordionButton {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 .accordionButton::after {
-  content: '▼'; /* "Open mouth" icon */
+  content: '▼';
   font-size: 0.75rem;
   transition: transform 0.2s;
 }
 .accordionButton.open::after {
-  transform: rotate(180deg); /* Flip icon when open */
+  transform: rotate(180deg);
 }
 
-/* --- NEW Sub-link Container (e.g., "NIN Verification") --- */
 .subLinkContainer {
-  padding-left: 2rem; /* Indent sub-links */
+  padding-left: 2rem;
   display: flex;
   flex-direction: column;
 }
@@ -114,7 +109,6 @@
   color: #0070f3;
   font-weight: 500;
 }
-/* ------------------------------------- */
 
 .sidebarFooter {
   padding: 1.5rem 1rem;
@@ -142,8 +136,10 @@
 
 /* --- Main Content Area --- */
 .mainContent {
-  flex-grow: 1;
-  width: 100%;
+  /* --- THIS IS THE FIX --- */
+  flex: 1; /* Shorthand for flex-grow: 1, flex-shrink: 1, flex-basis: 0% */
+  min-width: 0; /* Prevents flex items from overflowing */
+  /* ----------------------- */
   padding: 1.5rem;
   padding-top: 6rem; /* Space for fixed mobile header */
 }
@@ -189,7 +185,7 @@
   flex-direction: column;
   position: fixed;
   top: 0;
-  left: -260px; /* Start hidden off-screen */
+  left: -260px;
   bottom: 0;
   width: 250px;
   background-color: #ffffff;
@@ -199,25 +195,25 @@
 }
 
 .mobileSidebarOpen {
-  transform: translateX(260px); /* Slide in */
+  transform: translateX(260px);
 }
 
 
-/* --- THIS IS THE ALIGNMENT FIX --- */
-/* We change the breakpoint from 768px to 1024px */
+/* --- Responsive (Desktop) --- */
+/* Changed to 1024px to keep tablets in mobile view */
 @media (min-width: 1024px) {
   .mobileHeader,
   .mobileSidebarOverlay,
   .mobileSidebar {
-    display: none; /* Hide all mobile elements */
+    display: none;
   }
 
   .sidebar {
-    display: flex; /* Show desktop sidebar */
+    display: flex;
   }
 
   .mainContent {
-    padding-top: 1.5rem; /* Reset padding */
-    margin-left: 250px; /* Make space for the fixed sidebar */
+    padding-top: 1.5rem;
+    margin-left: 250px;
   }
 }
