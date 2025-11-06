@@ -204,6 +204,7 @@ export default function SignUpPage() {
             )}
           </div>
 
+          {/* --- THIS IS THE CORRECTED LINE --- */}
           <div className={styles.terms}>
             <input
               id="terms"
@@ -213,7 +214,7 @@ export default function SignUpPage() {
             />
             <label htmlFor="terms">
               I agree to the <Link href="/terms">Terms of Service</Link>.
-            </Clickable>
+            </label>
           </div>
           
           {error && (
@@ -228,4 +229,4 @@ export default function SignUpPage() {
       </div>
     </>
   );
-} 
+}
