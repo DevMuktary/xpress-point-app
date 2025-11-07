@@ -10,7 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. USERS TABLE
+// 1. USERS TABLE (Unchanged)
 model User {
   id                    String    @id @default(uuid())
   firstName             String    @map("first_name")
@@ -33,25 +33,22 @@ model User {
   virtualAccounts       VirtualAccount[]
   transactions          Transaction[]
   ninVerifications      NinVerification[]
-  otps                  Otp[] // <-- ADD THIS RELATION
+  otps                  Otp[]
 
   @@map("users")
 }
 
-// 2. WALLETS TABLE
+// 2. WALLETS TABLE (Unchanged)
 model Wallet {
   id        String   @id @default(uuid())
   userId    String   @unique @map("user_id")
-  balance   Decimal  @default(0.00)
+  balance   Decimal  @default(0.00) @db.Decimal(12, 2)
   updatedAt DateTime @updatedAt @map("updated_at")
-  
-  // --- Relation ---
   user      User     @relation(fields: [userId], references: [id])
-
   @@map("wallets")
 }
 
-// 3. VIRTUAL ACCOUNTS TABLE
+// 3. VIRTUAL ACCOUNTS TABLE (Unchanged)
 model VirtualAccount {
   id             String   @id @default(uuid())
   userId         String   @map("user_id")
@@ -60,59 +57,64 @@ model VirtualAccount {
   accountName    String   @map("account_name")
   accountType    String   @default("STATIC") @map("account_type")
   reference      String   @unique
-
-  // --- Relation ---
   user           User     @relation(fields: [userId], references: [id])
-
   @@map("virtual_accounts")
 }
 
-// 4. TRANSACTIONS TABLE
+// 4. TRANSACTIONS TABLE (UPDATED)
 model Transaction {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
-  type        String   // "DEPOSIT", "SERVICE_CHARGE", "UPGRADE_FEE"
-  amount      Decimal
+  type        String   // "DEPOSIT", "SERVICE_CHARGE", "UPGRADE_FEE", "WITHDRAWAL"
+  amount      Decimal  @db.Decimal(12, 2) // e.g., -150.00
   description String
   reference   String   @unique
   status      String   // "COMPLETED", "PENDING", "FAILED"
   createdAt   DateTime @default(now()) @map("created_at")
 
-  // --- Relation ---
+  // --- NEW: Link to the service that was bought ---
+  serviceId   String?  @map("service_id")
+  service     Service? @relation(fields: [serviceId], references: [id])
+  
   user        User     @relation(fields: [userId], references: [id])
-
   @@map("transactions")
 }
 
-// 5. NIN VERIFICATIONS TABLE (For Phase 3)
+// 5. NIN VERIFICATIONS TABLE (Unchanged)
 model NinVerification {
   id              String   @id @default(uuid())
   userId          String   @map("user_id")
-  data            Json     // Stores the full JSON from Robosttech
+  data            Json
   expiresAt       DateTime @map("expires_at")
-  
-  // --- Relation ---
   user            User     @relation(fields: [userId], references: [id])
-
   @@map("nin_verifications")
 }
 
-// --- NEW OTP TABLE ---
-// This stores the 6-digit codes
+// 6. OTP TABLE (Unchanged)
 model Otp {
   id        String   @id @default(uuid())
   code      String
   userId    String   @map("user_id")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-
-  // --- Relation ---
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@map("otps")
 }
 
-// Enum for User Roles
+// --- 7. NEW SERVICE TABLE ---
+model Service {
+  id               String    @id // e.g., "NIN_LOOKUP", "NIN_SLIP_REGULAR"
+  name             String    // e.g., "NIN Verification Lookup"
+  category         String    // e.g., "NIN"
+  agentPrice       Decimal   @map("agent_price") @db.Decimal(10, 2)
+  aggregatorPrice  Decimal   @map("aggregator_price") @db.Decimal(10, 2)
+  isActive         Boolean   @default(true) @map("is_active")
+
+  Transaction Transaction[] // Relation to transactions
+  @@map("services")
+}
+
+// Enum for User Roles (Unchanged)
 enum Role {
   AGENT
   AGGREGATOR
