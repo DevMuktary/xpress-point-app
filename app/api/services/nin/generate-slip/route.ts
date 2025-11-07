@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
-import { generateNinSlipPdf } from '@/lib/slipGenerator'; // We will create this
+import { generateNinSlipPdf } from '@/lib/slipGenerator';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// Helper to map slipType to database service ID
 const serviceIdMap: { [key: string]: string } = {
   Regular: 'NIN_SLIP_REGULAR',
   Standard: 'NIN_SLIP_STANDARD',
@@ -19,7 +18,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { verificationId, slipType } = body; // e.g., slipType = "Regular"
+    const { verificationId, slipType } = body;
 
     if (!verificationId || !slipType) {
       return NextResponse.json({ error: 'Missing verificationId or slipType.' }, { status: 400 });
@@ -77,12 +76,10 @@ export async function POST(request: Request) {
     // --- 4. Generate the PDF ---
     const pdfBuffer = await generateNinSlipPdf(
       slipType,
-      verification.data as any // Pass the saved JSON data
+      verification.data as any
     );
 
     // --- 5. Send the PDF file back ---
-    // --- THIS IS THE FIX ---
-    // We explicitly cast the buffer to ensure type compatibility.
     return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
@@ -92,9 +89,24 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error("NIN Slip Generation Error:", error.message);
+    // --- THIS IS THE FIX ---
+    // We log the FULL error, not just error.message
+    console.error("NIN Slip Generation Error:", error); 
+    
+    let errorMessage = "An internal server error occurred.";
+    if (error.message) {
+      errorMessage = error.message;
+    } else if (error.toString) {
+      errorMessage = error.toString();
+    }
+    
+    // Check for the most likely error (File Not Found)
+    if (error.code === 'ENOENT') {
+      errorMessage = "Service configuration error: Missing required template files. Please contact support.";
+    }
+
     return NextResponse.json(
-      { error: error.message || 'An internal server error occurred.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
