@@ -1,5 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import fontkit from '@pdf-lib/fontkit';
+// import fontkit from '@pdf-lib/fontkit'; // <-- REMOVED
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
@@ -36,7 +36,9 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   // 1. Create a new PDF document
   const pdfDoc = await PDFDocument.create();
-  pdfDoc.registerFontkit(fontkit);
+
+  // --- REMOVED FONTKIT REGISTRATION ---
+  // pdfDoc.registerFontkit(fontkit);
 
   // 2. Load the PNG template and the user's photo
   let templateImage;
@@ -65,20 +67,18 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   // 4. Draw the template as the background
   page.drawImage(templateImage, { x: 0, y: 0, width, height });
 
-  // 5. Load the BUILT-IN fonts
+  // 5. Load the BUILT-IN fonts (This does not require fontkit)
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   
   // 6. Draw the data (Y-coordinates are from bottom-left)
   if (templateType === 'regular') {
     
-    // --- THIS IS FIX #1 (NIN FONT AND POSITION) ---
-    // Changed size from 28 to 10.
-    // Changed y from (height - 178) to (height - 170) to align it.
+    // --- Your "perfection" fixes are still here ---
     page.drawText(displayField(data.nin), {
       x: 122, y: height - 170, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // -----------------------------------------------
+    // ---------------------------------------------
 
     page.drawText(displayField(data.trackingId), {
       x: 122, y: height - 133, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
@@ -98,12 +98,10 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.residence_AdressLine1), {
       x: 437, y: height - 140, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
     });
-
-    // --- THIS IS FIX #2 (IMAGE SIZE AND POSITION) ---
-    // Changed width/height from 120x132 to 105x115 to fit the box.
-    // Adjusted x and y to re-center the smaller image.
+    
+    // --- Your "perfection" fixes are still here ---
     page.drawImage(userPhoto, { x: 605, y: height - (81 + 115), width: 105, height: 115 });
-    // ------------------------------------------------
+    // ---------------------------------------------
   } 
   
   else if (templateType === 'standard') {
