@@ -27,7 +27,6 @@ const displayField = (value: any): string => {
   return value.toString();
 };
 
-// --- NEW: Helper to format today's date ---
 const getIssueDate = (): string => {
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
@@ -111,26 +110,28 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
-    // --- THIS IS THE FIX ---
-    // Moved left 2 units (x: 322)
+    // NIN (Unchanged per your request)
     page.drawText(formatNin(data.nin), {
       x: 322, y: height - 247, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
-    // -----------------------
     
+    // --- THIS IS THE FIX ---
+    // Moved Surname, First/Middle, and DOB down by 3 units
     page.drawText(displayField(data.surname), {
-      x: 320, y: height - 107, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 110, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 107
     });
     page.drawText(displayField(data.firstname) + ',', {
-      x: 320, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 150, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 147
     });
     page.drawText(displayField(data.middlename), {
-      x: 393, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 393, y: height - 150, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 147
     });
     page.drawText(displayField(data.birthdate), {
-      x: 320, y: height - 182, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 185, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 182
     });
+    // -----------------------
     
+    // Photo & QR (Unchanged per your request)
     page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 });
     page.drawImage(qrImage, { x: 498, y: height - (94 + 90), width: 90, height: 90 });
 
