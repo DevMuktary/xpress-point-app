@@ -29,7 +29,7 @@ export async function sendVerificationEmail(
   // -----------------------
 
   const sender = {
-    email: 'verify@xpresspoint.net', // Your "from" email
+    email: 'no-reply@xpresspoint.net', // Your "from" email
     name: 'Xpress Point',
   };
   
