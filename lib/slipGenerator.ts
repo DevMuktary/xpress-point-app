@@ -1,10 +1,11 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-// import fontkit from '@pdf-lib/fontkit'; // <-- REMOVED
+import fontkit from '@pdf-lib/fontkit';
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 
 // --- Helper Functions ---
+
 const loadFile = (filePath: string) => {
   const absolutePath = path.resolve(process.cwd(), filePath);
   return fs.promises.readFile(absolutePath);
@@ -35,9 +36,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   // 1. Create a new PDF document
   const pdfDoc = await PDFDocument.create();
-  
-  // --- REMOVED fontkit registration ---
-  // pdfDoc.registerFontkit(fontkit);
+  pdfDoc.registerFontkit(fontkit);
 
   // 2. Load the PNG template and the user's photo
   let templateImage;
@@ -72,9 +71,15 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   // 6. Draw the data (Y-coordinates are from bottom-left)
   if (templateType === 'regular') {
+    
+    // --- THIS IS FIX #1 (NIN FONT AND POSITION) ---
+    // Changed size from 28 to 10.
+    // Changed y from (height - 178) to (height - 170) to align it.
     page.drawText(displayField(data.nin), {
-      x: 122, y: height - 178, size: 28, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 122, y: height - 170, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // -----------------------------------------------
+
     page.drawText(displayField(data.trackingId), {
       x: 122, y: height - 133, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
@@ -93,7 +98,12 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.residence_AdressLine1), {
       x: 437, y: height - 140, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
     });
-    page.drawImage(userPhoto, { x: 600, y: height - (81 + 132), width: 120, height: 132 });
+
+    // --- THIS IS FIX #2 (IMAGE SIZE AND POSITION) ---
+    // Changed width/height from 120x132 to 105x115 to fit the box.
+    // Adjusted x and y to re-center the smaller image.
+    page.drawImage(userPhoto, { x: 605, y: height - (81 + 115), width: 105, height: 115 });
+    // ------------------------------------------------
   } 
   
   else if (templateType === 'standard') {
