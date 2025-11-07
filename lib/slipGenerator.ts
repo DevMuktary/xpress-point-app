@@ -94,37 +94,35 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.residence_AdressLine1), {
       x: 437, y: height - 140, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
     });
-
-    // --- THIS IS THE FIX ---
-    // Moved from y: height - (105 + 115) [which is 220]
-    // To y: height - (112 + 115) [which is 227]
-    // This moves it DOWN another 7 units.
+    
+    // This is the "perfect" position for REGULAR
     page.drawImage(userPhoto, { x: 615, y: height - (112 + 115), width: 105, height: 115 });
-    // -----------------------
   } 
   
   else if (templateType === 'standard') {
+    // --- THIS IS THE FIX ---
+    // All 'y' coordinates have been adjusted "up" by 20 units
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     page.drawText(formatNin(data.nin), {
-      x: 327, y: height - 389, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 327, y: height - 369, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2) // Was 389
     });
     page.drawText(displayField(data.surname), {
-      x: 320, y: height - 252, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 232, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 252
     });
     page.drawText(displayField(data.firstname) + ',', {
-      x: 320, y: height - 292, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 272, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
     });
     page.drawText(displayField(data.middlename), {
-      x: 393, y: height - 292, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 393, y: height - 272, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
     });
     page.drawText(displayField(data.birthdate), {
-      x: 320, y: height - 327, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 307, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 327
     });
     
-    page.drawImage(userPhoto, { x: 205, y: height - (232 + 100), width: 90, height: 100 });
-    page.drawImage(qrImage, { x: 498, y: height - (239 + 90), width: 90, height: 90 });
+    page.drawImage(userPhoto, { x: 205, y: height - (212 + 100), width: 90, height: 100 }); // Was 232
+    page.drawImage(qrImage, { x: 498, y: height - (219 + 90), width: 90, height: 90 }); // Was 239
   } 
   
   else if (templateType === 'premium') {
