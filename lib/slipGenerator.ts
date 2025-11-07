@@ -1,29 +1,26 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit'; // <-- 1. Import fontkit
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 
 // --- Helper Functions ---
 
-// Load a local file (font or PNG) as a buffer
 const loadFile = (filePath: string) => {
   const absolutePath = path.resolve(process.cwd(), filePath);
   return fs.promises.readFile(absolutePath);
 };
 
-// Generate the QR code as a PNG buffer
 const createQrCodeBuffer = async (data: any): Promise<Buffer> => {
   const qrText = `surname: ${data.surname} | givenNames: ${data.firstname} ${data.middlename} | dob: ${data.birthdate}`;
   return QRCode.toBuffer(qrText);
 };
 
-// Format NIN: 12345678901 -> 1234   567   8901
 const formatNin = (nin: string) => {
   if (!nin || nin.length !== 11) return nin;
   return `${nin.slice(0, 4)}   ${nin.slice(4, 7)}   ${nin.slice(7)}`;
 };
 
-// Fill empty fields with '****'
 const displayField = (value: any): string => {
   if (value === null || value === undefined || value === "") {
     return '****';
@@ -40,32 +37,30 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   // 1. Create a new PDF document
   const pdfDoc = await PDFDocument.create();
 
-  // 2. Load the PNG template and the user's photo
+  // --- 2. THIS IS THE FIX ---
+  // Register fontkit *before* embedding fonts
+  pdfDoc.registerFontkit(fontkit);
+  // --------------------------
+
+  // 3. Load the PNG template and the user's photo
   const templateBuffer = await loadFile(`public/templates/nin_${templateType}.png`);
   const templateImage = await pdfDoc.embedPng(templateBuffer);
   
   const photoBuffer = Buffer.from(data.photo, 'base64');
-  
-  // --- THIS IS THE FIX ---
-  // The API is sending a JPG, so we must use embedJpg
-  const userPhoto = await pdfDoc.embedJpg(photoBuffer);
-  // -----------------------
+  const userPhoto = await pdfDoc.embedJpg(photoBuffer); // Use embedJpg
 
-  // 3. Add a page to the PDF that matches the template's size
+  // 4. Add a page to the PDF that matches the template's size
   const { width, height } = templateImage.scale(1);
   const page = pdfDoc.addPage([width, height]);
   
-  // 4. Draw the template as the background
+  // 5. Draw the template as the background
   page.drawImage(templateImage, { x: 0, y: 0, width, height });
 
-  // 5. Load the font
+  // 6. Load the font (This will now work)
   const fontBuffer = await loadFile('public/fonts/PublicSans.ttf');
   const customFont = await pdfDoc.embedFont(fontBuffer);
   
-  // 6. Draw the data
-  // NOTE: pdf-lib (0,0) is BOTTOM-LEFT, not top-left.
-  // We must subtract the Y coordinate from the page height.
-
+  // 7. Draw the data (Y-coordinates are from bottom-left)
   if (templateType === 'regular') {
     page.drawText(displayField(data.nin), {
       x: 122, y: height - 178, size: 28, font: customFont, color: rgb(0.2, 0.2, 0.2)
@@ -147,7 +142,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawImage(qrImage, { x: 528, y: height - (295 + 160), width: 160, height: 160 });
   }
 
-  // 7. Save the PDF to a buffer and return it
+  // 8. Save the PDF to a buffer and return it
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }
