@@ -3,30 +3,21 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon, IdentificationIcon, PhoneIcon } from '@heroicons/react/24/outline';
-import Loading from '@/app/loading'; // Our global loader
+import Loading from '@/app/loading'; // Use our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
 // --- NEW: Helper function to trigger a file download ---
-// This takes the data from the API and tells the browser to save it.
 const downloadPdf = (buffer: ArrayBuffer, filename: string) => {
-  // Create a Blob (a file-like object) from the API data
   const blob = new Blob([buffer], { type: 'application/pdf' });
-  
-  // Create a temporary URL for this file
   const url = window.URL.createObjectURL(blob);
-  
-  // Create a hidden link element
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', filename); // Set the filename for the download
-  
-  // Add the link to the page, click it, and then remove it
+  link.setAttribute('download', filename);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  window.URL.revokeObjectURL(url); // Clean up the temporary URL
+  window.URL.revokeObjectURL(url);
 };
-// -----------------------------------------------------
 
 // --- (Helper functions below are unchanged) ---
 function decodeHtmlEntities(text: string): string {
@@ -146,17 +137,13 @@ export default function NinVerificationPage() {
       });
 
       if (!response.ok) {
-        // Try to parse error text from the server
         const errorData = await response.json();
         throw new Error(errorData.error || 'Slip generation failed.');
       }
 
-      // --- THIS IS THE FIX ---
-      // We got the PDF back! Get the data as an ArrayBuffer.
+      // We got the PDF back!
       const buffer = await response.arrayBuffer();
-      // Call our new download helper function
       downloadPdf(buffer, `nin_slip_${slipType.toLowerCase()}.pdf`);
-      // -----------------------
 
     } catch (err: any) {
       setError(err.message);
@@ -214,8 +201,8 @@ export default function NinVerificationPage() {
       </form>
     </div>
   );
-
-  // --- (renderResults is unchanged) ---
+  
+  // --- (renderResults is unchanged, BUT CORRECTED) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -251,10 +238,12 @@ export default function NinVerificationPage() {
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
           <DataRow label="Gender" value={formatGender(data.data.gender || '')} />
-          <DataDataRow 
+          {/* --- THIS IS THE FIX --- */}
+          <DataRow 
             label="Address" 
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
+          {/* ----------------------- */}
           <DataRow label="DOB" value={data.data.birthdate} />
           <DataRow label="Phone Number" value={data.data.telephoneno} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
