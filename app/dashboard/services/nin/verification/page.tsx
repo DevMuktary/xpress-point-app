@@ -6,10 +6,31 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon } from '@heroicons/react
 import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
-// --- NEW: Helper to decode HTML entities (fixes apostrophe bug) ---
+// --- NEW: Helper function to trigger a file download ---
+// This takes the data from the API and tells the browser to save it.
+const downloadPdf = (buffer: ArrayBuffer, filename: string) => {
+  // Create a Blob (a file-like object) from the API data
+  const blob = new Blob([buffer], { type: 'application/pdf' });
+  
+  // Create a temporary URL for this file
+  const url = window.URL.createObjectURL(blob);
+  
+  // Create a hidden link element
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename); // Set the filename for the download
+  
+  // Add the link to the page, click it, and then remove it
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url); // Clean up the temporary URL
+};
+// -----------------------------------------------------
+
+// --- (Helper functions below are unchanged) ---
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
-  // This is a simple, safe way to decode common entities
   return text
     .replace(/&apos;/g, "'")
     .replace(/&#39;/g, "'")
@@ -18,17 +39,12 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
 }
-
-// --- UPDATED: Helper function to display '****' for empty data ---
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "") {
     return '****';
   }
-  // Decode any entities before displaying
   return decodeHtmlEntities(value.toString());
 }
-
-// --- NEW: Helper function to format gender ---
 function formatGender(gender: string): string {
   if (!gender) return '****';
   const g = gender.toLowerCase();
@@ -36,8 +52,6 @@ function formatGender(gender: string): string {
   if (g === 'female' || g === 'f') return 'F';
   return g;
 }
-
-// --- NEW: Reusable row component for the verified data ---
 const DataRow = ({ label, value }: { label: string; value: any }) => (
   <div className="py-2">
     <p className="text-sm font-medium text-gray-500">{label}</p>
@@ -45,7 +59,7 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// Define the shape of the data we expect from the API
+// --- (Types are unchanged) ---
 type NinData = {
   photo: string;
   firstname: string;
@@ -63,7 +77,6 @@ type NinData = {
   birthstate?: string;
   maritalstatus?: string;
 };
-
 type VerificationResponse = {
   verificationId: string;
   data: NinData;
@@ -85,7 +98,7 @@ export default function NinVerificationPage() {
 
   const lookupFee = '150'; // Placeholder
 
-  // --- Stage 1: Handle the lookup ---
+  // --- (handleLookup is unchanged) ---
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -107,7 +120,7 @@ export default function NinVerificationPage() {
         throw new Error(data.error || 'Verification failed.');
       }
 
-      setVerificationData(data); // Success! Show the results
+      setVerificationData(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -115,7 +128,7 @@ export default function NinVerificationPage() {
     }
   };
 
-  // --- Stage 2: Handle Slip Generation (API to be built next) ---
+  // --- UPDATED: Handle Slip Generation ---
   const handleGenerateSlip = async (slipType: string) => {
     if (!verificationData) return;
     
@@ -133,13 +146,17 @@ export default function NinVerificationPage() {
       });
 
       if (!response.ok) {
+        // Try to parse error text from the server
         const errorData = await response.json();
         throw new Error(errorData.error || 'Slip generation failed.');
       }
 
+      // --- THIS IS THE FIX ---
+      // We got the PDF back! Get the data as an ArrayBuffer.
       const buffer = await response.arrayBuffer();
-      // downloadPdf(buffer, `nin_slip_${slipType.toLowerCase()}.pdf`);
-      alert("PDF would be downloaded here. API is working!"); // Placeholder
+      // Call our new download helper function
+      downloadPdf(buffer, `nin_slip_${slipType.toLowerCase()}.pdf`);
+      // -----------------------
 
     } catch (err: any) {
       setError(err.message);
@@ -148,7 +165,7 @@ export default function NinVerificationPage() {
     }
   };
 
-  // --- STAGE 1 RENDER: The Search Form ---
+  // --- (renderSearchForm is unchanged) ---
   const renderSearchForm = () => (
     <div className="rounded-2xl bg-white p-6 shadow-lg">
       <div className="mb-4 flex rounded-lg bg-gray-100 p-1">
@@ -169,7 +186,6 @@ export default function NinVerificationPage() {
           Search by Phone
         </button>
       </div>
-
       <form onSubmit={handleLookup}>
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -199,13 +215,10 @@ export default function NinVerificationPage() {
     </div>
   );
 
-  // --- STAGE 2 RENDER: The Results & Slip Buttons ---
+  // --- (renderResults is unchanged) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
-      
-      {/* --- Verified Information Card --- */}
       <div className="p-6">
-        {/* --- NEW: Header with "New Lookup" button --- */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">Verification Successful</h2>
           <button
@@ -219,7 +232,6 @@ export default function NinVerificationPage() {
             + New Lookup
           </button>
         </div>
-        
         <div className="flex justify-center mb-4">
           <SafeImage
             src={`data:image/png;base64,${data.data.photo}`}
@@ -230,8 +242,6 @@ export default function NinVerificationPage() {
             fallbackSrc="/logos/default.png"
           />
         </div>
-
-        {/* Data list matching your screenshot's order */}
         <div className="divide-y divide-gray-100">
           <DataRow label="First Name" value={data.data.firstname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
@@ -241,7 +251,7 @@ export default function NinVerificationPage() {
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
           <DataRow label="Gender" value={formatGender(data.data.gender || '')} />
-          <DataRow 
+          <DataDataRow 
             label="Address" 
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
@@ -251,8 +261,6 @@ export default function NinVerificationPage() {
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
       </div>
-
-      {/* --- Slip Generation Buttons --- */}
       <div className="border-t border-gray-100 bg-gray-50 p-6 rounded-b-2xl">
         <h3 className="text-lg font-semibold text-gray-900">Generate Slip</h3>
         <p className="text-sm text-gray-600">Select a slip type to generate and download.</p>
@@ -294,22 +302,17 @@ export default function NinVerificationPage() {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">NIN Verification</h1>
       </div>
-
-      {/* --- Error Message Display --- */}
       {error && (
         <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
           {error}
         </div>
       )}
-
-      {/* Conditionally render Search or Results */}
       {!verificationData ? renderSearchForm() : renderResults(verificationData)}
     </div>
   );
