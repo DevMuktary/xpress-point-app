@@ -1,6 +1,17 @@
-// 1. Get the API Key from Railway
+import * as Brevo from '@getbrevo/brevo';
+
+// 1. Initialize the Brevo API client
+const apiInstance = new Brevo.TransactionalEmailsApi();
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+
+if (!BREVO_API_KEY) {
+  console.error("CRITICAL: BREVO_API_KEY is not set.");
+} else {
+  apiInstance.setApiKey(
+    Brevo.TransactionalEmailsApiApiKeys.apiKey, 
+    BREVO_API_KEY
+  );
+}
 
 // 2. Define the email function
 export async function sendVerificationEmail(
@@ -8,13 +19,23 @@ export async function sendVerificationEmail(
   toName: string, 
   verificationToken: string
 ) {
-  if (!BREVO_API_KEY) {
-    console.error('CRITICAL: BREVO_API_KEY is not set in environment variables.');
-    return; // Do not attempt to send
+  // --- THIS IS THE FIX ---
+  // We use APP_URL, which is a server-side variable
+  const domain = process.env.APP_URL; 
+  if (!domain) {
+    console.error("CRITICAL: APP_URL is not set. Email links will be broken.");
+    return; // Stop if the URL is missing
   }
+  // -----------------------
 
+  const sender = {
+    email: 'verify@xpresspoint.net', // Your "from" email
+    name: 'Xpress Point',
+  };
+  
+  const recipient = [{ email: toEmail, name: toName }];
+  
   // 3. Create the verification link
-  const domain = process.env.NEXT_PUBLIC_APP_URL;
   const verificationLink = `${domain}/api/auth/verify-email?token=${verificationToken}`;
 
   // 4. Create the HTML for the email
@@ -32,39 +53,16 @@ export async function sendVerificationEmail(
     </div>
   `;
 
-  // 5. Create the Brevo API payload
-  const payload = {
-    sender: {
-      email: 'no-reply@xpresspoint.net', // Your "from" email
-      name: 'Xpress Point',
-    },
-    to: [
-      { email: toEmail, name: toName }
-    ],
-    subject: 'Verify Your Xpress Point Email Address',
-    htmlContent: htmlContent,
-  };
-
-  // 6. Send the email using fetch
+  // 5. Send the email
   try {
-    const response = await fetch(BREVO_API_URL, {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'api-key': BREVO_API_KEY,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      // If Brevo sends an error
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Brevo API error');
-    }
-
+    const sendSmtpEmail = new Brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = sender;
+    sendSmtpEmail.to = recipient;
+    sendSmtpEmail.subject = 'Verify Your Xpress Point Email Address';
+    sendSmtpEmail.htmlContent = htmlContent;
+    
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
     console.log(`Email verification sent to ${toEmail}`);
-
   } catch (error) {
     console.error('Error sending email via Brevo:', error);
   }
