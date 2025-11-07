@@ -1,23 +1,25 @@
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import ServiceLinkCard from '@/components/ServiceLinkCard';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 
+// --- THIS IS THE FIX ---
+// We import our new Client Component
+import SafeImage from '@/components/SafeImage';
+
 // This is a Server Component, so it's very fast.
 export default function NinServicesPage() {
   
-  // This is the list of services from your original blueprint
   const ninServices = [
     {
       title: 'NIN Verification',
       description: 'Verify and print Regular, Standard, or Premium slips.',
-      href: '/dashboard/services/nin/verification', // This is our next step
+      href: '/dashboard/services/nin/verification',
     },
     {
       title: 'IPE Clearance',
       description: 'Service for IPE clearance processes.',
-      href: '#', // We will build this page later
+      href: '#',
     },
     {
       title: 'Self Service Delink',
@@ -34,6 +36,11 @@ export default function NinServicesPage() {
       description: 'Includes "No Record Found" & "Update Record" (Mod-Validation).',
       href: '#',
     },
+    {
+      title: 'NIN Modification',
+      description: 'Request changes to your NIN data (Name, DOB, etc.).',
+      href: '#',
+    },
   ];
 
   return (
@@ -43,13 +50,17 @@ export default function NinServicesPage() {
         <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        <Image
+        
+        {/* --- THIS IS THE FIX --- */}
+        {/* We use the new SafeImage component */}
+        <SafeImage
           src="/logos/nin.png"
           alt="NIN Logo"
           width={40}
           height={40}
-          onError={(e) => (e.currentTarget.src = '/logos/default.png')}
+          fallbackSrc="/logos/default.png" // Tell it what to use on error
         />
+        
         <h1 className="text-2xl font-bold text-gray-900">NIN Services</h1>
       </div>
 
