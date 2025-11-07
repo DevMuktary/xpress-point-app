@@ -1,5 +1,5 @@
 // This file is at: /app/dashboard/page.tsx
-// This is now a simple Server Component that fetches its own data.
+// This is a Server Component that fetches data.
 
 import React from "react";
 import { redirect } from "next/navigation";
@@ -9,7 +9,9 @@ import Link from "next/link";
 import ServiceCard from "@/components/ServiceCard";
 import { CreditCardIcon, PlusIcon, ArrowUpCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
 
-// We use your logo names
+// --- NEW: Import our interactive component ---
+import EmailVerifyAlert from "@/components/EmailVerifyAlert";
+
 const allServices = [
   { title: "NIN Services", description: "Verify NIN, print slips, and more.", logo: "/logos/nin.png", href: "/dashboard/services/nin" },
   { title: "BVN Services", description: "Verify BVN and print slips.", logo: "/logos/bvn.png", href: "#" },
@@ -47,20 +49,12 @@ export default async function DashboardPage() {
   const walletBalance = finalWallet.balance;
 
   return (
-    // This container is centered and has a max-width,
-    // which fixes your alignment problem.
     <div className="w-full max-w-5xl mx-auto">
       
-      {/* Email Verification Alert */}
+      {/* --- THIS IS THE UPDATE --- */}
+      {/* We now conditionally render the interactive Client Component */}
       {!user.isEmailVerified && (
-        <div className="mb-6 flex items-start gap-3 rounded-lg bg-yellow-100 p-4 text-yellow-800">
-          <span className="text-xl">📧</span>
-          <div className="flex-1">
-            <h3 className="font-bold">Verify Your Email</h3>
-            <p className="text-sm">Please click the verification link sent to your email to unlock services.</p>
-          </div>
-          <button className="text-sm font-bold underline">Resend</button>
-        </div>
+        <EmailVerifyAlert />
       )}
 
       {/* ROW 1: WALLET CARD */}
