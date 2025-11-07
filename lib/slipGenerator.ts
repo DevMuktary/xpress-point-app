@@ -27,13 +27,25 @@ const displayField = (value: any): string => {
   return value.toString();
 };
 
+// --- THIS IS THE FIX ---
+// Updated helper to format date as DD-MMM-YYYY
 const getIssueDate = (): string => {
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0'); // January is 0
   const year = today.getFullYear();
-  return `${day}-${month}-${year}`; // DD-MM-YYYY format
+  
+  // Array of month abbreviations
+  const months = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+  ];
+  
+  // Get the month abbreviation (e.g., "NOV")
+  const monthAbbr = months[today.getMonth()]; 
+
+  return `${day}-${monthAbbr}-${year}`; // e.g., 07-NOV-2025
 };
+// -----------------------
 
 /**
  * Main function to generate the PDF
@@ -110,31 +122,30 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
-    // NIN (Unchanged per your request)
+    // NIN (Perfected position)
     page.drawText(formatNin(data.nin), {
       x: 322, y: height - 247, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // --- THIS IS THE FIX ---
-    // Moved Surname, First/Middle, and DOB down by 3 units
+    // Text Fields (Perfected position)
     page.drawText(displayField(data.surname), {
-      x: 320, y: height - 110, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 107
+      x: 320, y: height - 110, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname) + ',', {
-      x: 320, y: height - 150, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 147
+      x: 320, y: height - 150, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 393, y: height - 150, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 147
+      x: 393, y: height - 150, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 320, y: height - 185, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 182
+      x: 320, y: height - 185, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // -----------------------
     
-    // Photo & QR (Unchanged per your request)
+    // Photo & QR (Perfected position)
     page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 });
     page.drawImage(qrImage, { x: 498, y: height - (94 + 90), width: 90, height: 90 });
 
+    // Issue Date (Perfected position and format)
     page.drawText("ISSUE DATE", {
       x: 498, y: height - 192, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
