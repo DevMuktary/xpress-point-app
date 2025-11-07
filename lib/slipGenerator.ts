@@ -1,11 +1,10 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import fontkit from '@pdf-lib/fontkit'; // <-- 1. Import fontkit
+import fontkit from '@pdf-lib/fontkit';
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 
 // --- Helper Functions ---
-
 const loadFile = (filePath: string) => {
   const absolutePath = path.resolve(process.cwd(), filePath);
   return fs.promises.readFile(absolutePath);
@@ -36,31 +35,49 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   // 1. Create a new PDF document
   const pdfDoc = await PDFDocument.create();
-
-  // --- 2. THIS IS THE FIX ---
-  // Register fontkit *before* embedding fonts
   pdfDoc.registerFontkit(fontkit);
-  // --------------------------
 
-  // 3. Load the PNG template and the user's photo
-  const templateBuffer = await loadFile(`public/templates/nin_${templateType}.png`);
-  const templateImage = await pdfDoc.embedPng(templateBuffer);
-  
-  const photoBuffer = Buffer.from(data.photo, 'base64');
-  const userPhoto = await pdfDoc.embedJpg(photoBuffer); // Use embedJpg
+  // 2. Load the PNG template and the user's photo
+  let templateImage;
+  let userPhoto;
 
-  // 4. Add a page to the PDF that matches the template's size
+  // --- THIS IS THE FIX (Part 1) ---
+  // We wrap the template loading in a try...catch
+  try {
+    const templateBuffer = await loadFile(`public/templates/nin_${templateType}.png`);
+    templateImage = await pdfDoc.embedPng(templateBuffer);
+  } catch (error: any) {
+    console.error(`Failed to load template: nin_${templateType}.png`, error.message);
+    throw new Error(`Service configuration error: Could not load template file for ${slipType}.`);
+  }
+
+  // --- THIS IS THE FIX (Part 2) ---
+  // We wrap the user photo loading in a try...catch
+  try {
+    const photoBuffer = Buffer.from(data.photo, 'base64');
+    userPhoto = await pdfDoc.embedJpg(photoBuffer);
+  } catch (error: any) {
+    console.error("Failed to embed user photo (data.photo):", error.message);
+    // This is the error you are seeing.
+    if (error.message.includes('buffer length')) {
+      throw new Error("Failed to generate slip: The photo data from the API was corrupt.");
+    }
+    throw new Error("Failed to generate slip: Invalid photo data.");
+  }
+  // ---------------------------------
+
+  // 3. Add a page to the PDF that matches the template's size
   const { width, height } = templateImage.scale(1);
   const page = pdfDoc.addPage([width, height]);
   
-  // 5. Draw the template as the background
+  // 4. Draw the template as the background
   page.drawImage(templateImage, { x: 0, y: 0, width, height });
 
-  // 6. Load the font (This will now work)
+  // 5. Load the font
   const fontBuffer = await loadFile('public/fonts/PublicSans.ttf');
   const customFont = await pdfDoc.embedFont(fontBuffer);
   
-  // 7. Draw the data (Y-coordinates are from bottom-left)
+  // 6. Draw the data
   if (templateType === 'regular') {
     page.drawText(displayField(data.nin), {
       x: 122, y: height - 178, size: 28, font: customFont, color: rgb(0.2, 0.2, 0.2)
@@ -142,7 +159,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawImage(qrImage, { x: 528, y: height - (295 + 160), width: 160, height: 160 });
   }
 
-  // 8. Save the PDF to a buffer and return it
+  // 7. Save the PDF to a buffer and return it
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }
