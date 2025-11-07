@@ -108,31 +108,33 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   } 
   
   else if (templateType === 'standard') {
-    // --- THIS IS THE FIX ---
-    // All 'y' coordinates have been adjusted "up" by 145 units (down 5 from last time)
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
+    // --- THIS IS THE FIX ---
+    // Moved down 3 units (y: height - 247)
+    // Moved left 3 units (x: 324)
     page.drawText(formatNin(data.nin), {
-      x: 327, y: height - 244, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2) // Was 389
+      x: 324, y: height - 247, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
+    // -----------------------
+    
     page.drawText(displayField(data.surname), {
-      x: 320, y: height - 107, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 252
+      x: 320, y: height - 107, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname) + ',', {
-      x: 320, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
+      x: 320, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 393, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
+      x: 393, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 320, y: height - 182, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 327
+      x: 320, y: height - 182, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 }); // Was 232
-    page.drawImage(qrImage, { x: 498, y: height - (94 + 90), width: 90, height: 90 }); // Was 239
+    page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 });
+    page.drawImage(qrImage, { x: 498, y: height - (94 + 90), width: 90, height: 90 });
 
-    // --- NEW: Add Issue Date ---
     page.drawText("ISSUE DATE", {
       x: 498, y: height - 192, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
