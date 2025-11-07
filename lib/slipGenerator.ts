@@ -27,25 +27,17 @@ const displayField = (value: any): string => {
   return value.toString();
 };
 
-// --- THIS IS THE FIX ---
-// Updated helper to format date as DD-MMM-YYYY
 const getIssueDate = (): string => {
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
   const year = today.getFullYear();
-  
-  // Array of month abbreviations
   const months = [
     'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
     'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
   ];
-  
-  // Get the month abbreviation (e.g., "NOV")
   const monthAbbr = months[today.getMonth()]; 
-
-  return `${day}-${monthAbbr}-${year}`; // e.g., 07-NOV-2025
+  return `${day}-${monthAbbr}-${year}`;
 };
-// -----------------------
 
 /**
  * Main function to generate the PDF
@@ -145,13 +137,16 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 });
     page.drawImage(qrImage, { x: 498, y: height - (94 + 90), width: 90, height: 90 });
 
-    // Issue Date (Perfected position and format)
+    // --- THIS IS THE FIX ---
+    // Moved up 1 unit (y: 191/201)
+    // Moved left 3 units (x: 495)
     page.drawText("ISSUE DATE", {
-      x: 498, y: height - 192, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 495, y: height - 191, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 498, y: height - 202, size: 8, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 495, y: height - 201, size: 8, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // -----------------------
   } 
   
   else if (templateType === 'premium') {
