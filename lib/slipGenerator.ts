@@ -101,28 +101,28 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   else if (templateType === 'standard') {
     // --- THIS IS THE FIX ---
-    // All 'y' coordinates have been adjusted "up" by 20 units
+    // All 'y' coordinates have been adjusted "up" by 60 units
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     page.drawText(formatNin(data.nin), {
-      x: 327, y: height - 369, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2) // Was 389
+      x: 327, y: height - 329, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2) // Was 389
     });
     page.drawText(displayField(data.surname), {
-      x: 320, y: height - 232, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 252
+      x: 320, y: height - 192, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 252
     });
     page.drawText(displayField(data.firstname) + ',', {
-      x: 320, y: height - 272, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
+      x: 320, y: height - 232, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
     });
     page.drawText(displayField(data.middlename), {
-      x: 393, y: height - 272, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
+      x: 393, y: height - 232, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
     });
     page.drawText(displayField(data.birthdate), {
-      x: 320, y: height - 307, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 327
+      x: 320, y: height - 267, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 327
     });
     
-    page.drawImage(userPhoto, { x: 205, y: height - (212 + 100), width: 90, height: 100 }); // Was 232
-    page.drawImage(qrImage, { x: 498, y: height - (219 + 90), width: 90, height: 90 }); // Was 239
+    page.drawImage(userPhoto, { x: 205, y: height - (172 + 100), width: 90, height: 100 }); // Was 232
+    page.drawImage(qrImage, { x: 498, y: height - (179 + 90), width: 90, height: 90 }); // Was 239
   } 
   
   else if (templateType === 'premium') {
