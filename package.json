@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push && prisma generate && prisma db seed && next build",
+    "build": "prisma db push --accept-data-loss && prisma generate && npm run seed && next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "prisma db seed"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.3",
@@ -35,8 +35,5 @@
     "prisma": "latest",
     "tailwindcss": "^3.4.3",
     "typescript": "^5"
-  },
-  "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   }
 }
