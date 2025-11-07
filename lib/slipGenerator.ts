@@ -1,5 +1,4 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-// import fontkit from '@pdf-lib/fontkit'; // <-- REMOVED
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
@@ -37,9 +36,6 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   // 1. Create a new PDF document
   const pdfDoc = await PDFDocument.create();
 
-  // --- REMOVED FONTKIT REGISTRATION ---
-  // pdfDoc.registerFontkit(fontkit);
-
   // 2. Load the PNG template and the user's photo
   let templateImage;
   let userPhoto;
@@ -55,7 +51,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   try {
     const photoBuffer = Buffer.from(data.photo, 'base64');
     userPhoto = await pdfDoc.embedJpg(photoBuffer);
-  } catch (error: any) {
+  } catch (error: any)
     console.error("Failed to embed user photo (data.photo):", error.message);
     throw new Error("Failed to generate slip: The photo data from the API was corrupt.");
   }
@@ -67,19 +63,16 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   // 4. Draw the template as the background
   page.drawImage(templateImage, { x: 0, y: 0, width, height });
 
-  // 5. Load the BUILT-IN fonts (This does not require fontkit)
+  // 5. Load the BUILT-IN fonts
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   
   // 6. Draw the data (Y-coordinates are from bottom-left)
   if (templateType === 'regular') {
     
-    // --- Your "perfection" fixes are still here ---
     page.drawText(displayField(data.nin), {
       x: 122, y: height - 170, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // ---------------------------------------------
-
     page.drawText(displayField(data.trackingId), {
       x: 122, y: height - 133, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
@@ -98,10 +91,11 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.residence_AdressLine1), {
       x: 437, y: height - 140, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
     });
-    
-    // --- Your "perfection" fixes are still here ---
-    page.drawImage(userPhoto, { x: 605, y: height - (81 + 115), width: 105, height: 115 });
-    // ---------------------------------------------
+
+    // --- THIS IS THE FIX ---
+    // Shifted right (x: 615) and down (y: height - 205)
+    page.drawImage(userPhoto, { x: 615, y: height - (90 + 115), width: 105, height: 115 });
+    // -----------------------
   } 
   
   else if (templateType === 'standard') {
