@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 
 // --- Helper Functions ---
+
 const loadFile = (filePath: string) => {
   const absolutePath = path.resolve(process.cwd(), filePath);
   return fs.promises.readFile(absolutePath);
@@ -41,8 +42,6 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   let templateImage;
   let userPhoto;
 
-  // --- THIS IS THE FIX (Part 1) ---
-  // We wrap the template loading in a try...catch
   try {
     const templateBuffer = await loadFile(`public/templates/nin_${templateType}.png`);
     templateImage = await pdfDoc.embedPng(templateBuffer);
@@ -51,20 +50,21 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     throw new Error(`Service configuration error: Could not load template file for ${slipType}.`);
   }
 
-  // --- THIS IS THE FIX (Part 2) ---
-  // We wrap the user photo loading in a try...catch
   try {
     const photoBuffer = Buffer.from(data.photo, 'base64');
+    
+    // --- THIS IS THE FIX ---
+    // The API is sending a JPG, so we must use embedJpg
     userPhoto = await pdfDoc.embedJpg(photoBuffer);
+    // -----------------------
+
   } catch (error: any) {
     console.error("Failed to embed user photo (data.photo):", error.message);
-    // This is the error you are seeing.
-    if (error.message.includes('buffer length')) {
+    if (error.message.includes('buffer length') || error.message.includes('Invalid JPG')) {
       throw new Error("Failed to generate slip: The photo data from the API was corrupt.");
     }
     throw new Error("Failed to generate slip: Invalid photo data.");
   }
-  // ---------------------------------
 
   // 3. Add a page to the PDF that matches the template's size
   const { width, height } = templateImage.scale(1);
