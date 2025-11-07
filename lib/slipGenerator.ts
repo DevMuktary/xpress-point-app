@@ -27,6 +27,15 @@ const displayField = (value: any): string => {
   return value.toString();
 };
 
+// --- NEW: Helper to format today's date ---
+const getIssueDate = (): string => {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0'); // January is 0
+  const year = today.getFullYear();
+  return `${day}-${month}-${year}`; // DD-MM-YYYY format
+};
+
 /**
  * Main function to generate the PDF
  */
@@ -73,6 +82,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   // 6. Draw the data (Y-coordinates are from bottom-left)
   if (templateType === 'regular') {
     
+    // This is the "perfect" position for REGULAR
     page.drawText(displayField(data.nin), {
       x: 122, y: height - 170, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
@@ -94,35 +104,41 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.residence_AdressLine1), {
       x: 437, y: height - 140, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
     });
-    
-    // This is the "perfect" position for REGULAR
     page.drawImage(userPhoto, { x: 615, y: height - (112 + 115), width: 105, height: 115 });
   } 
   
   else if (templateType === 'standard') {
     // --- THIS IS THE FIX ---
-    // All 'y' coordinates have been adjusted "up" by 150 units from the original
+    // All 'y' coordinates have been adjusted "up" by 145 units (down 5 from last time)
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     page.drawText(formatNin(data.nin), {
-      x: 327, y: height - 239, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2) // Was 389
+      x: 327, y: height - 244, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2) // Was 389
     });
     page.drawText(displayField(data.surname), {
-      x: 320, y: height - 102, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 252
+      x: 320, y: height - 107, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 252
     });
     page.drawText(displayField(data.firstname) + ',', {
-      x: 320, y: height - 142, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
+      x: 320, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
     });
     page.drawText(displayField(data.middlename), {
-      x: 393, y: height - 142, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
+      x: 393, y: height - 147, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 292
     });
     page.drawText(displayField(data.birthdate), {
-      x: 320, y: height - 177, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 327
+      x: 320, y: height - 182, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2) // Was 327
     });
     
-    page.drawImage(userPhoto, { x: 205, y: height - (82 + 100), width: 90, height: 100 }); // Was 232
-    page.drawImage(qrImage, { x: 498, y: height - (89 + 90), width: 90, height: 90 }); // Was 239
+    page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 }); // Was 232
+    page.drawImage(qrImage, { x: 498, y: height - (94 + 90), width: 90, height: 90 }); // Was 239
+
+    // --- NEW: Add Issue Date ---
+    page.drawText("ISSUE DATE", {
+      x: 498, y: height - 192, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+    });
+    page.drawText(getIssueDate(), {
+      x: 498, y: height - 202, size: 8, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+    });
   } 
   
   else if (templateType === 'premium') {
