@@ -6,20 +6,35 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon } from '@heroicons/react
 import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
-// --- NEW: Helper function to display '****' for empty data ---
+// --- NEW: Helper to decode HTML entities (fixes apostrophe bug) ---
+function decodeHtmlEntities(text: string): string {
+  if (typeof text !== 'string') return text;
+  // This is a simple, safe way to decode common entities
+  return text
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+// --- UPDATED: Helper function to display '****' for empty data ---
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "") {
     return '****';
   }
-  return value.toString();
+  // Decode any entities before displaying
+  return decodeHtmlEntities(value.toString());
 }
 
 // --- NEW: Helper function to format gender ---
 function formatGender(gender: string): string {
   if (!gender) return '****';
-  if (gender.toLowerCase() === 'male' || gender.toLowerCase() === 'm') return 'M';
-  if (gender.toLowerCase() === 'female' || gender.toLowerCase() === 'f') return 'F';
-  return gender;
+  const g = gender.toLowerCase();
+  if (g === 'male' || g === 'm') return 'M';
+  if (g === 'female' || g === 'f') return 'F';
+  return g;
 }
 
 // --- NEW: Reusable row component for the verified data ---
@@ -52,7 +67,6 @@ type NinData = {
 type VerificationResponse = {
   verificationId: string;
   data: NinData;
-  // This is from our 'refactor' to use the database for prices
   slipPrices: {
     regular: number;
     standard: number;
@@ -69,7 +83,7 @@ export default function NinVerificationPage() {
 
   const [verificationData, setVerificationData] = useState<VerificationResponse | null>(null);
 
-  const lookupFee = '150'; // We can get this from the API later
+  const lookupFee = '150'; // Placeholder
 
   // --- Stage 1: Handle the lookup ---
   const handleLookup = async (e: React.FormEvent) => {
@@ -103,12 +117,35 @@ export default function NinVerificationPage() {
 
   // --- Stage 2: Handle Slip Generation (API to be built next) ---
   const handleGenerateSlip = async (slipType: string) => {
-    alert(`This will generate the ${slipType} slip. API is next.`);
-    // TODO:
-    // setIsLoading(true);
-    // setError(null);
-    // call '/api/services/nin/generate-slip'
-    // ...
+    if (!verificationData) return;
+    
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/services/nin/generate-slip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          verificationId: verificationData.verificationId,
+          slipType: slipType, // e.g., "Regular"
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Slip generation failed.');
+      }
+
+      const buffer = await response.arrayBuffer();
+      // downloadPdf(buffer, `nin_slip_${slipType.toLowerCase()}.pdf`);
+      alert("PDF would be downloaded here. API is working!"); // Placeholder
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- STAGE 1 RENDER: The Search Form ---
@@ -166,9 +203,22 @@ export default function NinVerificationPage() {
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       
-      {/* --- NEW: Verified Information Card --- */}
+      {/* --- Verified Information Card --- */}
       <div className="p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Verified Information</h2>
+        {/* --- NEW: Header with "New Lookup" button --- */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Verification Successful</h2>
+          <button
+            onClick={() => {
+              setVerificationData(null);
+              setError(null);
+              setSearchValue('');
+            }}
+            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+          >
+            + New Lookup
+          </button>
+        </div>
         
         <div className="flex justify-center mb-4">
           <SafeImage
@@ -209,7 +259,8 @@ export default function NinVerificationPage() {
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <button 
             onClick={() => handleGenerateSlip('Regular')}
-            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50"
+            disabled={isLoading}
+            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
             <span className="font-bold text-gray-800">Regular Slip</span>
             <span className="block text-sm text-gray-600">
@@ -218,7 +269,8 @@ export default function NinVerificationPage() {
           </button>
           <button 
             onClick={() => handleGenerateSlip('Standard')}
-            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50"
+            disabled={isLoading}
+            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
             <span className="font-bold text-gray-800">Standard Slip</span>
             <span className="block text-sm text-gray-600">
@@ -227,7 +279,8 @@ export default function NinVerificationPage() {
           </button>
           <button 
             onClick={() => handleGenerateSlip('Premium')}
-            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50"
+            disabled={isLoading}
+            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
             <span className="font-bold text-gray-800">Premium Slip</span>
             <span className="block text-sm text-gray-600">
