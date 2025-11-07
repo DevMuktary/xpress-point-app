@@ -14,7 +14,7 @@ export async function sendVerificationEmail(
   verificationToken: string
 ) {
   const sender = {
-    email: 'verify@xpresspoint.net', // Your "from" email
+    email: 'no-reply@xpresspoint.net', // Your "from" email
     name: 'Xpress Point',
   };
   
