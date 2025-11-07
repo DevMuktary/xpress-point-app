@@ -96,10 +96,10 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
 
     // --- THIS IS THE FIX ---
-    // Moved from y: height - (95 + 115)  [which is 210]
-    // To y: height - (100 + 115) [which is 215]
-    // This moves it DOWN another 5 units to be "above that top line".
-    page.drawImage(userPhoto, { x: 615, y: height - (100 + 115), width: 105, height: 115 });
+    // Moved from y: height - (100 + 115) [which is 215]
+    // To y: height - (105 + 115) [which is 220]
+    // This moves it DOWN another 5 units.
+    page.drawImage(userPhoto, { x: 615, y: height - (105 + 115), width: 105, height: 115 });
     // -----------------------
   } 
   
