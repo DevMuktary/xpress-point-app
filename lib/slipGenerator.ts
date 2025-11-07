@@ -114,12 +114,12 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
-    // NIN (Perfected position)
+    // NIN (Unchanged)
     page.drawText(formatNin(data.nin), {
       x: 322, y: height - 247, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Text Fields (Perfected position)
+    // Text Fields (Unchanged)
     page.drawText(displayField(data.surname), {
       x: 320, y: height - 110, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
@@ -133,20 +133,23 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 320, y: height - 185, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Photo & QR (Perfected position)
-    page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 });
-    page.drawImage(qrImage, { x: 498, y: height - (94 + 90), width: 90, height: 90 });
+    // --- THIS IS THE FIX (Image) ---
+    // Moved left 1 unit (x: 204)
+    page.drawImage(userPhoto, { x: 204, y: height - (87 + 100), width: 90, height: 100 });
+    
+    // --- THIS IS THE FIX (QR Code) ---
+    // Moved up 4 units (y: height - (90 + 90))
+    page.drawImage(qrImage, { x: 498, y: height - (90 + 90), width: 90, height: 90 });
 
-    // --- THIS IS THE FIX ---
-    // Moved up 1 unit (y: 191/201)
-    // Moved left 3 units (x: 495)
+    // --- THIS IS THE FIX (Issue Date) ---
+    // Moved left 7 units (x: 488) and up 4 units (y: 187/197)
     page.drawText("ISSUE DATE", {
-      x: 495, y: height - 191, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 488, y: height - 187, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 495, y: height - 201, size: 8, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 488, y: height - 197, size: 8, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // -----------------------
+    // ---------------------------------
   } 
   
   else if (templateType === 'premium') {
