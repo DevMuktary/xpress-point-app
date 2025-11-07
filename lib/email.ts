@@ -1,4 +1,4 @@
-import * as Brevo from '@brevo/brevo';
+import * as Brevo from '@getbrevo/brevo'; // <-- THIS IS THE FIX
 
 // 1. Initialize the Brevo API client
 const apiInstance = new Brevo.TransactionalEmailsApi();
@@ -14,7 +14,7 @@ export async function sendVerificationEmail(
   verificationToken: string
 ) {
   const sender = {
-    email: 'no-reply@xpresspoint.net', // Your "from" email
+    email: 'verify@xpresspoint.net', // Your "from" email
     name: 'Xpress Point',
   };
   
