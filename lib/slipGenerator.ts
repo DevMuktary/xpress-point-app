@@ -45,7 +45,11 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   const templateImage = await pdfDoc.embedPng(templateBuffer);
   
   const photoBuffer = Buffer.from(data.photo, 'base64');
-  const userPhoto = await pdfDoc.embedPng(photoBuffer);
+  
+  // --- THIS IS THE FIX ---
+  // The API is sending a JPG, so we must use embedJpg
+  const userPhoto = await pdfDoc.embedJpg(photoBuffer);
+  // -----------------------
 
   // 3. Add a page to the PDF that matches the template's size
   const { width, height } = templateImage.scale(1);
