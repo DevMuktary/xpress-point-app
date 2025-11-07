@@ -75,14 +75,15 @@ export async function POST(request: Request) {
     ]);
 
     // --- 4. Generate the PDF ---
-    // The slipGenerator will return the PDF as a Buffer
     const pdfBuffer = await generateNinSlipPdf(
       slipType,
       verification.data as any // Pass the saved JSON data
     );
 
     // --- 5. Send the PDF file back ---
-    return new NextResponse(pdfBuffer, {
+    // --- THIS IS THE FIX ---
+    // We explicitly cast the buffer to ensure type compatibility.
+    return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
