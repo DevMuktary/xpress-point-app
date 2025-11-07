@@ -1,11 +1,10 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import fontkit from '@pdf-lib/fontkit';
+// import fontkit from '@pdf-lib/fontkit'; // <-- REMOVED
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 
 // --- Helper Functions ---
-
 const loadFile = (filePath: string) => {
   const absolutePath = path.resolve(process.cwd(), filePath);
   return fs.promises.readFile(absolutePath);
@@ -36,7 +35,9 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   // 1. Create a new PDF document
   const pdfDoc = await PDFDocument.create();
-  pdfDoc.registerFontkit(fontkit);
+  
+  // --- REMOVED fontkit registration ---
+  // pdfDoc.registerFontkit(fontkit);
 
   // 2. Load the PNG template and the user's photo
   let templateImage;
@@ -52,18 +53,10 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
 
   try {
     const photoBuffer = Buffer.from(data.photo, 'base64');
-    
-    // --- THIS IS THE FIX ---
-    // The API is sending a JPG, so we must use embedJpg
     userPhoto = await pdfDoc.embedJpg(photoBuffer);
-    // -----------------------
-
   } catch (error: any) {
     console.error("Failed to embed user photo (data.photo):", error.message);
-    if (error.message.includes('buffer length') || error.message.includes('Invalid JPG')) {
-      throw new Error("Failed to generate slip: The photo data from the API was corrupt.");
-    }
-    throw new Error("Failed to generate slip: Invalid photo data.");
+    throw new Error("Failed to generate slip: The photo data from the API was corrupt.");
   }
 
   // 3. Add a page to the PDF that matches the template's size
@@ -73,32 +66,32 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   // 4. Draw the template as the background
   page.drawImage(templateImage, { x: 0, y: 0, width, height });
 
-  // 5. Load the font
-  const fontBuffer = await loadFile('public/fonts/PublicSans.ttf');
-  const customFont = await pdfDoc.embedFont(fontBuffer);
+  // 5. Load the BUILT-IN fonts
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   
-  // 6. Draw the data
+  // 6. Draw the data (Y-coordinates are from bottom-left)
   if (templateType === 'regular') {
     page.drawText(displayField(data.nin), {
-      x: 122, y: height - 178, size: 28, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 122, y: height - 178, size: 28, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.trackingId), {
-      x: 122, y: height - 133, size: 10, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 122, y: height - 133, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.surname), {
-      x: 296, y: height - 135, size: 10, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 296, y: height - 135, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 296, y: height - 170, size: 10, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 296, y: height - 170, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 296, y: height - 203, size: 10, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 296, y: height - 203, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 296, y: height - 232, size: 10, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 296, y: height - 232, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.residence_AdressLine1), {
-      x: 437, y: height - 140, size: 10, font: customFont, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
+      x: 437, y: height - 140, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
     });
     page.drawImage(userPhoto, { x: 600, y: height - (81 + 132), width: 120, height: 132 });
   } 
@@ -108,19 +101,19 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     page.drawText(formatNin(data.nin), {
-      x: 327, y: height - 389, size: 23, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 327, y: height - 389, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.surname), {
-      x: 320, y: height - 252, size: 12, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 252, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname) + ',', {
-      x: 320, y: height - 292, size: 12, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 292, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 393, y: height - 292, size: 12, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 393, y: height - 292, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 320, y: height - 327, size: 12, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 320, y: height - 327, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
     page.drawImage(userPhoto, { x: 205, y: height - (232 + 100), width: 90, height: 100 });
@@ -133,26 +126,26 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
 
     // Watermark
     page.drawText(displayField(data.nin), {
-      x: 170, y: height - 370, size: 16, font: customFont, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
+      x: 170, y: height - 370, size: 16, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
     page.drawText(formatNin(data.nin), {
-      x: 195, y: height - 590, size: 45, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 195, y: height - 590, size: 45, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.surname), {
-      x: 255, y: height - 390, size: 14, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - 390, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 255, y: height - 445, size: 14, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 360, y: height - 445, size: 14, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 360, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 255, y: height - 495, size: 14, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 424, y: height - 495, size: 14, font: customFont, color: rgb(0.2, 0.2, 0.2)
+      x: 424, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
     page.drawImage(userPhoto, { x: 97, y: height - (350 + 164), width: 130, height: 164 });
