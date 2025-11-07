@@ -1,11 +1,6 @@
-import * as Brevo from '@getbrevo/brevo'; // <-- THIS IS THE FIX
-
-// 1. Initialize the Brevo API client
-const apiInstance = new Brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(
-  Brevo.TransactionalEmailsApiApiKeys.apiKey, 
-  process.env.BREVO_API_KEY!
-);
+// 1. Get the API Key from Railway
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 // 2. Define the email function
 export async function sendVerificationEmail(
@@ -13,15 +8,12 @@ export async function sendVerificationEmail(
   toName: string, 
   verificationToken: string
 ) {
-  const sender = {
-    email: 'no-reply@xpresspoint.net', // Your "from" email
-    name: 'Xpress Point',
-  };
-  
-  const recipient = [{ email: toEmail, name: toName }];
-  
+  if (!BREVO_API_KEY) {
+    console.error('CRITICAL: BREVO_API_KEY is not set in environment variables.');
+    return; // Do not attempt to send
+  }
+
   // 3. Create the verification link
-  // We need to get our website's URL from the environment
   const domain = process.env.NEXT_PUBLIC_APP_URL;
   const verificationLink = `${domain}/api/auth/verify-email?token=${verificationToken}`;
 
@@ -40,19 +32,40 @@ export async function sendVerificationEmail(
     </div>
   `;
 
-  // 5. Send the email
+  // 5. Create the Brevo API payload
+  const payload = {
+    sender: {
+      email: 'no-reply@xpresspoint.net', // Your "from" email
+      name: 'Xpress Point',
+    },
+    to: [
+      { email: toEmail, name: toName }
+    ],
+    subject: 'Verify Your Xpress Point Email Address',
+    htmlContent: htmlContent,
+  };
+
+  // 6. Send the email using fetch
   try {
-    const sendSmtpEmail = new Brevo.SendSmtpEmail();
-    sendSmtpEmail.sender = sender;
-    sendSmtpEmail.to = recipient;
-    sendSmtpEmail.subject = 'Verify Your Xpress Point Email Address';
-    sendSmtpEmail.htmlContent = htmlContent;
-    
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const response = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': BREVO_API_KEY,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      // If Brevo sends an error
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Brevo API error');
+    }
+
     console.log(`Email verification sent to ${toEmail}`);
+
   } catch (error) {
     console.error('Error sending email via Brevo:', error);
-    // We don't throw an error, as the user is still logged in.
-    // They can use the "resend" button.
   }
 }
