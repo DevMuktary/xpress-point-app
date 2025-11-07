@@ -112,10 +112,9 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     // --- THIS IS THE FIX ---
-    // Moved down 3 units (y: height - 247)
-    // Moved left 3 units (x: 324)
+    // Moved left 2 units (x: 322)
     page.drawText(formatNin(data.nin), {
-      x: 324, y: height - 247, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 322, y: height - 247, size: 23, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     // -----------------------
     
