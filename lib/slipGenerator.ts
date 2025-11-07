@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+// import fontkit from '@pdf-lib/fontkit'; // This is correctly removed
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
@@ -35,6 +36,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   // 1. Create a new PDF document
   const pdfDoc = await PDFDocument.create();
+  // pdfDoc.registerFontkit(fontkit); // This is correctly removed
 
   // 2. Load the PNG template and the user's photo
   let templateImage;
@@ -48,13 +50,19 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     throw new Error(`Service configuration error: Could not load template file for ${slipType}.`);
   }
 
+  // --- THIS IS THE FIX ---
+  // Added the missing curly braces {} to the catch block
   try {
     const photoBuffer = Buffer.from(data.photo, 'base64');
     userPhoto = await pdfDoc.embedJpg(photoBuffer);
-  } catch (error: any)
+  } catch (error: any) { // <-- ADDED { HERE
     console.error("Failed to embed user photo (data.photo):", error.message);
-    throw new Error("Failed to generate slip: The photo data from the API was corrupt.");
-  }
+    if (error.message.includes('buffer length') || error.message.includes('Invalid JPG')) {
+      throw new Error("Failed to generate slip: The photo data from the API was corrupt.");
+    }
+    throw new Error("Failed to generate slip: Invalid photo data.");
+  } // <-- ADDED } HERE
+  // -----------------------
 
   // 3. Add a page to the PDF that matches the template's size
   const { width, height } = templateImage.scale(1);
@@ -91,11 +99,8 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.residence_AdressLine1), {
       x: 437, y: height - 140, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2), maxWidth: 160
     });
-
-    // --- THIS IS THE FIX ---
-    // Shifted right (x: 615) and down (y: height - 205)
+    // --- Your "perfection" fixes are still here ---
     page.drawImage(userPhoto, { x: 615, y: height - (90 + 115), width: 105, height: 115 });
-    // -----------------------
   } 
   
   else if (templateType === 'standard') {
