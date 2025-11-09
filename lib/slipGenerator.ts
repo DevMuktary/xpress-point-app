@@ -143,54 +143,62 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   else if (templateType === 'premium') {
     // --- THIS IS THE FIX ---
-    // Moved all elements Right by 100 and Down by 200
+    // Reverting to the original PHP coordinates as a baseline
+    // and adding the new elements.
     
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     // Watermark
     page.drawText(displayField(data.nin), {
-      x: 270, y: height - 570, size: 16, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
+      x: 170, y: height - 370, size: 16, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
     // NIN (Bold)
     page.drawText(formatNin(data.nin), {
-      x: 295, y: height - 790, size: 45, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
-    });
-
-    // Text Fields
-    page.drawText(displayField(data.surname), {
-      x: 355, y: height - 590, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
-    });
-    page.drawText(displayField(data.firstname), {
-      x: 355, y: height - 645, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
-    });
-    page.drawText(displayField(data.middlename), {
-      x: 460, y: height - 645, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
-    });
-    page.drawText(displayField(data.birthdate), {
-      x: 355, y: height - 695, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
-    });
-    page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 524, y: height - 695, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 195, y: height - 590, size: 45, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Photo & QR
-    page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 130, height: 164 });
-    page.drawImage(qrImage, { x: 628, y: height - (495 + 160), width: 160, height: 160 });
+    // Text Fields
+    page.drawText(displayField(data.surname), {
+      x: 255, y: height - 390, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+    });
+    page.drawText(displayField(data.firstname), {
+      x: 255, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+    });
+    page.drawText(displayField(data.middlename), {
+      x: 360, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+    });
+    page.drawText(displayField(data.birthdate), {
+      x: 255, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+    });
+    page.drawText(displayField(data.gender?.toUpperCase()), {
+      x: 424, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+    });
+    
+    // Photo
+    page.drawImage(userPhoto, { x: 97, y: height - (350 + 164), width: 130, height: 164 });
+    
+    // --- Refurbished QR Code (Larger) ---
+    page.drawImage(qrImage, { 
+      x: 520, // Centered
+      y: height - (295 + 170), // Centered
+      width: 170, // Made larger
+      height: 170 
+    });
 
-    // NGA, Issue Date, etc.
+    // --- Refurbished Text under QR ---
     page.drawText("NGA", {
-      x: 628, y: height - 675, size: 20, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 520, y: height - 485, size: 20, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.nin), {
-      x: 628, y: height - 690, size: 9, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 520, y: height - 500, size: 9, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText("ISSUE DATE", {
-      x: 628, y: height - 715, size: 10, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 520, y: height - 525, size: 10, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 628, y: height - 730, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 520, y: height - 540, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ---------------------------------
   }
