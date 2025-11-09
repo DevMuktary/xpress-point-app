@@ -180,11 +180,11 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX (Photo) ---
-    // Moved down 120 (y: height - 714 -> height - 834)
+    // Moved down 100 (y: height - 714 -> height - 814)
     // Moved left 10 (x: 197 -> 187)
     page.drawImage(userPhoto, { 
       x: 187, 
-      y: height - (550 + 164 + 120), // y: height - 834
+      y: height - (550 + 164 + 100), // y: height - 814
       width: 264, 
       height: 328 
     });
