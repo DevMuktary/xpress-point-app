@@ -183,7 +183,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     // Moved down 25 (y: height - 895 -> height - 920)
     // Moved right 70 (x: 864 -> 934)
     page.drawText(getIssueDate(), {
-      x: 934, y: height - 920, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 955, y: height - 935, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ------------------------------------
     
