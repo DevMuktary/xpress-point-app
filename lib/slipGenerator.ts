@@ -183,38 +183,14 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX (Photo) ---
-    const photoX = 169;
-    const photoY = height - 929;
-    const photoWidth = 262; 
-    const photoHeight = 326; 
-    const photoRadius = 10; 
-
-    // 1. Save the current state
-    page.pushGraphicsState(); // <-- CORRECTED
-    
-    // 2. Create the rounded rectangle path
-    page.drawRectangle({
-      x: photoX,
-      y: photoY,
-      width: photoWidth,
-      height: photoHeight,
-      borderRadius: photoRadius,
-      color: rgb(1, 1, 1),
+    // Removed all rounding/clipping code
+    // Just drawing the image directly
+    page.drawImage(userPhoto, { 
+      x: 169, 
+      y: height - 929,
+      width: 264, 
+      height: 328 
     });
-
-    // 3. Use this path as a "clipping mask"
-    page.clip();
-
-    // 4. Draw the image *inside* the mask
-    page.drawImage(userPhoto, {
-      x: photoX,
-      y: photoY,
-      width: photoWidth,
-      height: photoHeight,
-    });
-
-    // 5. Remove the mask
-    page.popGraphicsState(); // <-- CORRECTED
     // --------------------------------
     
     // QR Code (Perfected position)
