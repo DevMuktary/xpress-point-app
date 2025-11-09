@@ -180,14 +180,14 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX (Issue Date) ---
-    // Moved right 30 units (x: 774 -> 804)
+    // Moved down 15 (y: height - 880 -> height - 895)
+    // Moved right 60 (x: 804 -> 864)
     page.drawText(getIssueDate(), {
-      x: 804, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 864, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ------------------------------------
     
-    // --- THIS IS THE FIX (Photo) ---
-    // Reduced size by 2 units
+    // Photo (Perfected position)
     page.drawImage(userPhoto, { 
       x: 169, 
       y: height - 929,
