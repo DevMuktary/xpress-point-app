@@ -164,19 +164,23 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     
     // --- THIS IS THE FIX ---
     // Text Fields (Size reduced to x2 = 32)
-    // Surname (Moved up 60, left 15)
+    // Surname (Moved up 30, left 15)
     page.drawText(displayField(data.surname), {
-      x: 490, y: height - 730, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 475, y: height - 700, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // Firstname (Moved up 30, left 15)
     page.drawText(displayField(data.firstname), {
-      x: 505, y: height - 845, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 490, y: height - 815, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // Middlename (Moved up 30, left 15)
     page.drawText(displayField(data.middlename), {
-      x: 610, y: height - 845, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 595, y: height - 815, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // DOB (Unchanged)
     page.drawText(displayField(data.birthdate), {
       x: 505, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // Gender (Unchanged)
     page.drawText(displayField(data.gender?.toUpperCase()), {
       x: 674, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
