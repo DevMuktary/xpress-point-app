@@ -10,14 +10,21 @@ const loadFile = (filePath: string) => {
   return fs.promises.readFile(absolutePath);
 };
 
+// --- THIS IS THE FIX (Part 1) ---
+// Updated to generate a QR code with a transparent background
 const createQrCodeBuffer = async (data: any): Promise<Buffer> => {
   const qrText = `surname: ${data.surname} | givenNames: ${data.firstname} ${data.middlename} | dob: ${data.birthdate}`;
-  return QRCode.toBuffer(qrText);
+  return QRCode.toBuffer(qrText, {
+    color: {
+      dark: '#000000', // Black dots
+      light: '#0000'   // Transparent background
+    }
+  });
 };
+// ------------------------------
 
 const formatNin = (nin: string) => {
   if (!nin || nin.length !== 11) return nin;
-  // This function adds 3 spaces between blocks
   return `${nin.slice(0, 4)}   ${nin.slice(4, 7)}   ${nin.slice(7)}`;
 };
 
@@ -144,23 +151,21 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   else if (templateType === 'premium') {
     
+    // The 'qrBuffer' now has a transparent background
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
-    // --- THIS IS THE FIX ---
-    // Moved right 10 units (x: 435 -> 445)
-    // Increased size by 2 units (size: 54 -> 56)
+    // Bold NIN (Perfected position)
     page.drawText(formatNin(data.nin), {
       x: 445, y: height - 1048, size: 56, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
-    // -----------------------
-
-    // Watermark (Moved down 200, size +2)
+    
+    // Watermark
     page.drawText(displayField(data.nin), {
       x: 270, y: height - 570, size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
-    // Text Fields (Moved down 200, size +2)
+    // Text Fields
     page.drawText(displayField(data.surname), {
       x: 355, y: height - 590, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
@@ -177,13 +182,15 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 524, y: height - 695, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Photo (Moved down 200, width +2)
+    // Photo
     page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 132, height: 164 });
     
-    // QR Code (Moved down 200, size +2)
+    // --- THIS IS THE FIX (QR Code) ---
+    // Moved right 400 units (x: 628 -> 1028)
+    // Moved down 200 units (y: height - 667 -> height - 867)
     page.drawImage(qrImage, { 
-      x: 628, 
-      y: height - (495 + 172), 
+      x: 1028, 
+      y: height - (495 + 200 + 172), 
       width: 172, 
       height: 172 
     });
