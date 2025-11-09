@@ -143,83 +143,59 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   else if (templateType === 'premium') {
     // --- THIS IS THE FIX ---
-    // Moved all elements Down by 500, Text x3, QR x9, Image x4
+    // Moved all elements Down by 200 and increased sizes
     
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
-    
-    // New (enlarged) photo dimensions
-    const newPhotoWidth = 130 * 4; // 520
-    const newPhotoHeight = 164 * 4; // 656
-
-    // New (enlarged) QR dimensions
-    const newQrWidth = 160 * 9; // 1440
-    const newQrHeight = 160 * 9; // 1440
 
     // Watermark
     page.drawText(displayField(data.nin), {
-      x: 170, y: height - (370 + 500), size: 16 * 3, // 48
-      font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
+      x: 170, y: height - (370 + 200), size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
     // NIN (Bold)
     page.drawText(formatNin(data.nin), {
-      x: 195, y: height - (590 + 500), size: 45 * 3, // 135
-      font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 195, y: height - (590 + 200), size: 47, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     
     // Text Fields
     page.drawText(displayField(data.surname), {
-      x: 255, y: height - (390 + 500), size: 14 * 3, // 42
-      font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - (390 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 255, y: height - (445 + 500), size: 14 * 3, // 42
-      font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - (445 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 360, y: height - (445 + 500), size: 14 * 3, // 42
-      font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 360, y: height - (445 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 255, y: height - (495 + 500), size: 14 * 3, // 42
-      font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - (495 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 424, y: height - (495 + 500), size: 14 * 3, // 42
-      font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 424, y: height - (495 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Photo (Image x4, Down 500)
-    page.drawImage(userPhoto, { 
-      x: 97, y: height - (350 + 500 + newPhotoHeight), 
-      width: newPhotoWidth, 
-      height: newPhotoHeight
-    });
+    // Photo
+    page.drawImage(userPhoto, { x: 97, y: height - (350 + 200 + 164), width: 132, height: 164 });
     
-    // QR Code (QR x9, Down 500)
+    // QR Code
     page.drawImage(qrImage, { 
-      x: 528, y: height - (295 + 500 + newQrHeight),
-      width: newQrWidth,
-      height: newQrHeight
+      x: 528, 
+      y: height - (295 + 200 + 172), 
+      width: 172, 
+      height: 172 
     });
 
-    // --- REMOVED "NGA" TEXT ---
-
-    // NIN (under QR) (Text x3, Down 500)
+    // Text under QR
+    // "NGA" is removed.
     page.drawText(displayField(data.nin), {
-      x: 528, y: height - (500 + 500), size: 9 * 3, // 27
-      font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 528, y: height - (490 + 200), size: 11, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    
-    // Issue Date (Text x3, Down 500)
     page.drawText("ISSUE DATE", {
-      x: 528, y: height - (525 + 500), size: 10 * 3, // 30
-      font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 528, y: height - (515 + 200), size: 12, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 528, y: height - (540 + 500), size: 10 * 3, // 30
-      font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 528, y: height - (530 + 200), size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ---------------------------------
   }
