@@ -143,62 +143,83 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   else if (templateType === 'premium') {
     // --- THIS IS THE FIX ---
-    // Reverting to the original PHP coordinates as a baseline
-    // and adding the new elements.
+    // Moved all elements Down by 500, Text x3, QR x9, Image x4
     
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
+    
+    // New (enlarged) photo dimensions
+    const newPhotoWidth = 130 * 4; // 520
+    const newPhotoHeight = 164 * 4; // 656
+
+    // New (enlarged) QR dimensions
+    const newQrWidth = 160 * 9; // 1440
+    const newQrHeight = 160 * 9; // 1440
 
     // Watermark
     page.drawText(displayField(data.nin), {
-      x: 170, y: height - 370, size: 16, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
+      x: 170, y: height - (370 + 500), size: 16 * 3, // 48
+      font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
     // NIN (Bold)
     page.drawText(formatNin(data.nin), {
-      x: 195, y: height - 590, size: 45, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 195, y: height - (590 + 500), size: 45 * 3, // 135
+      font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     
     // Text Fields
     page.drawText(displayField(data.surname), {
-      x: 255, y: height - 390, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - (390 + 500), size: 14 * 3, // 42
+      font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 255, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - (445 + 500), size: 14 * 3, // 42
+      font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 360, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 360, y: height - (445 + 500), size: 14 * 3, // 42
+      font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 255, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 255, y: height - (495 + 500), size: 14 * 3, // 42
+      font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 424, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 424, y: height - (495 + 500), size: 14 * 3, // 42
+      font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Photo
-    page.drawImage(userPhoto, { x: 97, y: height - (350 + 164), width: 130, height: 164 });
+    // Photo (Image x4, Down 500)
+    page.drawImage(userPhoto, { 
+      x: 97, y: height - (350 + 500 + newPhotoHeight), 
+      width: newPhotoWidth, 
+      height: newPhotoHeight
+    });
     
-    // --- Refurbished QR Code (Larger) ---
+    // QR Code (QR x9, Down 500)
     page.drawImage(qrImage, { 
-      x: 520, // Centered
-      y: height - (295 + 170), // Centered
-      width: 170, // Made larger
-      height: 170 
+      x: 528, y: height - (295 + 500 + newQrHeight),
+      width: newQrWidth,
+      height: newQrHeight
     });
 
-    // --- Refurbished Text under QR ---
-    page.drawText("NGA", {
-      x: 520, y: height - 485, size: 20, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
-    });
+    // --- REMOVED "NGA" TEXT ---
+
+    // NIN (under QR) (Text x3, Down 500)
     page.drawText(displayField(data.nin), {
-      x: 520, y: height - 500, size: 9, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 528, y: height - (500 + 500), size: 9 * 3, // 27
+      font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    
+    // Issue Date (Text x3, Down 500)
     page.drawText("ISSUE DATE", {
-      x: 520, y: height - 525, size: 10, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 528, y: height - (525 + 500), size: 10 * 3, // 30
+      font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 520, y: height - 540, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 528, y: height - (540 + 500), size: 10 * 3, // 30
+      font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ---------------------------------
   }
