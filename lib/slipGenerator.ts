@@ -180,10 +180,10 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX (Issue Date) ---
-    // Moved down 15 (y: height - 880 -> height - 895)
-    // Moved right 60 (x: 804 -> 864)
+    // Moved down 25 (y: height - 895 -> height - 920)
+    // Moved right 70 (x: 864 -> 934)
     page.drawText(getIssueDate(), {
-      x: 864, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 934, y: height - 920, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ------------------------------------
     
