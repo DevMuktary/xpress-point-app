@@ -183,16 +183,16 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 132, height: 164 });
     
     // --- THIS IS THE FIX (QR Code) ---
-    // Moved left 60 (x: 978 -> 918)
-    // Moved down 15 (y: height - 777 -> height - 792)
+    // Moved left 100 (x: 918 -> 818)
+    // Moved down 20 (y: height - 792 -> height - 812)
     page.drawImage(qrImage, { 
-      x: 918, 
-      y: height - (777 + 15), 
+      x: 818, 
+      y: height - (792 + 20), 
       width: 344, 
       height: 344 
     });
 
-    // Text under QR (Moved down 200, size +2)
+    // Text under QR
     page.drawText(displayField(data.nin), {
       x: 628, y: height - 690, size: 11, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
