@@ -10,7 +10,6 @@ const loadFile = (filePath: string) => {
   return fs.promises.readFile(absolutePath);
 };
 
-// --- THIS IS THE FIX (Part 1) ---
 // Updated to generate a QR code with a transparent background
 const createQrCodeBuffer = async (data: any): Promise<Buffer> => {
   const qrText = `surname: ${data.surname} | givenNames: ${data.firstname} ${data.middlename} | dob: ${data.birthdate}`;
@@ -21,7 +20,6 @@ const createQrCodeBuffer = async (data: any): Promise<Buffer> => {
     }
   });
 };
-// ------------------------------
 
 const formatNin = (nin: string) => {
   if (!nin || nin.length !== 11) return nin;
@@ -151,7 +149,6 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   else if (templateType === 'premium') {
     
-    // The 'qrBuffer' now has a transparent background
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
@@ -186,13 +183,14 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 132, height: 164 });
     
     // --- THIS IS THE FIX (QR Code) ---
-    // Moved right 400 units (x: 628 -> 1028)
-    // Moved down 200 units (y: height - 667 -> height - 867)
+    // Moved left 50 (x: 1028 -> 978)
+    // Moved up 90 (y: height - 867 -> height - 777)
+    // Enlarged 2x (size: 172x172 -> 344x344)
     page.drawImage(qrImage, { 
-      x: 1028, 
-      y: height - (495 + 200 + 172), 
-      width: 172, 
-      height: 172 
+      x: 978, 
+      y: height - (495 + 200 + 172 - 90), // y: height - 777
+      width: 344, 
+      height: 344 
     });
 
     // Text under QR (Moved down 200, size +2)
