@@ -162,34 +162,33 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 270, y: height - 570, size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
-    // Text Fields
+    // --- THIS IS THE FIX ---
+    // Text Fields (Moved down 200, right 150, size x3)
     page.drawText(displayField(data.surname), {
-      x: 355, y: height - 590, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 505, y: height - 790, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 355, y: height - 645, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 505, y: height - 845, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 460, y: height - 645, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 610, y: height - 845, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 355, y: height - 695, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 505, y: height - 895, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 524, y: height - 695, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 674, y: height - 895, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // --- THIS IS THE FIX (Photo) ---
-    // Moved down 15 (y: height - 914 -> height - 929)
-    // Moved left 3 (x: 172 -> 169)
+    // Photo (Perfected position)
     page.drawImage(userPhoto, { 
       x: 169, 
-      y: height - (814 + 115), // y: height - 929
+      y: height - 929,
       width: 264, 
       height: 328 
     });
     
-    // QR Code
+    // QR Code (Perfected position)
     page.drawImage(qrImage, { 
       x: 870, 
       y: height - 814, 
@@ -197,16 +196,8 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       height: 326 
     });
 
-    // Text under QR
-    page.drawText(displayField(data.nin), {
-      x: 628, y: height - 690, size: 11, font: helvetica, color: rgb(0.2, 0.2, 0.2)
-    });
-    page.drawText("ISSUE DATE", {
-      x: 628, y: height - 715, size: 12, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
-    });
-    page.drawText(getIssueDate(), {
-      x: 628, y: height - 730, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
-    });
+    // Text under QR (REMOVED)
+    // -----------------------
   }
 
   // 7. Save the PDF to a buffer and return it
