@@ -17,6 +17,7 @@ const createQrCodeBuffer = async (data: any): Promise<Buffer> => {
 
 const formatNin = (nin: string) => {
   if (!nin || nin.length !== 11) return nin;
+  // This function adds 3 spaces between blocks
   return `${nin.slice(0, 4)}   ${nin.slice(4, 7)}   ${nin.slice(7)}`;
 };
 
@@ -147,9 +148,10 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     // --- THIS IS THE FIX ---
-    // Moved bold NIN right 50 units (x: 385 -> 435)
+    // Moved right 10 units (x: 435 -> 445)
+    // Increased size by 2 units (size: 54 -> 56)
     page.drawText(formatNin(data.nin), {
-      x: 435, y: height - 1048, size: 54, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 445, y: height - 1048, size: 56, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     // -----------------------
 
