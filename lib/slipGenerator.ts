@@ -163,22 +163,24 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX ---
-    // Text Fields (Moved down 200, right 150, size x3)
+    // Text Fields (Size reduced to x2 = 32)
+    // Surname (Moved up 60, left 15)
     page.drawText(displayField(data.surname), {
-      x: 505, y: height - 790, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 490, y: height - 730, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 505, y: height - 845, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 505, y: height - 845, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 610, y: height - 845, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 610, y: height - 845, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 505, y: height - 895, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 505, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 674, y: height - 895, size: 48, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 674, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // -----------------------
     
     // Photo (Perfected position)
     page.drawImage(userPhoto, { 
