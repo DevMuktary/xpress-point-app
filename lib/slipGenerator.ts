@@ -162,39 +162,37 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 270, y: height - 570, size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
-    // --- THIS IS THE FIX ---
-    // Surname (Perfected position)
+    // Text Fields (Perfected position)
     page.drawText(displayField(data.surname), {
       x: 475, y: height - 695, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Firstname (Perfected position)
     page.drawText(displayField(data.firstname), {
       x: 470, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Middlename (Perfected position)
     page.drawText(displayField(data.middlename), {
       x: 632, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // DOB (Perfected position)
     page.drawText(displayField(data.birthdate), {
       x: 465, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Gender (Perfected position)
     page.drawText(displayField(data.gender?.toUpperCase()), {
       x: 714, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Issue Date (Moved down 50, right 100)
+    
+    // --- THIS IS THE FIX (Issue Date) ---
+    // Moved right 30 units (x: 774 -> 804)
     page.drawText(getIssueDate(), {
-      x: 874, y: height - 930, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 804, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ------------------------------------
     
-    // Photo (Perfected position)
+    // --- THIS IS THE FIX (Photo) ---
+    // Reduced size by 2 units
     page.drawImage(userPhoto, { 
       x: 169, 
       y: height - 929,
-      width: 264, 
-      height: 328 
+      width: 260, 
+      height: 324 
     });
     
     // QR Code (Perfected position)
