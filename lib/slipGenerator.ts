@@ -134,19 +134,19 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX (Image) ---
-    // Moved right 4 units (x: 205)
-    page.drawImage(userPhoto, { x: 205, y: height - (87 + 100), width: 90, height: 100 });
+    // Moved right 2 units (x: 207)
+    page.drawImage(userPhoto, { x: 207, y: height - (87 + 100), width: 90, height: 100 });
     
     // QR (Unchanged)
     page.drawImage(qrImage, { x: 498, y: height - (90 + 90), width: 90, height: 90 });
 
     // --- THIS IS THE FIX (Issue Date) ---
-    // Moved right 20 units (x: 498)
+    // Moved right 20 units (x: 518)
     page.drawText("ISSUE DATE", {
-      x: 498, y: height - 187, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 518, y: height - 187, size: 8, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 498, y: height - 197, size: 8, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 518, y: height - 197, size: 8, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ---------------------------------
   } 
