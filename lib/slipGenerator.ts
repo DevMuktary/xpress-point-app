@@ -152,10 +152,16 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
-    // Bold NIN (Perfected position)
+    // --- THIS IS THE FIX (Bold NIN) ---
     page.drawText(formatNin(data.nin), {
-      x: 445, y: height - 1048, size: 56, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 445, 
+      y: height - 1048, 
+      size: 56, 
+      font: helveticaBold, 
+      color: rgb(0.2, 0.2, 0.2),
+      letterSpacing: 1.5 // Adds 1.5 units of space between each character
     });
+    // ---------------------------------
     
     // Watermark
     page.drawText(displayField(data.nin), {
@@ -179,11 +185,17 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 524, y: height - 695, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Photo
-    page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 132, height: 164 });
+    // --- THIS IS THE FIX (Photo) ---
+    // Moved down 40 units (y: height - 714 -> height - 754)
+    // Doubled size (width: 132->264, height: 164->328)
+    page.drawImage(userPhoto, { 
+      x: 197, 
+      y: height - (550 + 164 + 40), // y: height - 754
+      width: 264, 
+      height: 328 
+    });
     
-    // --- THIS IS THE FIX (QR Code) ---
-    // Moved right 2 (x: 868 -> 870)
+    // QR Code
     page.drawImage(qrImage, { 
       x: 870, 
       y: height - 814, 
