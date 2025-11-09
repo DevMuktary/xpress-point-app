@@ -183,12 +183,11 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 132, height: 164 });
     
     // --- THIS IS THE FIX (QR Code) ---
-    // Moved left 50 (x: 1028 -> 978)
-    // Moved up 90 (y: height - 867 -> height - 777)
-    // Enlarged 2x (size: 172x172 -> 344x344)
+    // Moved left 60 (x: 978 -> 918)
+    // Moved down 15 (y: height - 777 -> height - 792)
     page.drawImage(qrImage, { 
-      x: 978, 
-      y: height - (495 + 200 + 172 - 90), // y: height - 777
+      x: 918, 
+      y: height - (777 + 15), 
       width: 344, 
       height: 344 
     });
