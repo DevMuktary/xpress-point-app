@@ -143,54 +143,54 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   
   else if (templateType === 'premium') {
     // --- THIS IS THE FIX ---
-    // Applying the same "world-class" logic to the premium slip
+    // Moved all elements Right by 100 and Down by 200
     
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
     // Watermark
     page.drawText(displayField(data.nin), {
-      x: 170, y: height - 370, size: 16, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
+      x: 270, y: height - 570, size: 16, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
     // NIN (Bold)
     page.drawText(formatNin(data.nin), {
-      x: 195, y: height - 590, size: 45, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 295, y: height - 790, size: 45, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
-    
+
     // Text Fields
     page.drawText(displayField(data.surname), {
-      x: 255, y: height - 390, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 355, y: height - 590, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 255, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 355, y: height - 645, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 360, y: height - 445, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 460, y: height - 645, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 255, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 355, y: height - 695, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 424, y: height - 495, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 524, y: height - 695, size: 14, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
     // Photo & QR
-    page.drawImage(userPhoto, { x: 97, y: height - (350 + 164), width: 130, height: 164 });
-    page.drawImage(qrImage, { x: 528, y: height - (295 + 160), width: 160, height: 160 });
+    page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 130, height: 164 });
+    page.drawImage(qrImage, { x: 628, y: height - (495 + 160), width: 160, height: 160 });
 
-    // --- NEW: Add NGA, Issue Date, etc. ---
+    // NGA, Issue Date, etc.
     page.drawText("NGA", {
-      x: 528, y: height - 475, size: 20, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 628, y: height - 675, size: 20, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
-    page.drawText(displayField(data.nin), { // Using NIN as the 000... number
-      x: 528, y: height - 490, size: 9, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+    page.drawText(displayField(data.nin), {
+      x: 628, y: height - 690, size: 9, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText("ISSUE DATE", {
-      x: 528, y: height - 515, size: 10, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 628, y: height - 715, size: 10, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 528, y: height - 530, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 628, y: height - 730, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // ---------------------------------
   }
