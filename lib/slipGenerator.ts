@@ -190,7 +190,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     const photoRadius = 10; 
 
     // 1. Save the current state
-    page.saveGraphicsState(); // <-- CORRECTED
+    page.pushGraphicsState(); // <-- CORRECTED
     
     // 2. Create the rounded rectangle path
     page.drawRectangle({
@@ -214,7 +214,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
 
     // 5. Remove the mask
-    page.restoreGraphicsState(); // <-- CORRECTED
+    page.popGraphicsState(); // <-- CORRECTED
     // --------------------------------
     
     // QR Code (Perfected position)
