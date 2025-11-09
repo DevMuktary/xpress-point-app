@@ -167,21 +167,21 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.surname), {
       x: 475, y: height - 695, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Firstname (Moved left 12)
+    // Firstname (Perfected position)
     page.drawText(displayField(data.firstname), {
       x: 470, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Middlename (Moved right 10)
+    // Middlename (Perfected position)
     page.drawText(displayField(data.middlename), {
       x: 632, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // DOB (Unchanged)
+    // DOB (Moved up 15, left 30)
     page.drawText(displayField(data.birthdate), {
-      x: 505, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 475, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Gender (Unchanged)
+    // Gender (Moved up 15, right 30)
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 674, y: height - 895, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 704, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // -----------------------
     
