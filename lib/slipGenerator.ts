@@ -162,42 +162,35 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 270, y: height - 570, size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
-    // --- THIS IS THE FIX (Text Fields) ---
-    // Surname (Perfected position)
+    // Text Fields (Perfected position)
     page.drawText(displayField(data.surname), {
       x: 475, y: height - 695, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Firstname (Perfected position)
     page.drawText(displayField(data.firstname), {
       x: 470, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Middlename (Perfected position)
     page.drawText(displayField(data.middlename), {
       x: 632, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // DOB (Moved up 15, left 10)
     page.drawText(displayField(data.birthdate), {
       x: 465, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Gender (Moved up 15, right 10)
     page.drawText(displayField(data.gender?.toUpperCase()), {
       x: 714, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // NEW Issue Date (Moved up 15, right 60)
     page.drawText(getIssueDate(), {
       x: 774, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // ------------------------------------
     
     // --- THIS IS THE FIX (Photo) ---
     const photoX = 169;
     const photoY = height - 929;
-    const photoWidth = 262; // Reduced by 2
-    const photoHeight = 326; // Reduced by 2
-    const photoRadius = 10; // "very little" rounded edge
+    const photoWidth = 262; 
+    const photoHeight = 326; 
+    const photoRadius = 10; 
 
     // 1. Save the current state
-    page.pushGraphicsState();
+    page.saveGraphicsState(); // <-- CORRECTED
     
     // 2. Create the rounded rectangle path
     page.drawRectangle({
@@ -206,7 +199,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       width: photoWidth,
       height: photoHeight,
       borderRadius: photoRadius,
-      color: rgb(1, 1, 1), // Color doesn't matter, it's a mask
+      color: rgb(1, 1, 1),
     });
 
     // 3. Use this path as a "clipping mask"
@@ -221,7 +214,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
 
     // 5. Remove the mask
-    page.popGraphicsState();
+    page.restoreGraphicsState(); // <-- CORRECTED
     // --------------------------------
     
     // QR Code (Perfected position)
