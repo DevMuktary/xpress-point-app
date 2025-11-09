@@ -42,7 +42,7 @@ const getIssueDate = (): string => {
     'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
   ];
   const monthAbbr = months[today.getMonth()]; 
-  return `${day}-${monthAbbr}-${year}`;
+  return `${day}-${monthAbbr}-${year}`; // Format: 09-NOV-2025
 };
 
 /**
@@ -82,7 +82,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   const page = pdfDoc.addPage([width, height]);
   
   // 4. Draw the template as the background
-  page.drawImage(templateImage, { x: 0, y: 0, width, height });
+  page.drawImage(templateImage, { x: 0, y: 0, width: width, height: height });
 
   // 5. Load the BUILT-IN fonts
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -162,7 +162,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 270, y: height - 570, size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
-    // --- THIS IS THE FIX ---
+    // --- THIS IS THE FIX (Text Fields) ---
     // Surname (Perfected position)
     page.drawText(displayField(data.surname), {
       x: 475, y: height - 695, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
@@ -175,23 +175,54 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.middlename), {
       x: 632, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // DOB (Moved left 10)
+    // DOB (Moved up 15, left 10)
     page.drawText(displayField(data.birthdate), {
       x: 465, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Gender (Moved right 10)
+    // Gender (Moved up 15, right 10)
     page.drawText(displayField(data.gender?.toUpperCase()), {
       x: 714, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // -----------------------
-    
-    // Photo (Perfected position)
-    page.drawImage(userPhoto, { 
-      x: 169, 
-      y: height - 929,
-      width: 264, 
-      height: 328 
+    // NEW Issue Date (Moved up 15, right 60)
+    page.drawText(getIssueDate(), {
+      x: 774, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
+    // ------------------------------------
+    
+    // --- THIS IS THE FIX (Photo) ---
+    const photoX = 169;
+    const photoY = height - 929;
+    const photoWidth = 262; // Reduced by 2
+    const photoHeight = 326; // Reduced by 2
+    const photoRadius = 10; // "very little" rounded edge
+
+    // 1. Save the current state
+    page.pushGraphicsState();
+    
+    // 2. Create the rounded rectangle path
+    page.drawRectangle({
+      x: photoX,
+      y: photoY,
+      width: photoWidth,
+      height: photoHeight,
+      borderRadius: photoRadius,
+      color: rgb(1, 1, 1), // Color doesn't matter, it's a mask
+    });
+
+    // 3. Use this path as a "clipping mask"
+    page.clip();
+
+    // 4. Draw the image *inside* the mask
+    page.drawImage(userPhoto, {
+      x: photoX,
+      y: photoY,
+      width: photoWidth,
+      height: photoHeight,
+    });
+
+    // 5. Remove the mask
+    page.popGraphicsState();
+    // --------------------------------
     
     // QR Code (Perfected position)
     page.drawImage(qrImage, { 
