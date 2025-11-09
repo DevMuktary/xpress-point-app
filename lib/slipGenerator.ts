@@ -142,62 +142,61 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
   } 
   
   else if (templateType === 'premium') {
-    // --- THIS IS THE FIX ---
-    // Moved all elements Down by 200 and increased sizes
     
     const qrBuffer = await createQrCodeBuffer(data);
     const qrImage = await pdfDoc.embedPng(qrBuffer);
 
-    // Watermark
-    page.drawText(displayField(data.nin), {
-      x: 170, y: height - (370 + 200), size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
-    });
-    
-    // NIN (Bold)
+    // --- THIS IS THE FIX ---
+    // Moved bold NIN down 250 units (y: 790 -> 1040)
+    // Increased size by 4 units (size: 47 -> 51)
     page.drawText(formatNin(data.nin), {
-      x: 195, y: height - (590 + 200), size: 47, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 295, y: height - 1040, size: 51, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+    });
+    // -----------------------
+
+    // Watermark (Moved down 200, size +2)
+    page.drawText(displayField(data.nin), {
+      x: 270, y: height - 570, size: 18, font: helveticaBold, color: rgb(0.8, 0.8, 0.8), opacity: 0.3
     });
     
-    // Text Fields
+    // Text Fields (Moved down 200, size +2)
     page.drawText(displayField(data.surname), {
-      x: 255, y: height - (390 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 355, y: height - 590, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
-      x: 255, y: height - (445 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 355, y: height - 645, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.middlename), {
-      x: 360, y: height - (445 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 460, y: height - 645, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.birthdate), {
-      x: 255, y: height - (495 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 355, y: height - 695, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 424, y: height - (495 + 200), size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 524, y: height - 695, size: 16, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     
-    // Photo
-    page.drawImage(userPhoto, { x: 97, y: height - (350 + 200 + 164), width: 132, height: 164 });
+    // Photo (Moved down 200, width +2)
+    page.drawImage(userPhoto, { x: 197, y: height - (550 + 164), width: 132, height: 164 });
     
-    // QR Code
+    // QR Code (Moved down 200, size +2)
     page.drawImage(qrImage, { 
-      x: 528, 
-      y: height - (295 + 200 + 172), 
+      x: 628, 
+      y: height - (495 + 172), 
       width: 172, 
       height: 172 
     });
 
-    // Text under QR
-    // "NGA" is removed.
+    // Text under QR (Moved down 200, size +2)
     page.drawText(displayField(data.nin), {
-      x: 528, y: height - (490 + 200), size: 11, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 628, y: height - 690, size: 11, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText("ISSUE DATE", {
-      x: 528, y: height - (515 + 200), size: 12, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
+      x: 628, y: height - 715, size: 12, font: helveticaBold, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(getIssueDate(), {
-      x: 528, y: height - (530 + 200), size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 628, y: height - 730, size: 12, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // ---------------------------------
   }
 
   // 7. Save the PDF to a buffer and return it
