@@ -175,13 +175,13 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     page.drawText(displayField(data.middlename), {
       x: 632, y: height - 792, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // DOB (Moved up 15, left 30)
+    // DOB (Moved left 10)
     page.drawText(displayField(data.birthdate), {
-      x: 475, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 465, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Gender (Moved up 15, right 30)
+    // Gender (Moved right 10)
     page.drawText(displayField(data.gender?.toUpperCase()), {
-      x: 704, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 714, y: height - 880, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // -----------------------
     
