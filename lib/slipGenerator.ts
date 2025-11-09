@@ -163,18 +163,17 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX ---
-    // Text Fields (Size reduced to x2 = 32)
-    // Surname (Moved up 5, left 15)
+    // Surname (Unchanged)
     page.drawText(displayField(data.surname), {
       x: 475, y: height - 695, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Firstname (Moved up 15, left 15)
+    // Firstname (Moved up 11 units)
     page.drawText(displayField(data.firstname), {
       x: 490, y: height - 800, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // Middlename (Moved up 15, left 15)
+    // Middlename (Moved up 11 units, right 15 units)
     page.drawText(displayField(data.middlename), {
-      x: 595, y: height - 800, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 610, y: height - 800, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     // DOB (Unchanged)
     page.drawText(displayField(data.birthdate), {
