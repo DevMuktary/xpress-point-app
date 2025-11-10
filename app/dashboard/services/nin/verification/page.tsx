@@ -20,7 +20,7 @@ function decodeHtmlEntities(text: string): string {
 }
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "") {
-    return ''; // Return blank instead of '****'
+    return ''; // Return blank
   }
   return decodeHtmlEntities(value.toString());
 }
@@ -65,16 +65,12 @@ type VerificationResponse = {
     Premium: number;
   }
 };
-
-// --- Updated Modal State Type ---
 type ModalState = {
   isOpen: boolean;
-  slipType: 'Regular' | 'Standard' | 'Premium' | null; // Use specific types
+  slipType: 'Regular' | 'Standard' | 'Premium' | null;
   price: number | 0;
-  exampleImage: string; // To hold the example image path
+  exampleImage: string;
 };
-
-// --- Map to store example image paths ---
 const exampleImageMap = {
   Regular: '/examples/nin_regular_example.png',
   Standard: '/examples/nin_standard_example.png',
@@ -90,8 +86,6 @@ export default function NinVerificationPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [verificationData, setVerificationData] = useState<VerificationResponse | null>(null);
-  
-  // --- NEW: Default Modal State ---
   const [modalState, setModalState] = useState<ModalState>({ 
     isOpen: false, 
     slipType: null, 
@@ -101,12 +95,34 @@ export default function NinVerificationPage() {
 
   const lookupFee = '150'; // Placeholder
 
+  // --- THIS IS THE FIX (Part 1) ---
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccess(null);
     setVerificationData(null);
+
+    // --- NEW: World-Class Frontend Validation ---
+    const isNumeric = /^[0-9]+$/;
+    if (!isNumeric.test(searchValue)) {
+      setError("Input must only contain numbers.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (searchType === 'NIN' && searchValue.length !== 11) {
+      setError("NIN must be exactly 11 digits.");
+      setIsLoading(false);
+      return;
+    }
+    
+    if (searchType === 'PHONE' && searchValue.length !== 11) {
+      setError("Phone number must be exactly 11 digits (e.g., 080...).");
+      setIsLoading(false);
+      return;
+    }
+    // --- End of Validation ---
 
     try {
       const response = await fetch('/api/services/nin/lookup', {
@@ -130,17 +146,6 @@ export default function NinVerificationPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // --- UPDATED: This now opens the modal with the correct data ---
-  const handleSlipClick = (slipType: 'Regular' | 'Standard' | 'Premium') => {
-    if (!verificationData) return;
-    setModalState({
-      isOpen: true,
-      slipType: slipType,
-      price: verificationData.slipPrices[slipType],
-      exampleImage: exampleImageMap[slipType], // Get the correct example image
-    });
   };
 
   // --- (confirmGenerateSlip and downloadPdf are unchanged) ---
@@ -190,8 +195,19 @@ export default function NinVerificationPage() {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   };
+  
+  // --- (handleSlipClick is unchanged) ---
+  const handleSlipClick = (slipType: 'Regular' | 'Standard' | 'Premium') => {
+    if (!verificationData) return;
+    setModalState({
+      isOpen: true,
+      slipType: slipType,
+      price: verificationData.slipPrices[slipType],
+      exampleImage: exampleImageMap[slipType],
+    });
+  };
 
-  // --- (renderSearchForm is unchanged) ---
+  // --- STAGE 1 RENDER: The Search Form (Unchanged) ---
   const renderSearchForm = () => (
     <div className="rounded-2xl bg-white p-6 shadow-lg">
       <div className="mb-5 flex border-b border-gray-200">
@@ -245,7 +261,7 @@ export default function NinVerificationPage() {
     </div>
   );
   
-  // --- (renderResults is unchanged) ---
+  // --- STAGE 2 RENDER: The Results (Unchanged) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -343,12 +359,10 @@ export default function NinVerificationPage() {
     </div>
   );
 
+  // --- (Main return is unchanged) ---
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* Global Loader */}
       {isLoading && <Loading />}
-
-      {/* --- Page Header --- */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
@@ -370,8 +384,6 @@ export default function NinVerificationPage() {
           </button>
         )}
       </div>
-
-      {/* --- Error/Success Message Display --- */}
       {error && (
         <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
           {error}
@@ -382,15 +394,10 @@ export default function NinVerificationPage() {
           {success}
         </div>
       )}
-
-      {/* Conditionally render Search or Results */}
       {!verificationData ? renderSearchForm() : renderResults(verificationData)}
-
-      {/* --- NEW: "World-Class" Confirmation Modal --- */}
       {modalState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 Confirm Purchase
@@ -399,15 +406,11 @@ export default function NinVerificationPage() {
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            
-            {/* Modal Body */}
             <div className="p-6">
               <p className="text-center text-gray-600">
                 You are about to generate the{' '}
                 <strong className="font-bold text-gray-900">{modalState.slipType} Slip</strong> for:
               </p>
-              
-              {/* Example Image */}
               <div className="my-4 w-full h-48 relative border border-gray-200 rounded-lg overflow-hidden">
                 <Image
                   src={modalState.exampleImage}
@@ -417,7 +420,6 @@ export default function NinVerificationPage() {
                   className="bg-gray-50"
                 />
               </div>
-              
               <p className="text-center text-gray-600">
                 You will be charged{' '}
                 <strong className="text-2xl font-bold text-blue-600">
@@ -428,8 +430,6 @@ export default function NinVerificationPage() {
                 Are you sure you want to continue?
               </p>
             </div>
-            
-            {/* Modal Footer */}
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               <button
                 onClick={() => setModalState({ isOpen: false, slipType: null, price: 0, exampleImage: '' })}
