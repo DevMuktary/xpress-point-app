@@ -19,7 +19,8 @@ import {
   DocumentTextIcon,   // Exams
   BriefcaseIcon,      // CAC
   PhoneIcon,          // VTU
-  NewspaperIcon       // Newspaper
+  NewspaperIcon,      // Newspaper
+  ArchiveBoxIcon      // Service History
 } from '@heroicons/react/24/outline';
 
 // This type must match the user data we select in lib/auth.ts
@@ -31,6 +32,53 @@ type User = {
   role: string;
 };
 
+// --- NEW: Helper Component for Accordion Links ---
+// This prevents us from repeating the same complex code 8 times
+const ServiceAccordion = ({
+  title,
+  icon: Icon,
+  category,
+  openCategory,
+  toggleCategory,
+  links,
+  setIsSidebarOpen,
+}: {
+  title: string;
+  icon: React.ElementType;
+  category: string;
+  openCategory: string | null;
+  toggleCategory: (category: string) => void;
+  links: { href: string; name: string }[];
+  setIsSidebarOpen: (isOpen: boolean) => void;
+}) => (
+  <>
+    <button
+      className={`flex w-full items-center justify-between gap-3 rounded-lg px-4 py-2.5 font-medium text-gray-700 transition-all hover:bg-gray-100 ${openCategory === category ? 'bg-gray-100' : ''}`}
+      onClick={() => toggleCategory(category)}
+    >
+      <span className="flex items-center gap-3">
+        <Icon className="h-5 w-5" /> {title}
+      </span>
+      <ChevronDownIcon className={`h-4 w-4 transition-transform ${openCategory === category ? 'rotate-180' : ''}`} />
+    </button>
+    {openCategory === category && (
+      <div className="ml-8 flex flex-col border-l border-gray-200 pl-4">
+        {links.map((link) => (
+          <Link 
+            key={link.name} 
+            href={link.href} 
+            className="py-1.5 text-sm text-gray-600 hover:text-black" 
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            {link.name}
+          </Link>
+        ))}
+      </div>
+    )}
+  </>
+);
+
+
 export default function DashboardClientContainer({
   user,
   children,
@@ -41,17 +89,15 @@ export default function DashboardClientContainer({
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // This state will control which accordion menu is open
   const [openCategory, setOpenCategory] = useState<string | null>(null);
 
   const isActive = (path: string) => pathname === path;
   
-  // This function closes the old category and opens the new one
   const toggleCategory = (category: string) => {
     setOpenCategory(openCategory === category ? null : category);
   };
 
-  // --- THIS IS THE REFURBISHED SIDEBAR ---
+  // --- This is the Refurbished Sidebar Content ---
   const SidebarContent = () => (
     <>
       {/* Header */}
@@ -86,68 +132,144 @@ export default function DashboardClientContainer({
           All Services
         </span>
 
-        {/* NIN Accordion */}
-        <button
-          className={`flex w-full items-center justify-between gap-3 rounded-lg px-4 py-2.5 font-medium text-gray-700 transition-all hover:bg-gray-100 ${openCategory === 'nin' ? 'bg-gray-100' : ''}`}
-          onClick={() => toggleCategory('nin')}
-        >
-          <span className="flex items-center gap-3">
-            <IdentificationIcon className="h-5 w-5" /> NIN Services
-          </span>
-          <ChevronDownIcon className={`h-4 w-4 transition-transform ${openCategory === 'nin' ? 'rotate-180' : ''}`} />
-        </button>
-        {openCategory === 'nin' && (
-          <div className="ml-8 flex flex-col border-l border-gray-200 pl-4">
-            <Link href="/dashboard/services/nin/verification" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>NIN Verification</Link>
-            <Link href="#" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>IPE Clearance</Link>
-            <Link href="#" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>Self Service Delink</Link>
-            <Link href="#" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>Personalize NIN</Link>
-            <Link href="#" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>Validation</Link>
-            <Link href="#" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>NIN Modification</Link>
-          </div>
-        )}
-
-        {/* BVN Accordion */}
-        <button
-          className={`flex w-full items-center justify-between gap-3 rounded-lg px-4 py-2.5 font-medium text-gray-700 transition-all hover:bg-gray-100 ${openCategory === 'bvn' ? 'bg-gray-100' : ''}`}
-          onClick={() => toggleCategory('bvn')}
-        >
-          <span className="flex items-center gap-3">
-            <ShieldCheckIcon className="h-5 w-5" /> BVN Services
-          </span>
-          <ChevronDownIcon className={`h-4 w-4 transition-transform ${openCategory === 'bvn' ? 'rotate-180' : ''}`} />
-        </button>
-        {openCategory === 'bvn' && (
-          <div className="ml-8 flex flex-col border-l border-gray-200 pl-4">
-            <Link href="#" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>BVN Verification</Link>
-            {/* Add other BVN links here */}
-          </div>
-        )}
+        {/* --- THIS IS THE FIX --- */}
+        {/* All 8 Accordions are now added */}
         
-        {/* (Add other 6 service accordions here in the same style) */}
-        {/* ... JAMB, TIN, Exams, CAC, VTU, Newspaper ... */}
-
+        <ServiceAccordion
+          title="NIN Services"
+          icon={IdentificationIcon}
+          category="nin"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '/dashboard/services/nin/verification', name: 'NIN Verification' },
+            { href: '#', name: 'IPE Clearance' },
+            { href: '#', name: 'Self Service Delink' },
+            { href: '#', name: 'Personalize NIN' },
+            { href: '#', name: 'Validation' },
+            { href: '#', name: 'NIN Modification' },
+          ]}
+        />
+        <ServiceAccordion
+          title="BVN Services"
+          icon={ShieldCheckIcon}
+          category="bvn"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '#', name: 'BVN Verification' },
+            { href: '#', name: 'BVN Retrieval' },
+            { href: '#', name: 'BVN Modification' },
+          ]}
+        />
+        <ServiceAccordion
+          title="JAMB Services"
+          icon={AcademicCapIcon}
+          category="jamb"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '#', name: 'Original Result Slip' },
+            { href: '#', name: 'Registration Slip' },
+            { href: '#', name: 'Admission Letter' },
+          ]}
+        />
+        <ServiceAccordion
+          title="JTB-TIN"
+          icon={RectangleStackIcon}
+          category="tin"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '#', name: 'TIN Registration' },
+            { href: '#', name: 'TIN Certificate' },
+          ]}
+        />
+        <ServiceAccordion
+          title="Exam Pins"
+          icon={DocumentTextIcon}
+          category="exam"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '#', name: 'WAEC PIN' },
+            { href: '#', name: 'NECO PIN' },
+            { href: '#', name: 'NABTEB PIN' },
+          ]}
+        />
+        <ServiceAccordion
+          title="CAC Services"
+          icon={BriefcaseIcon}
+          category="cac"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '#', name: 'Business Name' },
+            { href: '#', name: 'Document Retrieval' },
+          ]}
+        />
+        <ServiceAccordion
+          title="VTU Services"
+          icon={PhoneIcon}
+          category="vtu"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '#', name: 'Buy Data' },
+            { href: '#', name: 'Buy Airtime' },
+            { href: '#', name: 'Pay Electricity' },
+          ]}
+        />
+        <ServiceAccordion
+          title="Newspaper"
+          icon={NewspaperIcon}
+          category="news"
+          openCategory={openCategory}
+          toggleCategory={toggleCategory}
+          setIsSidebarOpen={setIsSidebarOpen}
+          links={[
+            { href: '#', name: 'Change of Name' },
+          ]}
+        />
+        
         {/* --- Management Category --- */}
         <span className="mt-4 block px-4 py-2 text-xs font-semibold uppercase text-gray-400">
           Management
         </span>
 
-        {/* History Accordion */}
+        {/* --- THIS IS THE FIX --- */}
+        {/* Transaction History is now a simple link */}
+        <Link
+          href="/dashboard/history"
+          className={`flex items-center gap-3 rounded-lg px-4 py-2.5 font-medium text-gray-700 transition-all hover:bg-gray-100 ${isActive('/dashboard/history') ? 'bg-blue-50 text-blue-600' : ''}`}
+          onClick={() => setIsSidebarOpen(false)}
+        >
+          <ClockIcon className="h-5 w-5" />
+          Transaction History
+        </Link>
+
+        {/* NEW: Service History Accordion */}
         <button
-          className={`flex w-full items-center justify-between gap-3 rounded-lg px-4 py-2.5 font-medium text-gray-700 transition-all hover:bg-gray-100 ${openCategory === 'history' ? 'bg-gray-100' : ''}`}
-          onClick={() => toggleCategory('history')}
+          className={`flex w-full items-center justify-between gap-3 rounded-lg px-4 py-2.5 font-medium text-gray-700 transition-all hover:bg-gray-100 ${openCategory === 'service-history' ? 'bg-gray-100' : ''}`}
+          onClick={() => toggleCategory('service-history')}
         >
           <span className="flex items-center gap-3">
-            <ClockIcon className="h-5 w-5" /> Transaction History
+            <ArchiveBoxIcon className="h-5 w-5" /> Service History
           </span>
-          <ChevronDownIcon className={`h-4 w-4 transition-transform ${openCategory === 'history' ? 'rotate-180' : ''}`} />
+          <ChevronDownIcon className={`h-4 w-4 transition-transform ${openCategory === 'service-history' ? 'rotate-180' : ''}`} />
         </button>
-        {openCategory === 'history' && (
+        {openCategory === 'service-history' && (
           <div className="ml-8 flex flex-col border-l border-gray-200 pl-4">
-            <Link href="/dashboard/history/all" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>All Transactions</Link>
-            <Link href="/dashboard/history/wallet" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>Wallet Funding</Link>
             <Link href="/dashboard/history/nin" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>NIN History</Link>
             <Link href="/dashboard/history/vtu" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>Data/Airtime History</Link>
+            <Link href="/dashboard/history/exam" className="py-1.5 text-sm text-gray-600 hover:text-black" onClick={() => setIsSidebarOpen(false)}>Exam Pin History</Link>
           </div>
         )}
 
