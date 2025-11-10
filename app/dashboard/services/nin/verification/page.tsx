@@ -2,24 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeftIcon, IdentificationIcon, PhoneIcon } from '@heroicons/react/24/outline';
-import Loading from '@/app/loading'; // Use our global loader
+import Image from 'next/image'; // Import Next.js Image
+import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
-// --- NEW: Helper function to trigger a file download ---
-const downloadPdf = (buffer: ArrayBuffer, filename: string) => {
-  const blob = new Blob([buffer], { type: 'application/pdf' });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
-};
-
-// --- (Helper functions below are unchanged) ---
+// --- (Helper functions are unchanged) ---
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
   return text
@@ -32,21 +20,21 @@ function decodeHtmlEntities(text: string): string {
 }
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "") {
-    return '****';
+    return ''; // Return blank instead of '****'
   }
   return decodeHtmlEntities(value.toString());
 }
 function formatGender(gender: string): string {
-  if (!gender) return '****';
+  if (!gender) return '';
   const g = gender.toLowerCase();
   if (g === 'male' || g === 'm') return 'M';
   if (g === 'female' || g === 'f') return 'F';
   return g;
 }
 const DataRow = ({ label, value }: { label: string; value: any }) => (
-  <div className="py-2">
-    <p className="text-sm font-medium text-gray-500">{label}</p>
-    <p className="text-base font-semibold text-gray-900">{displayField(value)}</p>
+  <div className="py-2.5 grid grid-cols-3 gap-4">
+    <p className="text-sm font-medium text-gray-500 col-span-1">{label}</p>
+    <p className="text-base font-semibold text-gray-900 col-span-2">{displayField(value)}</p>
   </div>
 );
 
@@ -72,10 +60,25 @@ type VerificationResponse = {
   verificationId: string;
   data: NinData;
   slipPrices: {
-    regular: number;
-    standard: number;
-    premium: number;
+    Regular: number;
+    Standard: number;
+    Premium: number;
   }
+};
+
+// --- Updated Modal State Type ---
+type ModalState = {
+  isOpen: boolean;
+  slipType: 'Regular' | 'Standard' | 'Premium' | null; // Use specific types
+  price: number | 0;
+  exampleImage: string; // To hold the example image path
+};
+
+// --- Map to store example image paths ---
+const exampleImageMap = {
+  Regular: '/examples/nin_regular_example.png',
+  Standard: '/examples/nin_standard_example.png',
+  Premium: '/examples/nin_premium_example.png',
 };
 
 export default function NinVerificationPage() {
@@ -84,16 +87,25 @@ export default function NinVerificationPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [verificationData, setVerificationData] = useState<VerificationResponse | null>(null);
+  
+  // --- NEW: Default Modal State ---
+  const [modalState, setModalState] = useState<ModalState>({ 
+    isOpen: false, 
+    slipType: null, 
+    price: 0, 
+    exampleImage: '' 
+  });
 
   const lookupFee = '150'; // Placeholder
 
-  // --- (handleLookup is unchanged) ---
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setSuccess(null);
     setVerificationData(null);
 
     try {
@@ -112,6 +124,7 @@ export default function NinVerificationPage() {
       }
 
       setVerificationData(data);
+      setSuccess("Verification successful!");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -119,10 +132,25 @@ export default function NinVerificationPage() {
     }
   };
 
-  // --- UPDATED: Handle Slip Generation ---
-  const handleGenerateSlip = async (slipType: string) => {
+  // --- UPDATED: This now opens the modal with the correct data ---
+  const handleSlipClick = (slipType: 'Regular' | 'Standard' | 'Premium') => {
     if (!verificationData) return;
+    setModalState({
+      isOpen: true,
+      slipType: slipType,
+      price: verificationData.slipPrices[slipType],
+      exampleImage: exampleImageMap[slipType], // Get the correct example image
+    });
+  };
+
+  // --- (confirmGenerateSlip and downloadPdf are unchanged) ---
+  const confirmGenerateSlip = async () => {
+    if (!verificationData || !modalState.slipType) return;
     
+    const { verificationId } = verificationData;
+    const { slipType } = modalState;
+    
+    setModalState({ isOpen: false, slipType: null, price: 0, exampleImage: '' });
     setIsLoading(true);
     setError(null);
 
@@ -131,8 +159,8 @@ export default function NinVerificationPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          verificationId: verificationData.verificationId,
-          slipType: slipType, // e.g., "Regular"
+          verificationId: verificationId,
+          slipType: slipType,
         }),
       });
 
@@ -141,7 +169,6 @@ export default function NinVerificationPage() {
         throw new Error(errorData.error || 'Slip generation failed.');
       }
 
-      // We got the PDF back!
       const buffer = await response.arrayBuffer();
       downloadPdf(buffer, `nin_slip_${slipType.toLowerCase()}.pdf`);
 
@@ -151,23 +178,39 @@ export default function NinVerificationPage() {
       setIsLoading(false);
     }
   };
+  
+  const downloadPdf = (buffer: ArrayBuffer, filename: string) => {
+    const blob = new Blob([buffer], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   // --- (renderSearchForm is unchanged) ---
   const renderSearchForm = () => (
     <div className="rounded-2xl bg-white p-6 shadow-lg">
-      <div className="mb-4 flex rounded-lg bg-gray-100 p-1">
+      <div className="mb-5 flex border-b border-gray-200">
         <button
           onClick={() => setSearchType('NIN')}
-          className={`w-1/2 rounded-md py-2.5 text-sm font-medium ${
-            searchType === 'NIN' ? 'bg-white shadow' : 'text-gray-600'
+          className={`flex-1 -mb-px border-b-2 py-3 px-1 text-center text-sm font-medium ${
+            searchType === 'NIN'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Search by NIN
         </button>
         <button
           onClick={() => setSearchType('PHONE')}
-          className={`w-1/2 rounded-md py-2.5 text-sm font-medium ${
-            searchType === 'PHONE' ? 'bg-white shadow' : 'text-gray-600'
+          className={`flex-1 -mb-px border-b-2 py-3 px-1 text-center text-sm font-medium ${
+            searchType === 'PHONE'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Search by Phone
@@ -202,16 +245,17 @@ export default function NinVerificationPage() {
     </div>
   );
   
-  // --- (renderResults is unchanged, BUT CORRECTED) ---
+  // --- (renderResults is unchanged) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Verification Successful</h2>
+          <h2 className="text-xl font-bold text-gray-900">Verified Information</h2>
           <button
             onClick={() => {
               setVerificationData(null);
               setError(null);
+              setSuccess(null);
               setSearchValue('');
             }}
             className="text-sm font-medium text-blue-600 hover:text-blue-500"
@@ -238,12 +282,10 @@ export default function NinVerificationPage() {
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
           <DataRow label="Gender" value={formatGender(data.data.gender || '')} />
-          {/* --- THIS IS THE FIX --- */}
           <DataRow 
             label="Address" 
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
-          {/* ----------------------- */}
           <DataRow label="DOB" value={data.data.birthdate} />
           <DataRow label="Phone Number" value={data.data.telephoneno} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
@@ -252,36 +294,48 @@ export default function NinVerificationPage() {
       </div>
       <div className="border-t border-gray-100 bg-gray-50 p-6 rounded-b-2xl">
         <h3 className="text-lg font-semibold text-gray-900">Generate Slip</h3>
-        <p className="text-sm text-gray-600">Select a slip type to generate and download.</p>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-2 mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+          <InformationCircleIcon className="h-5 w-5 flex-shrink-0" />
+          <p>Verified data is saved for 24 hours. You can re-download paid slips from your history during this time.</p>
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4">
           <button 
-            onClick={() => handleGenerateSlip('Regular')}
+            onClick={() => handleSlipClick('Regular')}
             disabled={isLoading}
-            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            className="group flex items-center justify-between rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
-            <span className="font-bold text-gray-800">Regular Slip</span>
-            <span className="block text-sm text-gray-600">
-              Fee: ₦{displayField(data.slipPrices.regular)}
+            <div>
+              <span className="font-bold text-gray-800">Regular Slip</span>
+              <span className="block text-sm text-gray-600">Standard slip for general use.</span>
+            </div>
+            <span className="text-lg font-bold text-blue-600">
+              ₦{displayField(data.slipPrices.Regular)}
             </span>
           </button>
           <button 
-            onClick={() => handleGenerateSlip('Standard')}
+            onClick={() => handleSlipClick('Standard')}
             disabled={isLoading}
-            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            className="group flex items-center justify-between rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
-            <span className="font-bold text-gray-800">Standard Slip</span>
-            <span className="block text-sm text-gray-600">
-              Fee: ₦{displayField(data.slipPrices.standard)}
+            <div>
+              <span className="font-bold text-gray-800">Standard Slip</span>
+              <span className="block text-sm text-gray-600">Improved design with QR code.</span>
+            </div>
+            <span className="text-lg font-bold text-blue-600">
+              ₦{displayField(data.slipPrices.Standard)}
             </span>
           </button>
           <button 
-            onClick={() => handleGenerateSlip('Premium')}
+            onClick={() => handleSlipClick('Premium')}
             disabled={isLoading}
-            className="rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            className="group flex items-center justify-between rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
-            <span className="font-bold text-gray-800">Premium Slip</span>
-            <span className="block text-sm text-gray-600">
-              Fee: ₦{displayField(data.slipPrices.premium)}
+            <div>
+              <span className="font-bold text-gray-800">Premium Slip</span>
+              <span className="block text-sm text-gray-600">High-resolution secure design.</span>
+            </div>
+            <span className="text-lg font-bold text-blue-600">
+              ₦{displayField(data.slipPrices.Premium)}
             </span>
           </button>
         </div>
@@ -291,18 +345,108 @@ export default function NinVerificationPage() {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
-          <ChevronLeftIcon className="h-6 w-6" />
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">NIN Verification</h1>
+      {/* Global Loader */}
+      {isLoading && <Loading />}
+
+      {/* --- Page Header --- */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
+            <ChevronLeftIcon className="h-6 w-6" />
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">NIN Verification</h1>
+        </div>
+        {verificationData && (
+          <button
+            onClick={() => {
+              setVerificationData(null);
+              setError(null);
+              setSuccess(null);
+              setSearchValue('');
+            }}
+            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+          >
+            + New Lookup
+          </button>
+        )}
       </div>
+
+      {/* --- Error/Success Message Display --- */}
       {error && (
         <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
           {error}
         </div>
       )}
+      {success && (
+        <div className="mb-4 rounded-lg bg-green-100 p-4 text-center text-sm font-medium text-green-700">
+          {success}
+        </div>
+      )}
+
+      {/* Conditionally render Search or Results */}
       {!verificationData ? renderSearchForm() : renderResults(verificationData)}
+
+      {/* --- NEW: "World-Class" Confirmation Modal --- */}
+      {modalState.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 p-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Confirm Purchase
+              </h2>
+              <button onClick={() => setModalState({ isOpen: false, slipType: null, price: 0, exampleImage: '' })}>
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-6">
+              <p className="text-center text-gray-600">
+                You are about to generate the{' '}
+                <strong className="font-bold text-gray-900">{modalState.slipType} Slip</strong> for:
+              </p>
+              
+              {/* Example Image */}
+              <div className="my-4 w-full h-48 relative border border-gray-200 rounded-lg overflow-hidden">
+                <Image
+                  src={modalState.exampleImage}
+                  alt={`${modalState.slipType} Slip Example`}
+                  layout="fill"
+                  objectFit="contain"
+                  className="bg-gray-50"
+                />
+              </div>
+              
+              <p className="text-center text-gray-600">
+                You will be charged{' '}
+                <strong className="text-2xl font-bold text-blue-600">
+                  ₦{modalState.price}
+                </strong>.
+              </p>
+              <p className="text-center text-sm text-gray-500">
+                Are you sure you want to continue?
+              </p>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <button
+                onClick={() => setModalState({ isOpen: false, slipType: null, price: 0, exampleImage: '' })}
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+              >
+                NO
+              </button>
+              <button
+                onClick={confirmGenerateSlip}
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                YES, CONTINUE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
