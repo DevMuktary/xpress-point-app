@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Import Next.js Image
+import Image from 'next/image';
 import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import Loading from '@/app/loading'; // Our global loader
-import SafeImage from '@/components/SafeImage'; // Our image component
+import Loading from '@/app/loading';
+import SafeImage from '@/components/SafeImage';
 
 // --- (Helper functions are unchanged) ---
 function decodeHtmlEntities(text: string): string {
@@ -20,7 +20,7 @@ function decodeHtmlEntities(text: string): string {
 }
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "") {
-    return ''; // Return blank
+    return '';
   }
   return decodeHtmlEntities(value.toString());
 }
@@ -95,7 +95,7 @@ export default function NinVerificationPage() {
 
   const lookupFee = '150'; // Placeholder
 
-  // --- THIS IS THE FIX (Part 1) ---
+  // --- THIS IS THE FIX ---
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -103,35 +103,37 @@ export default function NinVerificationPage() {
     setSuccess(null);
     setVerificationData(null);
 
-    // --- NEW: World-Class Frontend Validation ---
+    // Frontend Validation
     const isNumeric = /^[0-9]+$/;
     if (!isNumeric.test(searchValue)) {
       setError("Input must only contain numbers.");
       setIsLoading(false);
       return;
     }
+    if (searchValue.length !== 11) {
+      setError("Input must be exactly 11 digits.");
+      setIsLoading(false);
+      return;
+    }
 
-    if (searchType === 'NIN' && searchValue.length !== 11) {
-      setError("NIN must be exactly 11 digits.");
-      setIsLoading(false);
-      return;
+    // --- NEW: Separate API Calls ---
+    let endpoint = '';
+    let payload = {};
+
+    if (searchType === 'NIN') {
+      endpoint = '/api/services/nin/lookup-nin';
+      payload = { nin: searchValue };
+    } else {
+      endpoint = '/api/services/nin/lookup-phone';
+      payload = { phone: searchValue };
     }
-    
-    if (searchType === 'PHONE' && searchValue.length !== 11) {
-      setError("Phone number must be exactly 11 digits (e.g., 080...).");
-      setIsLoading(false);
-      return;
-    }
-    // --- End of Validation ---
+    // ----------------------------
 
     try {
-      const response = await fetch('/api/services/nin/lookup', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: searchType,
-          value: searchValue,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -196,7 +198,6 @@ export default function NinVerificationPage() {
     window.URL.revokeObjectURL(url);
   };
   
-  // --- (handleSlipClick is unchanged) ---
   const handleSlipClick = (slipType: 'Regular' | 'Standard' | 'Premium') => {
     if (!verificationData) return;
     setModalState({
