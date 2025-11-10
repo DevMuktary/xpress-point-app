@@ -40,7 +40,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
 
-    // Get the correct price based on the user's role
     const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
 
     // --- 2. Check User Wallet ---
@@ -65,18 +64,23 @@ export async function POST(request: Request) {
 
     const data = response.data;
 
-    if (data.success === false || (data.data && data.data.status === 'not_found')) {
+    // --- THIS IS THE FIX ---
+    // Check if the API was "successful" BUT returned no data.
+    if (data.success === true && !data.data) {
+      return NextResponse.json({ error: 'Sorry 😢 no record found.' }, { status: 404 });
+    }
+    // -----------------------
+
+    if (data.success === false) {
       return NextResponse.json({ error: data.message || 'No match found.' }, { status: 404 });
     }
 
     // --- 4. Charge User & Save Transaction ---
     const [updatedWallet, verificationRecord] = await prisma.$transaction([
-      // a) Deduct from wallet
       prisma.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      // b) Save the lookup data for 24 hours
       prisma.ninVerification.create({
         data: {
           userId: user.id,
@@ -84,13 +88,12 @@ export async function POST(request: Request) {
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
       }),
-      // c) Log the transaction
       prisma.transaction.create({
         data: {
           userId: user.id,
-          serviceId: service.id, // <-- Link the transaction to the service
+          serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: price.negated(), // Charge the dynamic price
+          amount: price.negated(),
           description: `NIN Verification Lookup (${value})`,
           reference: `NIN-LOOKUP-${Date.now()}`,
           status: 'COMPLETED',
@@ -99,15 +102,32 @@ export async function POST(request: Request) {
     ]);
 
     // --- 5. Return Success Data to Frontend ---
+    const slipPrices = await prisma.service.findMany({
+      where: {
+        id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
+      },
+      select: {
+        id: true,
+        agentPrice: true,
+        aggregatorPrice: true
+      }
+    });
+    
+    // Function to get price by role
+    const getPrice = (id: string) => {
+      const s = slipPrices.find(sp => sp.id === id);
+      if (!s) return 0;
+      return user.role === 'AGGREGATOR' ? s.aggregatorPrice : s.agentPrice;
+    };
+
     return NextResponse.json({
       message: 'Verification Successful',
       verificationId: verificationRecord.id,
       data: data.data,
-      // Send the prices for the next step to the frontend
       slipPrices: {
-        regular: (await prisma.service.findUnique({ where: { id: 'NIN_SLIP_REGULAR' } }))?.agentPrice,
-        standard: (await prisma.service.findUnique({ where: { id: 'NIN_SLIP_STANDARD' } }))?.agentPrice,
-        premium: (await prisma.service.findUnique({ where: { id: 'NIN_SLIP_PREMIUM' } }))?.agentPrice,
+        Regular: getPrice('NIN_SLIP_REGULAR'),
+        Standard: getPrice('NIN_SLIP_STANDARD'),
+        Premium: getPrice('NIN_SLIP_PREMIUM'),
       }
     });
 
