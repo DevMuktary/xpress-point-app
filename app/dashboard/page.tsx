@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 import { getUserFromSession } from "@/lib/auth"; // We get the user to secure the page
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { CreditCardIcon, PlusIcon, ArrowUpCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { CreditCardIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 // --- We import our "world-class" components ---
 import EmailVerifyAlert from "@/components/EmailVerifyAlert";
-import ServiceItemCard from "@/components/ServiceItemCard"; // The NEW card
+import ServiceItemCard from "@/components/ServiceItemCard";
+import QuickActions from "@/components/QuickActions"; // <-- Import the NEW component
 
 // --- This is the list of all 8 service categories ---
 const allServices = [
@@ -88,8 +89,6 @@ export default async function DashboardPage() {
   const walletBalance = finalWallet.balance;
 
   return (
-    // This container is centered and has a max-width,
-    // which fixes your alignment problem.
     <div className="w-full max-w-5xl mx-auto">
       
       {/* --- Email Verification Alert --- */}
@@ -121,13 +120,20 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      {/* --- UPDATED Quick Actions --- */}
+      {/* We render the new Client Component and pass the user's role */}
+      <QuickActions userRole={user.role} />
+
       {/* --- "Our Services" Grid --- */}
       <div>
         <h2 className="mb-4 text-xl font-bold text-gray-900">
           All Services
         </h2>
-        {/* --- Refurbished Grid: 2 columns on mobile --- */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        {/* --- THIS IS THE FIX --- */}
+        {/* "grid-cols-1" = 1 card per row on mobile (stable) */}
+        {/* "md:grid-cols-2" = 2 cards per row on tablet */}
+        {/* "lg:grid-cols-3" = 3 cards per row on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {allServices.map((service) => (
             <ServiceItemCard
               key={service.title}
