@@ -1,0 +1,184 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getUserFromSession } from '@/lib/auth';
+import axios from 'axios';
+
+// --- Raudah (BVN) Credentials ---
+const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
+const RAUDAH_ENDPOINT = 'https://raudah.com.ng/api/bvn/bvn';
+
+// --- Payvessel Credentials ---
+const PAYVESSEL_API_KEY = process.env.PAYVESSEL_API_KEY;
+const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
+const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
+const PAYVESSEL_ENDPOINT = 'https://api.payvessel.com/pms/api/external/request/customerReservedAccount/';
+
+// --- Helper Functions from our slip generator ---
+function parseBvnData(data: any): {
+  firstName: string | null;
+  lastName: string | null;
+  dateOfBirth: string | null;
+  nin: string | null;
+} {
+  const coreData = data.data?.data || data.data;
+  const firstName = data.firstName || coreData?.firstname || coreData?.firstName || null;
+  const lastName = data.lastName || coreData?.surname || coreData?.lastName || null;
+  const dateOfBirth = coreData?.dateOfBirth || coreData?.birthdate || null;
+  const nin = coreData?.nin || null;
+  return { firstName, lastName, dateOfBirth, nin };
+}
+
+function formatPhoneForPayvessel(internationalPhone: string): string {
+  if (internationalPhone.startsWith('+234')) {
+    return '0' + internationalPhone.substring(4);
+  }
+  return internationalPhone;
+}
+// ---------------------------------------------
+
+export async function POST(request: Request) {
+  // 1. Get User
+  const user = await getUserFromSession();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // 2. Check for missing API keys
+  if (!RAUDAH_API_KEY || !PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
+    console.error('CRITICAL: Missing one or more API keys in environment.');
+    return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
+  }
+
+  try {
+    const body = await request.json();
+    const { bvn, dob } = body; 
+
+    if (!bvn || !dob) {
+      return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
+    }
+
+    // --- 3. Call Raudah BVN API ---
+    let data: any; 
+    try {
+      const raudahResponse = await axios.post(
+        RAUDAH_ENDPOINT, { value: bvn }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': RAUDAH_API_KEY,
+          },
+        }
+      );
+      data = raudahResponse.data; 
+      
+    } catch (apiError: any) {
+      if (apiError.response && apiError.response.data && (apiError.response.data.success === true || apiError.response.data.status === true)) {
+        console.log("Raudah API (Warning): Treating error-status payload as success.");
+        data = apiError.response.data;
+      } else {
+        console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
+        throw new Error("The BVN verification service is currently unavailable.");
+      }
+    }
+
+    // --- 4. Handle Raudah Error Response ---
+    if (data.status === false || data.success === false) {
+      let errorMessage = data.message && typeof data.message === 'object' ? data.message['0'] : data.message;
+      throw new Error(errorMessage || "BVN verification failed.");
+    }
+    
+    // --- 5. Parse and Validate ---
+    const { firstName, lastName, dateOfBirth, nin } = parseBvnData(data);
+
+    if (!firstName || !lastName || !dateOfBirth) {
+      throw new Error("BVN record not found or response was incomplete.");
+    }
+
+    let bvnDob = dateOfBirth;
+    if (bvnDob.includes('-') && bvnDob.length === 10) {
+      const parts = bvnDob.split('-');
+      if (parts[0].length !== 4) { // Convert DD-MM-YYYY to YYYY-MM-DD
+        bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+
+    if (bvnDob !== dob) {
+      return NextResponse.json(
+        { error: 'Date of Birth does not match BVN record.' }, { status: 400 }
+      );
+    }
+
+    // --- 6. YOUR NEW "WORLD-CLASS" LOGIC ---
+    // If NIN is null, use the BVN as the NIN.
+    const finalNin = nin || bvn;
+    // ----------------------------------------
+    
+    // --- 7. Update User in Database ---
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        firstName: firstName,
+        lastName: lastName,
+        bvn: bvn,
+        nin: finalNin, // Save the final NIN (either real or fallback)
+        isIdentityVerified: true,
+      },
+    });
+
+    // --- 8. Call Payvessel API ---
+    const payload = {
+      email: user.email,
+      name: `${firstName} ${lastName}`,
+      phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
+      bankcode: ["999991", "120001"], // PalmPay, 9Payment
+      account_type: "STATIC",
+      businessid: PAYVESSEL_BUSINESS_ID,
+      bvn: bvn,
+      nin: finalNin, // Use the final NIN
+    };
+
+    const payvesselResponse = await axios.post(
+      PAYVESSEL_ENDPOINT,
+      payload,
+      {
+        headers: {
+          'api-key': PAYVESSEL_API_KEY,
+          'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const payvesselData = payvesselResponse.data;
+
+    if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
+      throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
+    }
+
+    // --- 9. Save Accounts to Database ---
+    const accountData = payvesselData.banks.map((bank: any) => ({
+      userId: user.id,
+      bankName: bank.bankName,
+      accountNumber: bank.accountNumber,
+      accountName: bank.accountName,
+      accountType: bank.account_type,
+      reference: bank.trackingReference,
+    }));
+
+    await prisma.virtualAccount.createMany({
+      data: accountData,
+    });
+
+    // --- 10. Send Success Response ---
+    return NextResponse.json({ 
+      message: "Wallet activated successfully!",
+      banks: payvesselData.banks 
+    }, { status: 200 });
+
+  } catch (error: any) {
+    console.error('Wallet Activation Error:', error.message);
+    return NextResponse.json(
+      { error: error.message || 'An internal server error occurred.' },
+      { status: 400 } // Send a 400 so the frontend can display the clean error
+    );
+  }
+}
