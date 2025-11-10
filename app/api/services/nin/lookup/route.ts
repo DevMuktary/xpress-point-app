@@ -23,6 +23,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
+  let endpoint = '';
+  let payload = {};
+  
   try {
     const body = await request.json();
     const { type, value } = body; 
@@ -52,24 +55,22 @@ export async function POST(request: Request) {
     }
 
     // --- 3. Call External API ---
-    const endpoint = type === 'NIN' ? NIN_VERIFY_ENDPOINT : PHONE_VERIFY_ENDPOINT;
-    const payload = type === 'NIN' ? { nin: value } : { phone: value };
+    endpoint = type === 'NIN' ? NIN_VERIFY_ENDPOINT : PHONE_VERIFY_ENDPOINT;
+    payload = type === 'NIN' ? { nin: value } : { phone: value };
 
     const response = await axios.post(endpoint, payload, {
       headers: {
         'api-key': ROBOSTTECH_API_KEY,
         'Content-Type': 'application/json',
       },
+      timeout: 15000, // --- NEW: 15-second timeout ---
     });
 
     const data = response.data;
 
-    // --- THIS IS THE FIX ---
-    // Check if the API was "successful" BUT returned no data.
     if (data.success === true && !data.data) {
       return NextResponse.json({ error: 'Sorry 😢 no record found.' }, { status: 404 });
     }
-    // -----------------------
 
     if (data.success === false) {
       return NextResponse.json({ error: data.message || 'No match found.' }, { status: 404 });
@@ -113,7 +114,6 @@ export async function POST(request: Request) {
       }
     });
     
-    // Function to get price by role
     const getPrice = (id: string) => {
       const s = slipPrices.find(sp => sp.id === id);
       if (!s) return 0;
@@ -132,7 +132,11 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error("NIN Lookup Error:", error.response ? error.response.data : error.message);
+    // --- NEW: Improved Error Logging ---
+    console.error(`NIN Lookup Error (Endpoint: ${endpoint}):`, error.message);
+    if (error.code === 'ECONNABORTED') {
+      return NextResponse.json({ error: 'The verification service timed out. Please try again.' }, { status: 504 });
+    }
     return NextResponse.json(
       { error: error.response?.data?.message || error.message || 'An internal server error occurred.' },
       { status: 500 }
