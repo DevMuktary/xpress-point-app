@@ -34,13 +34,20 @@ const services = [
     agentPrice: new Decimal(200.00),
     aggregatorPrice: new Decimal(180.00),
   },
-  // --- NEW SERVICE ---
   {
     id: 'NIN_PERSONALIZATION',
     name: 'NIN Personalization',
     category: 'NIN',
-    agentPrice: new Decimal(1000.00), // You can change this price
+    agentPrice: new Decimal(1000.00),
     aggregatorPrice: new Decimal(950.00),
+  },
+  // --- NEW SERVICE ---
+  {
+    id: 'NIN_IPE_CLEARANCE',
+    name: 'NIN IPE Clearance',
+    category: 'NIN',
+    agentPrice: new Decimal(2500.00), // You can change this price
+    aggregatorPrice: new Decimal(2450.00),
   },
   // -------------------
 ];
