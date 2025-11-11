@@ -4,24 +4,21 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// API credentials
-const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
-const PHONE_VERIFY_ENDPOINT = 'https://raudah.com.ng/api/nin/phone2';
+// --- THIS IS THE FIX ---
+// Using the new, stable Workbyte provider
+const WORKBYTE_API_TOKEN = process.env.WORKBYTE_API_TOKEN;
+const PHONE_VERIFY_ENDPOINT = 'https://workbyte.com.ng/api/nin-search3/by-phone/';
 
-if (!RAUDAH_API_KEY) {
-  console.error("CRITICAL: RAUDAH_API_KEY is not set.");
+if (!WORKBYTE_API_TOKEN) {
+  console.error("CRITICAL: WORKBYTE_API_TOKEN is not set.");
 }
 
-// Helper function to parse API errors
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
   if (error.response && error.response.data) {
     const data = error.response.data;
-    if (data.message && (data.response_code === "01" || data.statusCode === 404)) {
-      return `Sorry 😢 Record not found.`;
-    }
     if (data.message && typeof data.message === 'string') {
       return data.message;
     }
@@ -38,7 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
-  if (!RAUDAH_API_KEY) {
+  if (!WORKBYTE_API_TOKEN) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
@@ -62,61 +59,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call External API (Raudah) ---
-    let data: any;
-    try {
-      const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
-        { 
-          value: phone,
-          ref: `XPRESSPOINT_PHN_${user.id}_${Date.now()}`
+    // --- 2. Call External API (Workbyte) ---
+    const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
+      { 
+        phone: phone // Use 'phone' as per Workbyte docs
+      },
+      {
+        headers: { 
+          'Authorization': WORKBYTE_API_TOKEN, // Use 'Authorization: Token ...'
+          'Content-Type': 'application/json' 
         },
-        {
-          headers: { 
-            'Authorization': RAUDAH_API_KEY,
-            'Content-Type': 'application/json' 
-          },
-          timeout: 15000,
-        }
-      );
-      data = response.data;
-    } catch (error: any) {
-      // This catches the "buggy success" responses
-      if (error.response && error.response.data && (error.response.data.success === true || error.response.data.status === true)) {
-        console.log("Raudah Phone API (Warning): Treating error-status payload as success.");
-        data = error.response.data;
-      } else {
-        throw error; // This is a real network/auth error
+        timeout: 15000,
       }
-    }
-    
-    // --- 3. Handle Raudah Response (Based on your new log) ---
-    if (data.success === true && data.statusCode === 200 && data.data) {
-      // This is a SUCCESS
-      
-      const responseData = data.data; // This is the correct data path
-      
-      // --- 4. "World-Class" Data Mapping (Fixing field names) ---
-      // We map their API names to our standard `NinData` names
-      const mappedData = {
-        photo: responseData.image,
-        firstname: responseData.firstName,
-        surname: responseData.lastName,
-        middlename: responseData.middleName,
-        birthdate: responseData.dateOfBirth, // This is YYYY-MM-DD
-        nin: responseData.nin || responseData.idNumber, // Use 'idNumber' if 'nin' is null
-        trackingId: 'N/A', // Not provided by this endpoint
-        residence_AdressLine1: responseData.addressLine,
-        birthlga: 'N/A', // Not provided
-        gender: responseData.gender,
-        residence_lga: responseData.lga,
-        residence_state: responseData.state,
-        telephoneno: responseData.mobile,
-        birthstate: 'N/A', // Not provided
-        maritalstatus: 'N/A', // Not provided
-      };
-      // -----------------------------------------------------
+    );
 
-      // --- 5. Charge User & Save Transaction ---
+    const data = response.data;
+    
+    // --- 3. Handle Workbyte Response (Based on your docs) ---
+    if (data.status === true && data.code === 200 && data.data?.status === true && data.data?.data) {
+      
+      const responseData = data.data.data; // This is the correct data path
+
+      // --- 4. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
         prisma.wallet.update({
           where: { userId: user.id },
@@ -125,7 +89,7 @@ export async function POST(request: Request) {
         prisma.ninVerification.create({
           data: {
             userId: user.id,
-            data: mappedData as any, // Save the *mapped* data
+            data: responseData, // Save the data.data.data object
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         }),
@@ -136,13 +100,13 @@ export async function POST(request: Request) {
             type: 'SERVICE_CHARGE',
             amount: price.negated(),
             description: `NIN Lookup by Phone (${phone})`,
-            reference: `NIN-PHONE-${Date.now()}`,
+            reference: data.transaction_id || `NIN-PHONE-${Date.now()}`,
             status: 'COMPLETED',
           },
         }),
       ]);
 
-      // --- 6. Return Success Data to Frontend ---
+      // --- 5. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
         where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { id: true, agentPrice: true, aggregatorPrice: true }
@@ -157,7 +121,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         message: 'Verification Successful',
         verificationId: verificationRecord.id,
-        data: mappedData, // <-- Send the mapped data
+        data: responseData,
         slipPrices: {
           Regular: getPrice('NIN_SLIP_REGULAR'),
           Standard: getPrice('NIN_SLIP_STANDARD'),
