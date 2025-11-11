@@ -49,9 +49,10 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     setSubmitSuccess(null);
     setStatusMessage(null);
 
-    // --- "World-Class" Validation ---
-    if (trackingId.length > 15) {
-      setSubmitError("Tracking ID cannot be more than 15 characters.");
+    // --- THIS IS THE FIX ---
+    // "World-Class" Validation for EXACTLY 15 characters
+    if (trackingId.length !== 15) {
+      setSubmitError("Tracking ID must be exactly 15 characters.");
       setIsSubmitting(false);
       return;
     }
@@ -186,7 +187,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
 
-      {/* --- 1. The "No Refund" Warning (FIXED) --- */}
+      {/* --- 1. The "No Refund" Warning (Refurbished) --- */}
       <div className="rounded-lg bg-red-50 p-4 border border-red-200">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -206,11 +207,11 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         </div>
       </div>
 
-      {/* --- 2. The "Submit New Request" Form (FIXED) --- */}
+      {/* --- 2. The "Submit New Request" Form (Refurbished) --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-900">Submit New Request</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Enter Tracking ID to get NIN NUMBER/SLIP.
+          Enter 15-Characters Tracking ID to get NIN NUMBER/SLIP..
         </p>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="relative">
@@ -220,10 +221,10 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             <input
               type="text"
               value={trackingId}
-              onChange={(e) => setTrackingId(e.target.value)}
-              placeholder="Enter Tracking ID (max 15 characters)"
-              maxLength={15} // <-- THIS IS THE FIX
-              className="w-full rounded-lg border border-gray-300 p-3 pl-10 text-lg shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              onChange={(e) => setTrackingId(e.target.value.toUpperCase())} // Always use uppercase
+              placeholder="Enter 15-character Tracking ID"
+              maxLength={15} // Enforce max length
+              className="w-full rounded-lg border border-gray-300 p-3 pl-10 text-lg uppercase shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               required
             />
           </div>
