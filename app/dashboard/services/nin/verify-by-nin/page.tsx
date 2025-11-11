@@ -7,16 +7,7 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, 
 import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
-// --- THIS IS THE FIX (Part 1) ---
-// Updated helper function to return empty string
-function displayField(value: any): string {
-  if (value === null || value === undefined || value === "") {
-    return ''; // Return blank instead of '****'
-  }
-  return decodeHtmlEntities(value.toString());
-}
-// ---------------------------------
-
+// --- (Helper functions are unchanged) ---
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
   return text
@@ -26,6 +17,12 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
+}
+function displayField(value: any): string {
+  if (value === null || value === undefined || value === "") {
+    return ''; // Return blank
+  }
+  return decodeHtmlEntities(value.toString());
 }
 function formatGender(gender: string): string {
   if (!gender) return '';
@@ -41,24 +38,27 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- (Types are updated for the new API response) ---
+// --- THIS IS THE FIX (Part 1) ---
+// Types are updated to match our MAPPED data
 type NinData = {
   photo: string;
-  firs_tname: string; // <-- Fix for API typo
-  last_name: string;  // <-- New name
+  firstname: string; // <-- Correct
+  surname: string;   // <-- Correct
   middlename: string;
   birthdate: string;
-  NIN: string;        // <-- New name
+  nin: string;       // <-- Correct
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
   gender?: string;
   residence_lga?: string;
   residence_state?: string;
-  phone_number: string; // <-- New name
+  telephoneno: string; // <-- Correct
   birthstate?: string;
   maritalstatus?: string;
 };
+// ---------------------------------
+
 type VerificationResponse = {
   verificationId: string;
   data: NinData;
@@ -265,11 +265,11 @@ export default function VerifyByNinPage() {
           />
         </div>
         <div className="divide-y divide-gray-100">
-          {/* --- Using new, correct field names --- */}
-          <DataRow label="First Name" value={data.data.firs_tname} />
+          {/* --- Using MAPPED, correct field names --- */}
+          <DataRow label="First Name" value={data.data.firstname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
-          <DataRow label="Last Name" value={data.data.last_name} />
-          <DataRow label="ID" value={data.data.NIN || data.data.nin} />
+          <DataRow label="Last Name" value={data.data.surname} />
+          <DataRow label="ID" value={data.data.nin} />
           <DataRow label="Tracking ID" value={data.data.trackingId} />
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
@@ -279,11 +279,12 @@ export default function VerifyByNinPage() {
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
           <DataRow label="DOB" value={data.data.birthdate} />
-          <DataRow label="Phone Number" value={data.data.phone_number} />
+          <DataRow label="Phone Number" value={data.data.telephoneno} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
       </div>
+      {/* --- (Slip Generation buttons are unchanged) --- */}
       <div className="border-t border-gray-100 bg-gray-50 p-6 rounded-b-2xl">
         <h3 className="text-lg font-semibold text-gray-900">Generate Slip</h3>
         <div className="mt-2 mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
@@ -335,7 +336,7 @@ export default function VerifyByNinPage() {
     </div>
   );
 
-  // --- (Main return is unchanged) ---
+  // --- (Main return and Modal are unchanged) ---
   return (
     <div className="w-full max-w-3xl mx-auto">
       {isLoading && <Loading />}
