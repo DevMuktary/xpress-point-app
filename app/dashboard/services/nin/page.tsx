@@ -1,23 +1,29 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
-import SafeImage from '@/components/SafeImage'; // Use our safe image
-import ServiceItemCard from '@/components/ServiceItemCard'; // <-- Import the NEW card
+import SafeImage from '@/components/SafeImage';
+import ServiceItemCard from '@/components/ServiceItemCard'; // We use our "world-class" card
 
 // This is a Server Component, so it's very fast.
 export default function NinServicesPage() {
   
-  // This is the list of services from your original blueprint
+  // --- THIS IS THE FIX ---
+  // The list is "refurbished" to separate the verification types.
   const ninServices = [
     {
-      title: 'NIN Verification',
-      description: 'Verify and print Regular, Standard, or Premium slips.',
-      href: '/dashboard/services/nin/verification',
+      title: 'NIN Verification (by NIN)',
+      description: 'Verify and print slips using an 11-digit NIN.',
+      href: '/dashboard/services/nin/verify-by-nin', // This is a new page
+    },
+    {
+      title: 'NIN Verification (by Phone)',
+      description: 'Verify and print slips using an 11-digit phone number.',
+      href: '/dashboard/services/nin/verify-by-phone', // This is a new page
     },
     {
       title: 'IPE Clearance',
       description: 'Service for IPE clearance processes.',
-      href: '#', // We will build this page later
+      href: '#',
     },
     {
       title: 'Self Service Delink',
@@ -59,7 +65,8 @@ export default function NinServicesPage() {
         <h1 className="text-2xl font-bold text-gray-900">NIN Services</h1>
       </div>
 
-      {/* --- NEW: Service Grid --- */}
+      {/* --- "Refurbished" Service Grid --- */}
+      {/* This will stack to 1-column on mobile, just as you wanted */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {ninServices.map((service) => (
           <ServiceItemCard
