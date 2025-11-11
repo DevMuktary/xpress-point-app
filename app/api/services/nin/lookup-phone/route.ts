@@ -19,8 +19,8 @@ function parseApiError(error: any): string {
   }
   if (error.response && error.response.data) {
     const data = error.response.data;
-    if (data.message && data.response_code === "01") {
-      return `Sorry 😢 ${data.message}`;
+    if (data.message && (data.response_code === "01" || data.statusCode === 404)) {
+      return `Sorry 😢 Record not found.`;
     }
     if (data.message && typeof data.message === 'string') {
       return data.message;
@@ -80,6 +80,7 @@ export async function POST(request: Request) {
       );
       data = response.data;
     } catch (error: any) {
+      // This catches the "buggy success" responses
       if (error.response && error.response.data && (error.response.data.success === true || error.response.data.status === true)) {
         console.log("Raudah Phone API (Warning): Treating error-status payload as success.");
         data = error.response.data;
