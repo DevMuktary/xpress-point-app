@@ -45,12 +45,10 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
 type NinData = {
   photo: string;
   firs_tname: string; // <-- Fix for API typo
-  surname: string;    // <-- Old name
   last_name: string;  // <-- New name
   middlename: string;
   birthdate: string;
   NIN: string;        // <-- New name
-  nin: string;        // <-- Old name
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
@@ -58,7 +56,6 @@ type NinData = {
   residence_lga?: string;
   residence_state?: string;
   phone_number: string; // <-- New name
-  telephoneno?: string; // <-- Old name
   birthstate?: string;
   maritalstatus?: string;
 };
