@@ -41,7 +41,8 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- (Types are updated for the new API response) ---
+// --- THIS IS THE FIX (Part 2) ---
+// Types are updated to match our MAPPED data
 type NinData = {
   photo: string;
   firstname: string; // <-- Correct
@@ -59,6 +60,8 @@ type NinData = {
   birthstate?: string;
   maritalstatus?: string;
 };
+// ---------------------------------
+
 type VerificationResponse = {
   verificationId: string;
   data: NinData;
@@ -236,7 +239,7 @@ export default function VerifyByPhonePage() {
     </div>
   );
   
-  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX, Part 2) ---
+  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX, Part 3) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -274,7 +277,7 @@ export default function VerifyByPhonePage() {
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
           <DataRow label="Gender" value={formatGender(data.data.gender || '')} />
-          <DataRow 
+          <DataDataRow 
             label="Address" 
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
