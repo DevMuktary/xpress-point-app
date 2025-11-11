@@ -5,9 +5,9 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- THIS IS THE FIX ---
-// Using the new, stable Workbyte provider
+// Using the 'nin-search2' endpoint from your example
 const WORKBYTE_API_TOKEN = process.env.WORKBYTE_API_TOKEN;
-const PHONE_VERIFY_ENDPOINT = 'https://workbyte.com.ng/api/nin-search3/by-phone/';
+const PHONE_VERIFY_ENDPOINT = 'https://workbyte.com.ng/api/nin-search2/by-phone/'; // <-- Corrected
 
 if (!WORKBYTE_API_TOKEN) {
   console.error("CRITICAL: WORKBYTE_API_TOKEN is not set.");
@@ -21,6 +21,10 @@ function parseApiError(error: any): string {
     const data = error.response.data;
     if (data.message && typeof data.message === 'string') {
       return data.message;
+    }
+    // Handle "Access Forbidden"
+    if (error.response.status === 403) {
+      return "Access Forbidden: Please check API credentials.";
     }
   }
   if (error.message) {
@@ -62,11 +66,11 @@ export async function POST(request: Request) {
     // --- 2. Call External API (Workbyte) ---
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phone // Use 'phone' as per Workbyte docs
+        phone: phone
       },
       {
         headers: { 
-          'Authorization': WORKBYTE_API_TOKEN, // Use 'Authorization: Token ...'
+          'Authorization': WORKBYTE_API_TOKEN,
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
@@ -75,10 +79,10 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 3. Handle Workbyte Response (Based on your docs) ---
+    // --- 3. Handle Workbyte Response ---
     if (data.status === true && data.code === 200 && data.data?.status === true && data.data?.data) {
       
-      const responseData = data.data.data; // This is the correct data path
+      const responseData = data.data.data;
 
       // --- 4. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
@@ -89,7 +93,7 @@ export async function POST(request: Request) {
         prisma.ninVerification.create({
           data: {
             userId: user.id,
-            data: responseData, // Save the data.data.data object
+            data: responseData,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         }),
@@ -130,7 +134,6 @@ export async function POST(request: Request) {
       });
 
     } else {
-      // This is a "Record not found" or other known error
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
