@@ -7,7 +7,7 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, 
 import Loading from '@/app/loading';
 import SafeImage from '@/components/SafeImage';
 
-// --- (Helper functions are unchanged) ---
+// --- (Helper functions) ---
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
   return text
@@ -18,12 +18,17 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
 }
+
+// --- THIS IS THE FIX ---
+// Updated helper function to return empty string for "****"
 function displayField(value: any): string {
-  if (value === null || value === undefined || value === "") {
+  if (value === null || value === undefined || value === "" || value === "****") {
     return ''; // Return blank
   }
   return decodeHtmlEntities(value.toString());
 }
+// ------------------------
+
 function formatGender(gender: string): string {
   if (!gender) return '';
   const g = gender.toLowerCase();
@@ -38,7 +43,7 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- (Types are unchanged) ---
+// --- (Types) ---
 type NinData = {
   photo: string;
   firstname: string; 
@@ -94,7 +99,6 @@ export default function VerifyByPhonePage() {
 
   const lookupFee = '150'; // Placeholder
 
-  // --- (handleLookup is unchanged) ---
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -144,7 +148,6 @@ export default function VerifyByPhonePage() {
     }
   };
 
-  // --- (confirmGenerateSlip and downloadPdf are unchanged) ---
   const confirmGenerateSlip = async () => {
     if (!verificationData || !modalState.slipType) return;
     
@@ -202,7 +205,6 @@ export default function VerifyByPhonePage() {
     });
   };
 
-  // --- STAGE 1 RENDER: The Search Form (Unchanged) ---
   const renderSearchForm = () => (
     <div className="rounded-2xl bg-white p-6 shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900">Enter Phone Number</h3>
@@ -233,7 +235,6 @@ export default function VerifyByPhonePage() {
     </div>
   );
   
-  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -270,20 +271,16 @@ export default function VerifyByPhonePage() {
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
           <DataRow label="Gender" value={formatGender(data.data.gender || '')} />
-          {/* --- THIS IS THE FIX --- */}
-          {/* Changed DataDataRow to DataRow */}
           <DataRow 
             label="Address" 
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
-          {/* ----------------------- */}
           <DataRow label="DOB" value={data.data.birthdate} />
           <DataRow label="Phone Number" value={data.data.telephoneno} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
       </div>
-      {/* --- (Slip Generation buttons are unchanged) --- */}
       <div className="border-t border-gray-100 bg-gray-50 p-6 rounded-b-2xl">
         <h3 className="text-lg font-semibold text-gray-900">Generate Slip</h3>
         <div className="mt-2 mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
@@ -335,7 +332,6 @@ export default function VerifyByPhonePage() {
     </div>
   );
 
-  // --- (Main return and Modal are unchanged) ---
   return (
     <div className="w-full max-w-3xl mx-auto">
       {isLoading && <Loading />}
