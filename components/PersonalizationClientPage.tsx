@@ -1,9 +1,15 @@
 "use client"; // This is an interactive component
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { PersonalizationRequest } from '@prisma/client';
-import { ExclamationTriangleIcon, ArrowPathIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { PersonalizationRequest, RequestStatus } from '@prisma/client';
+import { 
+  ExclamationTriangleIcon, 
+  ArrowPathIcon, 
+  CheckCircleIcon,
+  DocumentMagnifyingGlassIcon,
+  MagnifyingGlassIcon
+} from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
@@ -32,6 +38,20 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
   // State for the *history table's* messages
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
+  // --- NEW: Filter States ---
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  // --- NEW: Filtered Requests ---
+  // This automatically filters the list when state changes
+  const filteredRequests = useMemo(() => {
+    return requests.filter(req => {
+      const matchesSearch = req.trackingId.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = (statusFilter === 'ALL' || req.status === statusFilter);
+      return matchesSearch && matchesStatus;
+    });
+  }, [requests, searchTerm, statusFilter]);
+
   // --- API 1: Submit New Request ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +76,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
       setTrackingId(''); // Clear the input field
       
       // Add the new request to the top of our history list
-      // We need to fetch all requests again to get the new one
       const newRequests = await fetchHistory();
       setRequests(newRequests);
 
@@ -69,7 +88,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
 
   // --- API 2: Check Status (Manual Button) ---
   const handleCheckStatus = async (request: PersonalizationRequest) => {
-    setIsCheckingId(request.id); // Set loading for THIS button
+    setIsCheckingId(request.id);
     setSubmitError(null);
     setSubmitSuccess(null);
     setStatusMessage(`Checking ${request.trackingId}...`); // On-screen message
@@ -96,7 +115,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     } catch (err: any) {
       setStatusMessage(`Error: ${err.message}`);
     } finally {
-      setIsCheckingId(null); // Stop loading for this button
+      setIsCheckingId(null);
     }
   };
 
@@ -114,10 +133,60 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     });
   };
+  
+  // Helper to get "world-class" status colors
+  const getStatusColor = (status: RequestStatus) => {
+    switch (status) {
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'FAILED':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+  
+  // Helper for the "smart" button
+  const renderActionButton = (request: PersonalizationRequest) => {
+    const isLoading = isCheckingId === request.id;
+    
+    switch (request.status) {
+      case 'COMPLETED':
+        return (
+          <Link 
+            href={`/dashboard/services/nin/personalize/result/${request.id}`}
+            className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+          >
+            View Result
+          </Link>
+        );
+      case 'PENDING':
+        return (
+          <button
+            onClick={() => handleCheckStatus(request)}
+            disabled={isLoading}
+            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+          >
+            {isLoading ? (
+              <ArrowPathIcon className="h-5 w-5 animate-spin" />
+            ) : (
+              'Check Status'
+            )}
+          </button>
+        );
+      case 'FAILED':
+        return (
+          <span className="text-sm text-red-600" title={request.statusMessage || 'Failed'}>
+            Sorry, this failed 😞
+          </span>
+        );
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -151,17 +220,19 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         </p>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <DocumentMagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            </div>
             <input
               type="text"
               value={trackingId}
               onChange={(e) => setTrackingId(e.target.value)}
               placeholder="Enter Tracking ID"
-              className="w-full rounded-lg border border-gray-300 p-3 text-lg shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 p-3 pl-10 text-lg shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               required
             />
           </div>
           
-          {/* On-screen messages for the submit button */}
           {submitSuccess && (
             <p className="mt-2 text-sm font-medium text-green-600">{submitSuccess}</p>
           )}
@@ -179,91 +250,82 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         </form>
       </div>
       
-      {/* --- 3. The "My Requests" History Table (Your "Smart" Table) --- */}
+      {/* --- 3. The "My Requests" History --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-900">My Requests</h3>
         
+        {/* --- NEW: Filter & Search Bar --- */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Search Box */}
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by Tracking ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 p-2.5 pl-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="FAILED">Failed</option>
+          </select>
+        </div>
+        
         {/* On-screen message for the "Check Status" button */}
         {statusMessage && (
-          <p className="mt-2 text-sm font-medium text-center text-blue-600">{statusMessage}</p>
+          <p className="mt-4 text-sm font-medium text-center text-blue-600">{statusMessage}</p>
         )}
         
-        <div className="mt-4 flow-root">
-          <div className="-mx-6 -my-6 overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 px-6 text-left text-sm font-semibold text-gray-900">Tracking ID</th>
-                    <th scope="col" className="py-3.5 px-6 text-left text-sm font-semibold text-gray-900">Date</th>
-                    <th scope="col" className="py-3.5 px-6 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th scope="col" className="py-3.5 px-6 text-left text-sm font-semibold text-gray-900">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {requests.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-4 px-6 text-center text-gray-500">
-                        You have no pending requests.
-                      </td>
-                    </tr>
-                  )}
-                  {requests.map((request) => (
-                    <tr key={request.id}>
-                      <td className="py-4 px-6 text-sm font-medium text-gray-800">{request.trackingId}</td>
-                      <td className="py-4 px-6 text-sm text-gray-500">{formatDate(request.createdAt)}</td>
-                      <td className="py-4 px-6 text-sm">
-                        {request.status === 'COMPLETED' && (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                            Completed
-                          </span>
-                        )}
-                        {request.status === 'PENDING' && (
-                          <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                            Pending
-                          </span>
-                        )}
-                        {request.status === 'FAILED' && (
-                          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                            Failed
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6 text-sm">
-                        {/* --- The "Smart" Button --- */}
-                        {request.status === 'COMPLETED' && (
-                          <Link 
-                            href={`/dashboard/services/nin/personalize/result/${request.id}`}
-                            className="rounded bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700"
-                          >
-                            View Result
-                          </Link>
-                        )}
-                        {request.status === 'PENDING' && (
-                          <button
-                            onClick={() => handleCheckStatus(request)}
-                            disabled={isCheckingId === request.id}
-                            className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            {isCheckingId === request.id ? (
-                              <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                            ) : (
-                              'Check Status'
-                            )}
-                          </button>
-                        )}
-                        {request.status === 'FAILED' && (
-                          <span className="text-xs text-red-600" title={request.statusMessage || 'Failed'}>
-                            Sorry, this failed 😞
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* --- NEW: "One-by-One" Card List --- */}
+        <div className="mt-6 space-y-4">
+          {filteredRequests.length === 0 && (
+            <div className="py-8 text-center text-gray-500">
+              <p>No requests found.</p>
             </div>
-          </div>
+          )}
+
+          {filteredRequests.map((request) => (
+            <div 
+              key={request.id} 
+              className="rounded-lg border border-gray-200 p-4"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                {/* Left Side (ID & Date) */}
+                <div>
+                  <p className="text-base font-semibold text-gray-900 break-all">
+                    {request.trackingId}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(request.createdAt)}
+                  </p>
+                </div>
+                
+                {/* Right Side (Status & Button) */}
+                <div className="mt-4 sm:mt-0 sm:ml-4 flex flex-col sm:items-end gap-2">
+                  <span 
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(request.status)}`}
+                  >
+                    {request.status}
+                  </span>
+                  
+                  <div className="mt-2">
+                    {renderActionButton(request)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
