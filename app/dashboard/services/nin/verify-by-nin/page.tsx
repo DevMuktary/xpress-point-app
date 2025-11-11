@@ -7,7 +7,16 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, 
 import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
-// --- (Helper functions are unchanged) ---
+// --- THIS IS THE FIX (Part 1) ---
+// Updated helper function to return empty string
+function displayField(value: any): string {
+  if (value === null || value === undefined || value === "") {
+    return ''; // Return blank
+  }
+  return decodeHtmlEntities(value.toString());
+}
+// ---------------------------------
+
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
   return text
@@ -17,12 +26,6 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
-}
-function displayField(value: any): string {
-  if (value === null || value === undefined || value === "") {
-    return ''; // Return blank
-  }
-  return decodeHtmlEntities(value.toString());
 }
 function formatGender(gender: string): string {
   if (!gender) return '';
@@ -38,7 +41,7 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- THIS IS THE FIX (Part 1) ---
+// --- THIS IS THE FIX (Part 2) ---
 // Types are updated to match our MAPPED data
 type NinData = {
   photo: string;
@@ -236,7 +239,7 @@ export default function VerifyByNinPage() {
     </div>
   );
   
-  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX, Part 2) ---
+  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX, Part 3) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
