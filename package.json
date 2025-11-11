@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --accept-data-loss && prisma generate && npm run seed && next build",
+    "build": "npm run db:fixstatus && prisma db push --accept-data-loss && prisma generate && npm run seed && next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
+    "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
+    "db:fixstatus": "psql $DATABASE_URL -c \"UPDATE \\\"personalization_requests\\\" SET \\\"status\\\" = 'PROCESSING' WHERE \\\"status\\\" = 'PENDING';\" || exit 0"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.3",
