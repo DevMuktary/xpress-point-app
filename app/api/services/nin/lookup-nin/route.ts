@@ -4,7 +4,6 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// --- THIS IS THE FIX (Part 1) ---
 // Using the new, stable ConfirmIdent provider
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const NIN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_search';
@@ -12,7 +11,6 @@ const NIN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_search';
 if (!CONFIRMIDENT_API_KEY) {
   console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
-// ------------------------------
 
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
@@ -61,33 +59,31 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // --- THIS IS THE FIX (Part 2) ---
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
-      { 
-        nin: nin // Use 'nin' as per docs
-      },
+      { nin: nin },
       {
         headers: { 
-          'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
+          'api-key': CONFIRMIDENT_API_KEY,
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
       }
     );
-    // ---------------------------------
 
     const data = response.data;
     
-    // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
+    // --- 3. Handle ConfirmIdent Response ---
     if (data.success === true && data.data) {
       
       const responseData = data.data; // This is the correct data path
 
-      // --- 4. "World-Class" Data Mapping (Fixing field names) ---
+      // --- 4. "World-Class" Data Mapping (FIXED) ---
+      // This now matches the fields from your log
+      // -----------------------------------------------------
       const mappedData = {
         photo: responseData.photo,
-        firstname: responseData.firs_tname, // Handling their typo
-        surname: responseData.last_name,
+        firstname: responseData.firstname, // <-- FIX: Was responseData.firs_tname
+        surname: responseData.surname,   // <-- FIX: Was responseData.last_name
         middlename: responseData.middlename,
         birthdate: responseData.birthdate.replace(/-/g, '-'),
         nin: responseData.NIN,
@@ -97,7 +93,7 @@ export async function POST(request: Request) {
         gender: responseData.gender,
         residence_lga: responseData.residence_lga,
         residence_state: responseData.residence_state,
-        telephoneno: responseData.phone_number,
+        telephoneno: responseData.telephoneno, // <-- FIX: Was responseData.phone_number
         birthstate: responseData.birthstate,
         maritalstatus: responseData.maritalstatus,
         profession: responseData.profession,
@@ -115,7 +111,7 @@ export async function POST(request: Request) {
         prisma.ninVerification.create({
           data: {
             userId: user.id,
-            data: mappedData as any,
+            data: mappedData as any, // Save the *mapped* data
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         }),
@@ -147,7 +143,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         message: 'Verification Successful',
         verificationId: verificationRecord.id,
-        data: mappedData,
+        data: mappedData, // <-- Send the mapped data
         slipPrices: {
           Regular: getPrice('NIN_SLIP_REGULAR'),
           Standard: getPrice('NIN_SLIP_STANDARD'),
@@ -156,6 +152,7 @@ export async function POST(request: Request) {
       });
       
     } else {
+      // This is a "Record not found" or other known error
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
