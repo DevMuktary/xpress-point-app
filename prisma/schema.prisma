@@ -102,8 +102,10 @@ model Service {
 }
 
 // --- THIS IS THE FIX ---
+// We allow BOTH the new and old values for now
 enum RequestStatus {
-  PROCESSING // Changed from PENDING
+  PENDING    // <-- The old value
+  PROCESSING // <-- The new, "world-class" value
   COMPLETED
   FAILED
 }
@@ -113,8 +115,8 @@ model PersonalizationRequest {
   id             String        @id @default(uuid())
   userId         String        @map("user_id")
   trackingId     String        @map("tracking_id")
-  // --- THIS IS THE FIX ---
-  status         RequestStatus @default(PROCESSING) // Changed from PENDING
+  // The default is now PROCESSING, but PENDING is still a valid value
+  status         RequestStatus @default(PROCESSING)
   statusMessage  String?       @map("status_message")
   data           Json?
   createdAt      DateTime      @default(now()) @map("created_at")
