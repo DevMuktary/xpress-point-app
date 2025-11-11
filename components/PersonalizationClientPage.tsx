@@ -30,8 +30,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // --- THIS IS THE FIX ---
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   // --- Filtered Requests ---
@@ -42,7 +40,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
       return matchesSearch && matchesStatus;
     });
   }, [requests, searchTerm, statusFilter]);
-  // ----------------------
 
   // --- API 1: Submit New Request ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +48,14 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     setSubmitError(null);
     setSubmitSuccess(null);
     setStatusMessage(null);
+
+    // --- "World-Class" Validation ---
+    if (trackingId.length > 15) {
+      setSubmitError("Tracking ID cannot be more than 15 characters.");
+      setIsSubmitting(false);
+      return;
+    }
+    // ----------------------------
 
     try {
       const response = await fetch('/api/services/nin/personalization-submit', {
@@ -125,13 +130,12 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     });
   };
   
-  // --- THIS IS THE FIX ---
   // Helper to get "world-class" status colors
   const getStatusColor = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED':
         return 'bg-green-100 text-green-800';
-      case 'PROCESSING': // Changed from PENDING
+      case 'PROCESSING':
         return 'bg-yellow-100 text-yellow-800';
       case 'FAILED':
         return 'bg-red-100 text-red-800';
@@ -139,7 +143,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         return 'bg-gray-100 text-gray-800';
     }
   };
-  // ----------------------
   
   // Helper for the "smart" button
   const renderActionButton = (request: PersonalizationRequest) => {
@@ -155,8 +158,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             View Result
           </Link>
         );
-      // --- THIS IS THE FIX ---
-      case 'PROCESSING': // Changed from PENDING
+      case 'PROCESSING':
         return (
           <button
             onClick={() => handleCheckStatus(request)}
@@ -170,7 +172,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             )}
           </button>
         );
-      // ----------------------
       case 'FAILED':
         return (
           <span className="text-sm text-red-600" title={request.statusMessage || 'Failed'}>
@@ -185,7 +186,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
 
-      {/* --- 1. The "No Refund" Warning --- */}
+      {/* --- 1. The "No Refund" Warning (FIXED) --- */}
       <div className="rounded-lg bg-red-50 p-4 border border-red-200">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -197,7 +198,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             </h3>
             <div className="mt-2 text-sm text-red-700">
               <p>
-                There is **no refund** for this service. Please make sure the
+                There is <strong className="font-semibold">no refund</strong> for this service. Please make sure the
                 Tracking ID is correct before submitting.
               </p>
             </div>
@@ -205,11 +206,11 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         </div>
       </div>
 
-      {/* --- 2. The "Submit New Request" Form --- */}
+      {/* --- 2. The "Submit New Request" Form (FIXED) --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-900">Submit New Request</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Enter  Tracking ID To Get your NIN Number.
+          Enter Tracking ID to get NIN NUMBER/SLIP.
         </p>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="relative">
@@ -220,7 +221,8 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
               type="text"
               value={trackingId}
               onChange={(e) => setTrackingId(e.target.value)}
-              placeholder="Enter Tracking ID"
+              placeholder="Enter Tracking ID (max 15 characters)"
+              maxLength={15} // <-- THIS IS THE FIX
               className="w-full rounded-lg border border-gray-300 p-3 pl-10 text-lg shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               required
             />
@@ -267,7 +269,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             className="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="ALL">All Statuses</option>
-            {/* --- THIS IS THE FIX --- */}
             <option value="PROCESSING">Processing</option> 
             <option value="COMPLETED">Completed</option>
             <option value="FAILED">Failed</option>
