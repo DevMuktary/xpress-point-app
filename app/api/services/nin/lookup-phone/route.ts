@@ -4,7 +4,6 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// --- THIS IS THE FIX ---
 // Using the new, stable ConfirmIdent provider
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const PHONE_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_phone';
@@ -66,7 +65,7 @@ export async function POST(request: Request) {
       },
       {
         headers: { 
-          'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
+          'api-key': CONFIRMIDENT_API_KEY,
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
@@ -76,6 +75,7 @@ export async function POST(request: Request) {
     const data = response.data;
     
     // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
+    // This is the "world-class" stable structure: data.data
     if (data.success === true && data.data) {
       
       const responseData = data.data; // This is the correct data path
