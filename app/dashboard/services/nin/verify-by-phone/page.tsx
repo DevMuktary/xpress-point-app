@@ -7,16 +7,7 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, 
 import Loading from '@/app/loading';
 import SafeImage from '@/components/SafeImage';
 
-// --- THIS IS THE FIX (Part 1) ---
-// Updated helper function to return empty string
-function displayField(value: any): string {
-  if (value === null || value === undefined || value === "") {
-    return ''; // Return blank
-  }
-  return decodeHtmlEntities(value.toString());
-}
-// ---------------------------------
-
+// --- (Helper functions are unchanged) ---
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
   return text
@@ -26,6 +17,12 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
+}
+function displayField(value: any): string {
+  if (value === null || value === undefined || value === "") {
+    return ''; // Return blank
+  }
+  return decodeHtmlEntities(value.toString());
 }
 function formatGender(gender: string): string {
   if (!gender) return '';
@@ -41,27 +38,24 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- THIS IS THE FIX (Part 2) ---
-// Types are updated to match our MAPPED data
+// --- (Types are unchanged) ---
 type NinData = {
   photo: string;
-  firstname: string; // <-- Correct
-  surname: string;   // <-- Correct
+  firstname: string; 
+  surname: string;   
   middlename: string;
   birthdate: string;
-  nin: string;       // <-- Correct
+  nin: string;       
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
   gender?: string;
   residence_lga?: string;
   residence_state?: string;
-  telephoneno: string; // <-- Correct
+  telephoneno: string; 
   birthstate?: string;
   maritalstatus?: string;
 };
-// ---------------------------------
-
 type VerificationResponse = {
   verificationId: string;
   data: NinData;
@@ -239,7 +233,7 @@ export default function VerifyByPhonePage() {
     </div>
   );
   
-  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX, Part 3) ---
+  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -268,7 +262,6 @@ export default function VerifyByPhonePage() {
           />
         </div>
         <div className="divide-y divide-gray-100">
-          {/* --- Using MAPPED, correct field names --- */}
           <DataRow label="First Name" value={data.data.firstname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
           <DataRow label="Last Name" value={data.data.surname} />
@@ -277,10 +270,13 @@ export default function VerifyByPhonePage() {
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
           <DataRow label="Gender" value={formatGender(data.data.gender || '')} />
-          <DataDataRow 
+          {/* --- THIS IS THE FIX --- */}
+          {/* Changed DataDataRow to DataRow */}
+          <DataRow 
             label="Address" 
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
+          {/* ----------------------- */}
           <DataRow label="DOB" value={data.data.birthdate} />
           <DataRow label="Phone Number" value={data.data.telephoneno} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
