@@ -4,32 +4,24 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// --- THIS IS THE FIX (Part 1) ---
-// Using the 'nin-search3' endpoint from your new documentation
-const WORKBYTE_API_TOKEN = process.env.WORKBYTE_API_TOKEN;
-const NIN_VERIFY_ENDPOINT = 'https://workbyte.com.ng/api/nin-search3/'; // <-- Corrected
+// --- THIS IS THE FIX ---
+// Using the new, stable ConfirmIdent provider
+const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
+const NIN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_search';
 
-if (!WORKBYTE_API_TOKEN) {
-  console.error("CRITICAL: WORKBYTE_API_TOKEN is not set.");
+if (!CONFIRMIDENT_API_KEY) {
+  console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
 
-// Helper to parse Workbyte's various error messages
+// Helper to parse errors
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
   if (error.response && error.response.data) {
     const data = error.response.data;
-    // Handle specific codes from your doc
-    if (data.code === 401) return "Access denied: API key is invalid.";
-    if (data.code === 403) return "Permission denied. Please contact support.";
-    if (data.code === 402) return "Insufficient balance with API provider.";
-    // Handle general messages
     if (data.message && typeof data.message === 'string') {
       return data.message;
-    }
-    if (data.detail && typeof data.detail === 'string') {
-      return data.detail; // Sometimes they use 'detail'
     }
   }
   if (error.message) {
@@ -44,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
-  if (!WORKBYTE_API_TOKEN) {
+  if (!CONFIRMIDENT_API_KEY) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
@@ -68,12 +60,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call External API (Workbyte) ---
+    // --- 2. Call External API (ConfirmIdent) ---
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
-      { nin: nin },
+      { 
+        nin: nin // Use 'nin' as per docs
+      },
       {
         headers: { 
-          'Authorization': WORKBYTE_API_TOKEN,
+          'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
@@ -82,31 +76,36 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 3. Handle Workbyte Response (Based on your new docs) ---
-    // This is the "world-class" stable structure: data.data
-    if (data.status === true && data.code === 200 && data.data?.status === 'found' && data.data?.data) {
+    // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
+    if (data.success === true && data.data) {
       
-      const responseData = data.data.data; // This is the correct data path
-      
-      // --- 4. "World-Class" Data Mapping (Fixes apostrophe bug) ---
+      const responseData = data.data; // This is the correct data path
+
+      // --- 4. "World-Class" Data Mapping (Fixing field names) ---
+      // This is the *most important* fix to prevent crashes.
       const mappedData = {
-        photo: responseData.image.replace('data:image/jpg;base64,', ''), // Clean base64
-        firstname: responseData.firstName,
-        surname: responseData.lastName,
-        middlename: responseData.middleName,
-        birthdate: responseData.dateOfBirth.replace(/-/g, '-'), // API sends 1-1-2000, we'll keep it
-        nin: responseData.nin,
+        photo: responseData.photo,
+        firstname: responseData.firs_tname, // Handling their typo
+        surname: responseData.last_name,
+        middlename: responseData.middlename,
+        birthdate: responseData.birthdate.replace(/-/g, '-'), // Ensure DD-MM-YYYY
+        nin: responseData.NIN,
         trackingId: responseData.trackingId,
-        residence_AdressLine1: responseData.address?.addressLine, // Safe access
+        residence_AdressLine1: responseData.residence_AdressLine1,
         birthlga: responseData.birthlga,
         gender: responseData.gender,
-        residence_lga: responseData.address?.lga, // Safe access
-        residence_state: responseData.address?.state, // Safe access
-        telephoneno: responseData.mobile,
+        residence_lga: responseData.residence_lga,
+        residence_state: responseData.residence_state,
+        telephoneno: responseData.phone_number,
         birthstate: responseData.birthstate,
         maritalstatus: responseData.maritalstatus,
+        // (Adding other fields from their response)
+        profession: responseData.profession,
+        religion: responseData.religion,
+        signature: responseData.signature,
       };
-      
+      // -----------------------------------------------------
+
       // --- 5. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
         prisma.wallet.update({
@@ -148,7 +147,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         message: 'Verification Successful',
         verificationId: verificationRecord.id,
-        data: mappedData, // Send our clean, mapped data
+        data: mappedData, // <-- Send the mapped data
         slipPrices: {
           Regular: getPrice('NIN_SLIP_REGULAR'),
           Standard: getPrice('NIN_SLIP_STANDARD'),
@@ -157,7 +156,7 @@ export async function POST(request: Request) {
       });
       
     } else {
-      // This is a "No record found" or other known error
+      // This is a "Record not found" or other known error
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
