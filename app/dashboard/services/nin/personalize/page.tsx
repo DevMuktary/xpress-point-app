@@ -6,7 +6,8 @@ import SafeImage from '@/components/SafeImage';
 
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import PersonalizationClientPage from '@/components/PersonalizationClientPage'; // We will create this next
+// We will create this new "world-class" client component next
+import PersonalizationClientPage from '@/components/PersonalizationClientPage'; 
 
 // This is a Server Component. It fetches data on the server.
 export default async function PersonalizeNinPage() {
