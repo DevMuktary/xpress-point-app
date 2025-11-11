@@ -59,12 +59,14 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // --- THIS IS THE FIX (HYPOTHESIS 3) ---
-    // Let's try 'telephoneno' with the 11-digit number
-    // This matches the key they use in their *response*
+    // --- THIS IS THE FINAL TEST ---
+    // Let's try the international +234 format
+    // This converts "070..." to "+23470..."
+    const phoneToSend = phone.startsWith('0') ? `+234${phone.substring(1)}` : phone;
+
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        telephoneno: phone 
+        phone: phoneToSend // Key is 'phone' and value is +234...
       },
       {
         headers: { 
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
         timeout: 15000,
       }
     );
-    // ---------------------------------------
+    // -----------------------------
     
     const data = response.data;
     
