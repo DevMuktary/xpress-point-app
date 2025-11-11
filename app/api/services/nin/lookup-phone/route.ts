@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { phone } = body; 
+    const { phone } = body; // This is the 11-digit number from your frontend
 
     if (!phone) {
       return NextResponse.json({ error: 'Phone number is required.' }, { status: 400 });
@@ -60,10 +60,12 @@ export async function POST(request: Request) {
 
     // --- 2. Call External API (ConfirmIdent) ---
     // --- THIS IS THE FIX ---
-    // The API expects the field to be 'telephoneno', not 'phone'
+    // The API expects a 10-digit number, so we strip the leading '0'
+    const phoneToSend = phone.startsWith('0') ? phone.substring(1) : phone;
+
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        telephoneno: phone 
+        phone: phoneToSend // Key is 'phone' and value is 10-digits
       },
       {
         headers: { 
@@ -124,7 +126,7 @@ export async function POST(request: Request) {
             serviceId: service.id,
             type: 'SERVICE_CHARGE',
             amount: price.negated(),
-            description: `NIN Lookup by Phone (${phone})`,
+            description: `NIN Lookup by Phone (${phone})`, // Log the original 11-digit
             reference: data.transaction_id || `NIN-PHONE-${Date.now()}`,
             status: 'COMPLETED',
           },
