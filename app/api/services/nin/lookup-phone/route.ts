@@ -75,7 +75,6 @@ export async function POST(request: Request) {
     const data = response.data;
     
     // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
-    // This is the "world-class" stable structure: data.data
     if (data.success === true && data.data) {
       
       const responseData = data.data; // This is the correct data path
