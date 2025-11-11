@@ -4,7 +4,6 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// --- THIS IS THE FIX ---
 // Using the new, stable ConfirmIdent provider
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const NIN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_search';
@@ -13,7 +12,6 @@ if (!CONFIRMIDENT_API_KEY) {
   console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
 
-// Helper to parse errors
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
@@ -62,12 +60,10 @@ export async function POST(request: Request) {
 
     // --- 2. Call External API (ConfirmIdent) ---
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
-      { 
-        nin: nin // Use 'nin' as per docs
-      },
+      { nin: nin },
       {
         headers: { 
-          'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
+          'api-key': CONFIRMIDENT_API_KEY,
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
@@ -77,12 +73,12 @@ export async function POST(request: Request) {
     const data = response.data;
     
     // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
-    if (data.success === true && data.data) {
+    // This is the "world-class" stable structure: data.data.data
+    if (data.success === true && data.data?.data) {
       
-      const responseData = data.data; // This is the correct data path
+      const responseData = data.data.data; // This is the correct data path
 
       // --- 4. "World-Class" Data Mapping (Fixing field names) ---
-      // This is the *most important* fix to prevent crashes.
       const mappedData = {
         photo: responseData.photo,
         firstname: responseData.firs_tname, // Handling their typo
@@ -99,7 +95,6 @@ export async function POST(request: Request) {
         telephoneno: responseData.phone_number,
         birthstate: responseData.birthstate,
         maritalstatus: responseData.maritalstatus,
-        // (Adding other fields from their response)
         profession: responseData.profession,
         religion: responseData.religion,
         signature: responseData.signature,
