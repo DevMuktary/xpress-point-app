@@ -9,7 +9,6 @@ const CRON_SECRET = process.env.CRON_JOB_SECRET;
 
 export async function POST(request: Request) {
   // --- 1. "World-Class" Security ---
-  // Check for the secret key in the authorization header
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
@@ -24,16 +23,17 @@ export async function POST(request: Request) {
   let failed = 0;
 
   try {
-    // --- 2. Get all PENDING requests ---
+    // --- 2. Get all PROCESSING requests ---
+    // --- THIS IS THE FIX ---
     const pendingRequests = await prisma.personalizationRequest.findMany({
-      where: { status: 'PENDING' },
+      where: { status: 'PROCESSING' },
     });
 
     if (pendingRequests.length === 0) {
-      return NextResponse.json({ message: 'No pending jobs to check.' });
+      return NextResponse.json({ message: 'No processing jobs to check.' });
     }
 
-    console.log(`CRON JOB: Found ${pendingRequests.length} pending requests.`);
+    console.log(`CRON JOB: Found ${pendingRequests.length} processing requests.`);
 
     // --- 3. Loop and check each one ---
     for (const request of pendingRequests) {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
               'api-key': ROBOSTTECH_API_KEY,
               'Content-Type': 'application/json' 
             },
-            timeout: 10000, // Shorter timeout for cron
+            timeout: 10000,
           }
         );
         
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
           });
           failed++;
         }
-        // If still pending, we do nothing and let it loop.
+        // If still processing, we do nothing.
 
       } catch (loopError: any) {
         console.error(`CRON JOB: Failed to check ${request.trackingId}:`, loopError.message);
