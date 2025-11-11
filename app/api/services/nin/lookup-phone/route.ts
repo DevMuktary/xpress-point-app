@@ -138,7 +138,7 @@ export async function POST(request: Request) {
 
       // --- 6. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
-        where: { id: { in: ['NIN_S LIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
+        where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { id: true, agentPrice: true, aggregatorPrice: true }
       });
       
@@ -165,7 +165,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
 
-  } catch (error: any) =  const errorMessage = parseApiError(error);
+  } catch (error: any) {
+    const errorMessage = parseApiError(error);
     console.error(`NIN Lookup (Phone) Error:`, errorMessage);
     return NextResponse.json(
       { error: errorMessage },
@@ -173,3 +174,4 @@ export async function POST(request: Request) {
     );
   }
 }
+
