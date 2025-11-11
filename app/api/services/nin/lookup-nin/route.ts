@@ -4,12 +4,13 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// API credentials
-const ROBOSTTECH_API_KEY = process.env.ROBOSTTECH_API_KEY;
-const NIN_VERIFY_ENDPOINT = 'https://robosttech.com/api/nin_verify';
+// --- THIS IS THE FIX ---
+// Using our existing Raudah key and the NEW Raudah NIN endpoint
+const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
+const NIN_VERIFY_ENDPOINT = 'https://raudah.com.ng/api/nin/v3';
 
-if (!ROBOSTTECH_API_KEY) {
-  console.error("CRITICAL: ROBOSTTECH_API_KEY is not set.");
+if (!RAUDAH_API_KEY) {
+  console.error("CRITICAL: RAUDAH_API_KEY is not set.");
 }
 
 export async function POST(request: Request) {
@@ -18,13 +19,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
-  if (!ROBOSTTECH_API_KEY) {
+  if (!RAUDAH_API_KEY) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
   try {
     const body = await request.json();
-    const { nin } = body; // Only accepts 'nin'
+    const { nin } = body; 
 
     if (!nin) {
       return NextResponse.json({ error: 'NIN is required.' }, { status: 400 });
@@ -42,24 +43,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call External API ---
+    // --- 2. Call External API (Raudah) ---
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
-      { nin: nin }, // Only sends 'nin'
+      { 
+        value: nin, // Use 'value' as per Raudah docs
+        ref: `XPRESSPOINT_NIN_${user.id}_${Date.now()}`
+      },
       {
-        headers: { 'api-key': ROBOSTTECH_API_KEY, 'Content-Type': 'application/json' },
+        headers: { 
+          'Authorization': RAUDAH_API_KEY, // Use 'Authorization'
+          'Content-Type': 'application/json' 
+        },
         timeout: 15000,
       }
     );
 
     const data = response.data;
-    if (data.success === true && !data.data) {
+
+    // --- 3. Handle Raudah Response ---
+    // We'll use the same robust parsing from our BVN API
+    if (data.status === false || data.success === false) {
+      let errorMessage = data.message && typeof data.message === 'object' ? data.message['0'] : data.message;
+      throw new Error(errorMessage || "NIN verification failed.");
+    }
+    
+    // The data payload from Raudah might be in `data.data` or `data.data.data`
+    const responseData = data.data?.data || data.data; 
+
+    if (!responseData || responseData.status === 'not_found' || !responseData.firstname) {
       return NextResponse.json({ error: 'Sorry 😢 no record found.' }, { status: 404 });
     }
-    if (data.success === false) {
-      return NextResponse.json({ error: data.message || 'No match found.' }, { status: 404 });
-    }
 
-    // --- 3. Charge User & Save Transaction ---
+    // --- 4. Charge User & Save Transaction ---
     const [_, verificationRecord] = await prisma.$transaction([
       prisma.wallet.update({
         where: { userId: user.id },
@@ -68,7 +83,7 @@ export async function POST(request: Request) {
       prisma.ninVerification.create({
         data: {
           userId: user.id,
-          data: data.data,
+          data: responseData, // Save the actual data object
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
       }),
@@ -85,7 +100,7 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // --- 4. Return Success Data to Frontend ---
+    // --- 5. Return Success Data to Frontend ---
     const slipPrices = await prisma.service.findMany({
       where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
       select: { id: true, agentPrice: true, aggregatorPrice: true }
@@ -100,7 +115,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: 'Verification Successful',
       verificationId: verificationRecord.id,
-      data: data.data,
+      data: responseData,
       slipPrices: {
         Regular: getPrice('NIN_SLIP_REGULAR'),
         Standard: getPrice('NIN_SLIP_STANDARD'),
