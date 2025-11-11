@@ -38,7 +38,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
     }
 
-    // If it's already complete, just return
     if (existingRequest.status === 'COMPLETED') {
       return NextResponse.json({ status: 'COMPLETED', message: 'This request is already complete.' });
     }
@@ -57,7 +56,7 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 3. Handle Robosttech Response (Your "world-class" flow) ---
+    // --- 3. Handle Robosttech Response ---
     
     if (data.success === true && data.status === 'completed' && data.data) {
       // --- SUCCESS! ---
@@ -66,11 +65,10 @@ export async function POST(request: Request) {
         data: {
           status: 'COMPLETED',
           statusMessage: 'Completed',
-          data: data.data as any, // Save the full data object
+          data: data.data as any,
         },
       });
       
-      // Send the "world-class" on-screen message
       return NextResponse.json({ status: 'COMPLETED', message: 'Success! Your data is ready.' });
 
     } else if (data.success === false && data.status === 'failed') {
@@ -85,8 +83,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'FAILED', message: `Sorry 😞 ${data.message}` });
     
     } else {
-      // --- STILL PENDING ---
-      return NextResponse.json({ status: 'PENDING', message: data.message || 'Request is still processing.' });
+      // --- STILL PROCESSING ---
+      // --- THIS IS THE FIX ---
+      return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Request is still processing.' });
     }
 
   } catch (error: any) {
