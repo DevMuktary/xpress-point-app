@@ -4,25 +4,22 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// API credentials
+// --- THIS IS THE FIX (Part 1) ---
+// Using the new, stable ConfirmIdent provider
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const NIN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_search';
 
 if (!CONFIRMIDENT_API_KEY) {
   console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
+// ------------------------------
 
-// --- NEW: Helper function to parse API errors ---
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
-  // Check for the "Record not found" error from your log
   if (error.response && error.response.data) {
     const data = error.response.data;
-    if (data.message && data.response_code === "01") {
-      return `Sorry 😢 ${data.message}`; // "Record not found..."
-    }
     if (data.message && typeof data.message === 'string') {
       return data.message;
     }
@@ -63,28 +60,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call External API (Raudah) ---
+    // --- 2. Call External API (ConfirmIdent) ---
+    // --- THIS IS THE FIX (Part 2) ---
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
       { 
-        value: nin,
-        ref: `XPRESSPOINT_NIN_${user.id}_${Date.now()}`
+        nin: nin // Use 'nin' as per docs
       },
       {
         headers: { 
-          'Authorization': RAUDAH_API_KEY,
+          'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
       }
     );
+    // ---------------------------------
 
     const data = response.data;
     
-    // --- 3. Handle Raudah Response (Based on your logs) ---
-    if (data.status === true && data.response_code === "00" && data.nin_data) {
-      // This is a SUCCESS
+    // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
+    if (data.success === true && data.data) {
       
-      // --- 4. Charge User & Save Transaction ---
+      const responseData = data.data; // This is the correct data path
+
+      // --- 4. "World-Class" Data Mapping (Fixing field names) ---
+      const mappedData = {
+        photo: responseData.photo,
+        firstname: responseData.firs_tname, // Handling their typo
+        surname: responseData.last_name,
+        middlename: responseData.middlename,
+        birthdate: responseData.birthdate.replace(/-/g, '-'),
+        nin: responseData.NIN,
+        trackingId: responseData.trackingId,
+        residence_AdressLine1: responseData.residence_AdressLine1,
+        birthlga: responseData.birthlga,
+        gender: responseData.gender,
+        residence_lga: responseData.residence_lga,
+        residence_state: responseData.residence_state,
+        telephoneno: responseData.phone_number,
+        birthstate: responseData.birthstate,
+        maritalstatus: responseData.maritalstatus,
+        profession: responseData.profession,
+        religion: responseData.religion,
+        signature: responseData.signature,
+      };
+      // -----------------------------------------------------
+
+      // --- 5. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
         prisma.wallet.update({
           where: { userId: user.id },
@@ -93,7 +115,7 @@ export async function POST(request: Request) {
         prisma.ninVerification.create({
           data: {
             userId: user.id,
-            data: data.nin_data, // <-- Save the nin_data object
+            data: mappedData as any,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         }),
@@ -104,13 +126,13 @@ export async function POST(request: Request) {
             type: 'SERVICE_CHARGE',
             amount: price.negated(),
             description: `NIN Verification Lookup (${nin})`,
-            reference: `NIN-LOOKUP-${Date.now()}`,
+            reference: data.transaction_id || `NIN-LOOKUP-${Date.now()}`,
             status: 'COMPLETED',
           },
         }),
       ]);
 
-      // --- 5. Return Success Data to Frontend ---
+      // --- 6. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
         where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { id: true, agentPrice: true, aggregatorPrice: true }
@@ -125,7 +147,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         message: 'Verification Successful',
         verificationId: verificationRecord.id,
-        data: data.nin_data, // <-- Send the nin_data object
+        data: mappedData,
         slipPrices: {
           Regular: getPrice('NIN_SLIP_REGULAR'),
           Standard: getPrice('NIN_SLIP_STANDARD'),
@@ -134,13 +156,11 @@ export async function POST(request: Request) {
       });
       
     } else {
-      // This is a "Record not found" or other known error
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
 
   } catch (error: any) {
-    // This catches axios errors (timeout, 500, etc)
     const errorMessage = parseApiError(error);
     console.error(`NIN Lookup (NIN) Error:`, errorMessage);
     return NextResponse.json(
