@@ -99,7 +99,7 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       x: 105, y: height - 133, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.surname), {
-      x: 296, y: height - 145, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
+      x: 296, y: height - 160, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
     page.drawText(displayField(data.firstname), {
       x: 296, y: height - 170, size: 10, font: helvetica, color: rgb(0.2, 0.2, 0.2)
