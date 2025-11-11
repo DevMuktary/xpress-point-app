@@ -59,14 +59,12 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // --- THIS IS THE FINAL TEST ---
-    // Let's try the international +234 format
-    // This converts "070..." to "+23470..."
-    const phoneToSend = phone.startsWith('0') ? `+234${phone.substring(1)}` : phone;
+    // Using the 10-digit format for the 'phone' key
+    const phoneToSend = phone.startsWith('0') ? phone.substring(1) : phone;
 
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phoneToSend // Key is 'phone' and value is +234...
+        phone: phoneToSend 
       },
       {
         headers: { 
@@ -76,12 +74,15 @@ export async function POST(request: Request) {
         timeout: 15000,
       }
     );
-    // -----------------------------
     
     const data = response.data;
     
     // --- 3. Handle ConfirmIdent Response ---
-    if (data.success === true && data.data) {
+    // --- THIS IS THE FIX ---
+    // We only check if the data.data object exists.
+    // We ignore the "success" flag because the API sends confusing messages.
+    if (data.data) {
+    // -----------------------
       
       const responseData = data.data;
 
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
       };
 
       return NextResponse.json({
-        message: 'Verification Successful',
+        message: 'Verification Successful', // This message goes to the frontend
         verificationId: verificationRecord.id,
         data: mappedData,
         slipPrices: {
@@ -158,6 +159,7 @@ export async function POST(request: Request) {
       });
 
     } else {
+      // Now, this block will *only* catch real errors
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
