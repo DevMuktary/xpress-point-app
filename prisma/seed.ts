@@ -11,7 +11,7 @@ const services = [
     name: 'NIN Verification Lookup',
     category: 'NIN',
     agentPrice: new Decimal(150.00),
-    aggregatorPrice: new Decimal(140.00), // Example of a different price
+    aggregatorPrice: new Decimal(140.00),
   },
   {
     id: 'NIN_SLIP_REGULAR',
@@ -34,17 +34,21 @@ const services = [
     agentPrice: new Decimal(200.00),
     aggregatorPrice: new Decimal(180.00),
   },
-  // We can add all other services here
+  // --- NEW SERVICE ---
+  {
+    id: 'NIN_PERSONALIZATION',
+    name: 'NIN Personalization',
+    category: 'NIN',
+    agentPrice: new Decimal(1000.00), // You can change this price
+    aggregatorPrice: new Decimal(950.00),
+  },
+  // -------------------
 ];
 
 async function main() {
   console.log('Start seeding services...');
   
   for (const service of services) {
-    const serviceExists = await prisma.service.findUnique({
-      where: { id: service.id },
-    });
-    
     // We use upsert to create or update the service
     await prisma.service.upsert({
       where: { id: service.id },
