@@ -42,21 +42,21 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
 );
 
 // --- THIS IS THE FIX (Part 2) ---
-// Types are updated to match our MAPPED data
+// Types are updated to match the NEW API response
 type NinData = {
   photo: string;
-  firstname: string; // <-- Correct
-  surname: string;   // <-- Correct
+  firs_tname: string; // <-- Fix for API typo
+  last_name: string;  // <-- New name
   middlename: string;
   birthdate: string;
-  nin: string;       // <-- Correct
+  NIN: string;        // <-- New name
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
   gender?: string;
   residence_lga?: string;
   residence_state?: string;
-  telephoneno: string; // <-- Correct
+  phone_number: string; // <-- New name
   birthstate?: string;
   maritalstatus?: string;
 };
@@ -269,10 +269,10 @@ export default function VerifyByNinPage() {
         </div>
         <div className="divide-y divide-gray-100">
           {/* --- Using MAPPED, correct field names --- */}
-          <DataRow label="First Name" value={data.data.firstname} />
+          <DataRow label="First Name" value={data.data.firs_tname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
-          <DataRow label="Last Name" value={data.data.surname} />
-          <DataRow label="ID" value={data.data.nin} />
+          <DataRow label="Last Name" value={data.data.last_name} />
+          <DataRow label="ID" value={data.data.NIN} />
           <DataRow label="Tracking ID" value={data.data.trackingId} />
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
@@ -282,7 +282,7 @@ export default function VerifyByNinPage() {
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
           <DataRow label="DOB" value={data.data.birthdate} />
-          <DataRow label="Phone Number" value={data.data.telephoneno} />
+          <DataRow label="Phone Number" value={data.data.phone_number} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
