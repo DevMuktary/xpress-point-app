@@ -7,15 +7,12 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, 
 import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
-// --- THIS IS THE FIX (Part 1) ---
-// Updated helper function to return empty string
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "") {
     return ''; // Return blank
   }
   return decodeHtmlEntities(value.toString());
 }
-// ---------------------------------
 
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
@@ -42,21 +39,21 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
 );
 
 // --- THIS IS THE FIX (Part 2) ---
-// Types are updated to match the NEW API response
+// Types are updated to match our MAPPED data from the backend
 type NinData = {
   photo: string;
-  firs_tname: string; // <-- Fix for API typo
-  last_name: string;  // <-- New name
+  firstname: string; // <-- Correct
+  surname: string;   // <-- Correct
   middlename: string;
   birthdate: string;
-  NIN: string;        // <-- New name
+  nin: string;       // <-- Correct
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
   gender?: string;
   residence_lga?: string;
   residence_state?: string;
-  phone_number: string; // <-- New name
+  telephoneno: string; // <-- Correct
   birthstate?: string;
   maritalstatus?: string;
 };
@@ -269,10 +266,10 @@ export default function VerifyByNinPage() {
         </div>
         <div className="divide-y divide-gray-100">
           {/* --- Using MAPPED, correct field names --- */}
-          <DataRow label="First Name" value={data.data.firs_tname} />
+          <DataRow label="First Name" value={data.data.firstname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
-          <DataRow label="Last Name" value={data.data.last_name} />
-          <DataRow label="ID" value={data.data.NIN} />
+          <DataRow label="Last Name" value={data.data.surname} />
+          <DataRow label="ID" value={data.data.nin} />
           <DataRow label="Tracking ID" value={data.data.trackingId} />
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
@@ -282,7 +279,7 @@ export default function VerifyByNinPage() {
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
           <DataRow label="DOB" value={data.data.birthdate} />
-          <DataRow label="Phone Number" value={data.data.phone_number} />
+          <DataRow label="Phone Number" value={data.data.telephoneno} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
