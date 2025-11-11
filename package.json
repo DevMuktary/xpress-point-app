@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "db:fixstatus": "psql $DATABASE_URL -c \"UPDATE \\\"personalization_requests\\\" SET \\\"status\\\" = 'PROCESSING' WHERE \\\"status\\\" = 'PENDING';\" || exit 0"
+    "db:fixstatus": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/fixstatus.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.3",
