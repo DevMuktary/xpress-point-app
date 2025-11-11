@@ -7,12 +7,15 @@ import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, 
 import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
+// --- THIS IS THE FIX ---
+// Updated helper function to return empty string for "****"
 function displayField(value: any): string {
-  if (value === null || value === undefined || value === "") {
+  if (value === null || value === undefined || value === "" || value === "****") {
     return ''; // Return blank
   }
   return decodeHtmlEntities(value.toString());
 }
+// ------------------------
 
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
@@ -38,7 +41,6 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- THIS IS THE FIX (Part 2) ---
 // Types are updated to match our MAPPED data from the backend
 type NinData = {
   photo: string;
@@ -57,7 +59,6 @@ type NinData = {
   birthstate?: string;
   maritalstatus?: string;
 };
-// ---------------------------------
 
 type VerificationResponse = {
   verificationId: string;
@@ -97,7 +98,6 @@ export default function VerifyByNinPage() {
 
   const lookupFee = '150'; // Placeholder
 
-  // --- (handleLookup is unchanged) ---
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -147,7 +147,6 @@ export default function VerifyByNinPage() {
     }
   };
 
-  // --- (confirmGenerateSlip and downloadPdf are unchanged) ---
   const confirmGenerateSlip = async () => {
     if (!verificationData || !modalState.slipType) return;
     
@@ -205,7 +204,6 @@ export default function VerifyByNinPage() {
     });
   };
 
-  // --- STAGE 1 RENDER: The Search Form (Unchanged) ---
   const renderSearchForm = () => (
     <div className="rounded-2xl bg-white p-6 shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900">Enter NIN</h3>
@@ -236,7 +234,6 @@ export default function VerifyByNinPage() {
     </div>
   );
   
-  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX, Part 3) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -265,7 +262,6 @@ export default function VerifyByNinPage() {
           />
         </div>
         <div className="divide-y divide-gray-100">
-          {/* --- Using MAPPED, correct field names --- */}
           <DataRow label="First Name" value={data.data.firstname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
           <DataRow label="Last Name" value={data.data.surname} />
@@ -284,7 +280,6 @@ export default function VerifyByNinPage() {
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
       </div>
-      {/* --- (Slip Generation buttons are unchanged) --- */}
       <div className="border-t border-gray-100 bg-gray-50 p-6 rounded-b-2xl">
         <h3 className="text-lg font-semibold text-gray-900">Generate Slip</h3>
         <div className="mt-2 mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
@@ -336,7 +331,6 @@ export default function VerifyByNinPage() {
     </div>
   );
 
-  // --- (Main return and Modal are unchanged) ---
   return (
     <div className="w-full max-w-3xl mx-auto">
       {isLoading && <Loading />}
