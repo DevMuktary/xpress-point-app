@@ -5,12 +5,12 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- THIS IS THE FIX ---
-// Using the 'nin-search2' endpoint from your example
-const WORKBYTE_API_TOKEN = process.env.WORKBYTE_API_TOKEN;
-const PHONE_VERIFY_ENDPOINT = 'https://workbyte.com.ng/api/nin-search2/by-phone/'; // <-- Corrected
+// Using the new, stable ConfirmIdent provider
+const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
+const PHONE_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_phone';
 
-if (!WORKBYTE_API_TOKEN) {
-  console.error("CRITICAL: WORKBYTE_API_TOKEN is not set.");
+if (!CONFIRMIDENT_API_KEY) {
+  console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
 
 function parseApiError(error: any): string {
@@ -21,10 +21,6 @@ function parseApiError(error: any): string {
     const data = error.response.data;
     if (data.message && typeof data.message === 'string') {
       return data.message;
-    }
-    // Handle "Access Forbidden"
-    if (error.response.status === 403) {
-      return "Access Forbidden: Please check API credentials.";
     }
   }
   if (error.message) {
@@ -39,7 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
-  if (!WORKBYTE_API_TOKEN) {
+  if (!CONFIRMIDENT_API_KEY) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
@@ -63,14 +59,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call External API (Workbyte) ---
+    // --- 2. Call External API (ConfirmIdent) ---
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phone
+        phone: phone // Use 'phone' as per docs
       },
       {
         headers: { 
-          'Authorization': WORKBYTE_API_TOKEN,
+          'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
@@ -79,12 +75,35 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 3. Handle Workbyte Response ---
-    if (data.status === true && data.code === 200 && data.data?.status === true && data.data?.data) {
+    // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
+    if (data.success === true && data.data) {
       
-      const responseData = data.data.data;
+      const responseData = data.data; // This is the correct data path
 
-      // --- 4. Charge User & Save Transaction ---
+      // --- 4. "World-Class" Data Mapping (Fixing field names) ---
+      const mappedData = {
+        photo: responseData.photo,
+        firstname: responseData.firs_tname, // Handling their typo
+        surname: responseData.last_name,
+        middlename: responseData.middlename,
+        birthdate: responseData.birthdate.replace(/-/g, '-'),
+        nin: responseData.NIN,
+        trackingId: responseData.trackingId,
+        residence_AdressLine1: responseData.residence_AdressLine1,
+        birthlga: responseData.birthlga,
+        gender: responseData.gender,
+        residence_lga: responseData.residence_lga,
+        residence_state: responseData.residence_state,
+        telephoneno: responseData.phone_number,
+        birthstate: responseData.birthstate,
+        maritalstatus: responseData.maritalstatus,
+        profession: responseData.profession,
+        religion: responseData.religion,
+        signature: responseData.signature,
+      };
+      // -----------------------------------------------------
+
+      // --- 5. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
         prisma.wallet.update({
           where: { userId: user.id },
@@ -93,7 +112,7 @@ export async function POST(request: Request) {
         prisma.ninVerification.create({
           data: {
             userId: user.id,
-            data: responseData,
+            data: mappedData as any, // Save the *mapped* data
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         }),
@@ -110,7 +129,7 @@ export async function POST(request: Request) {
         }),
       ]);
 
-      // --- 5. Return Success Data to Frontend ---
+      // --- 6. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
         where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { id: true, agentPrice: true, aggregatorPrice: true }
@@ -125,7 +144,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         message: 'Verification Successful',
         verificationId: verificationRecord.id,
-        data: responseData,
+        data: mappedData, // <-- Send the mapped data
         slipPrices: {
           Regular: getPrice('NIN_SLIP_REGULAR'),
           Standard: getPrice('NIN_SLIP_STANDARD'),
