@@ -12,20 +12,23 @@ if (!RAUDAH_API_KEY) {
   console.error("CRITICAL: RAUDAH_API_KEY is not set.");
 }
 
-// --- NEW: Helper function to parse API errors ---
+// --- THIS IS THE FIX (Part 1) ---
+// We add the same robust error parser from our other API
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
+  // Check for Raudah's { status: false, message: { '0': '...' } }
   if (error.response && error.response.data) {
     const data = error.response.data;
     if (data.message && typeof data.message === 'object' && data.message['0']) {
-      return data.message['0']; // Raudah's { '0': '...' } error
+      return data.message['0'];
     }
     if (data.message && typeof data.message === 'string') {
       return data.message;
     }
   }
+  // Check for a simple string message
   if (error.message) {
     return error.message;
   }
@@ -142,13 +145,15 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    // --- THIS IS THE FIX ---
+    // --- THIS IS THE FIX (Part 2) ---
     // Use the new helper to get a clean string message
     const errorMessage = parseApiError(error);
     console.error(`NIN Lookup (NIN) Error:`, errorMessage);
+    // Send a 400 (Bad Request) or 504 (Timeout) instead of 500
+    const status = error.code === 'ECONNABORTED' ? 504 : 400;
     return NextResponse.json(
       { error: errorMessage },
-      { status: 500 }
+      { status: status }
     );
     // -----------------------
   }
