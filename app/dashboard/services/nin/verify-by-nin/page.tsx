@@ -3,11 +3,20 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeftIcon, IdentificationIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, IdentificationIcon, PhoneIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading'; // Our global loader
 import SafeImage from '@/components/SafeImage'; // Our image component
 
-// --- Helper function to decode HTML entities (fixes apostrophe bug) ---
+// --- THIS IS THE FIX (Part 1) ---
+// Updated helper function to return empty string
+function displayField(value: any): string {
+  if (value === null || value === undefined || value === "") {
+    return ''; // Return blank instead of '****'
+  }
+  return decodeHtmlEntities(value.toString());
+}
+// ---------------------------------
+
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
   return text
@@ -18,14 +27,6 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
 }
-// --- Helper function to display '' for empty data ---
-function displayField(value: any): string {
-  if (value === null || value === undefined || value === "") {
-    return ''; // Return blank
-  }
-  return decodeHtmlEntities(value.toString());
-}
-// --- Helper function to format gender ---
 function formatGender(gender: string): string {
   if (!gender) return '';
   const g = gender.toLowerCase();
@@ -33,7 +34,6 @@ function formatGender(gender: string): string {
   if (g === 'female' || g === 'f') return 'F';
   return g;
 }
-// --- Reusable row component for the verified data ---
 const DataRow = ({ label, value }: { label: string; value: any }) => (
   <div className="py-2.5 grid grid-cols-3 gap-4">
     <p className="text-sm font-medium text-gray-500 col-span-1">{label}</p>
@@ -41,21 +41,24 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- Type definitions ---
+// --- (Types are updated for the new API response) ---
 type NinData = {
   photo: string;
-  firstname: string;
-  surname: string;
+  firs_tname: string; // <-- Fix for API typo
+  surname: string;    // <-- Old name
+  last_name: string;  // <-- New name
   middlename: string;
   birthdate: string;
-  nin: string;
+  NIN: string;        // <-- New name
+  nin: string;        // <-- Old name
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
   gender?: string;
   residence_lga?: string;
   residence_state?: string;
-  telephoneno?: string;
+  phone_number: string; // <-- New name
+  telephoneno?: string; // <-- Old name
   birthstate?: string;
   maritalstatus?: string;
 };
@@ -97,7 +100,7 @@ export default function VerifyByNinPage() {
 
   const lookupFee = '150'; // Placeholder
 
-  // --- This is the SIMPLIFIED lookup handler ---
+  // --- (handleLookup is unchanged) ---
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -105,7 +108,6 @@ export default function VerifyByNinPage() {
     setSuccess(null);
     setVerificationData(null);
 
-    // --- "World-Class" Frontend Validation ---
     const isNumeric = /^[0-9]+$/;
     if (!isNumeric.test(searchValue)) {
       setError("Input must only contain numbers.");
@@ -124,19 +126,15 @@ export default function VerifyByNinPage() {
       setIsLoading(false);
       return;
     }
-    // --- End of Validation ---
 
     try {
-      // --- THIS IS THE FIX ---
-      // We now call the specific 'lookup-nin' API
       const response = await fetch('/api/services/nin/lookup-nin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nin: searchValue, // Send 'nin', not 'value'
+          nin: searchValue,
         }),
       });
-      // -----------------------
 
       const data = await response.json();
       if (!response.ok) {
@@ -210,7 +208,7 @@ export default function VerifyByNinPage() {
     });
   };
 
-  // --- STAGE 1 RENDER: The Search Form (Now simpler) ---
+  // --- STAGE 1 RENDER: The Search Form (Unchanged) ---
   const renderSearchForm = () => (
     <div className="rounded-2xl bg-white p-6 shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900">Enter NIN</h3>
@@ -241,7 +239,7 @@ export default function VerifyByNinPage() {
     </div>
   );
   
-  // --- STAGE 2 RENDER: The Results (Unchanged) ---
+  // --- STAGE 2 RENDER: The Results (THIS IS THE FIX, Part 2) ---
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -270,10 +268,11 @@ export default function VerifyByNinPage() {
           />
         </div>
         <div className="divide-y divide-gray-100">
-          <DataRow label="First Name" value={data.data.firstname} />
+          {/* --- Using new, correct field names --- */}
+          <DataRow label="First Name" value={data.data.firs_tname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
-          <DataRow label="Last Name" value={data.data.surname} />
-          <DataRow label="ID" value={data.data.nin} />
+          <DataRow label="Last Name" value={data.data.last_name} />
+          <DataRow label="ID" value={data.data.NIN || data.data.nin} />
           <DataRow label="Tracking ID" value={data.data.trackingId} />
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
           <DataRow label="L.G. Origin" value={data.data.birthlga} />
@@ -283,7 +282,7 @@ export default function VerifyByNinPage() {
             value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
           />
           <DataRow label="DOB" value={data.data.birthdate} />
-          <DataRow label="Phone Number" value={data.data.telephoneno} />
+          <DataRow label="Phone Number" value={data.data.phone_number} />
           <DataRow label="State of Origin" value={data.data.birthstate} />
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
