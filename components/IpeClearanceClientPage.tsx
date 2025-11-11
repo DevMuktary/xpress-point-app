@@ -224,7 +224,7 @@ export default function IpeClearanceClientPage({ initialRequests }: Props) {
             </h3>
             <div className="mt-2 text-sm text-red-700">
               <p>
-                There is <strong className="font-semibold">no refund</strong> for this service.
+                There is <strong className="font-semibold">no refund</strong> for this service, except in some certain circumstances and if any of that happens, you'll be refunded automatically.
                 Please be sure the Tracking ID is correct and has an IPE issue before submitting.
               </p>
             </div>
