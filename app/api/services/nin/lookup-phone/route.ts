@@ -59,13 +59,12 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // --- THIS IS THE FIX ---
-    // The API expects a 10-digit number, so we strip the leading '0'
-    const phoneToSend = phone.startsWith('0') ? phone.substring(1) : phone;
-
+    // --- THIS IS THE FIX (HYPOTHESIS 3) ---
+    // Let's try 'telephoneno' with the 11-digit number
+    // This matches the key they use in their *response*
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phoneToSend // Key is 'phone' and value is 10-digits
+        telephoneno: phone 
       },
       {
         headers: { 
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
         timeout: 15000,
       }
     );
-    // ------------------------
+    // ---------------------------------------
     
     const data = response.data;
     
@@ -126,7 +125,7 @@ export async function POST(request: Request) {
             serviceId: service.id,
             type: 'SERVICE_CHARGE',
             amount: price.negated(),
-            description: `NIN Lookup by Phone (${phone})`, // Log the original 11-digit
+            description: `NIN Lookup by Phone (${phone})`,
             reference: data.transaction_id || `NIN-PHONE-${Date.now()}`,
             status: 'COMPLETED',
           },
