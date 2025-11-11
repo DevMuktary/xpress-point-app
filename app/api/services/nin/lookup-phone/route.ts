@@ -47,8 +47,6 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Get Price & Check Wallet ---
-    // NOTE: This is still using the 'NIN_LOOKUP' service price.
-    // You might want a separate service ID like 'NIN_LOOKUP_PHONE'
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
@@ -61,9 +59,11 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
+    // --- THIS IS THE FIX ---
+    // The API expects the field to be 'telephoneno', not 'phone'
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phone
+        telephoneno: phone 
       },
       {
         headers: { 
@@ -73,6 +73,7 @@ export async function POST(request: Request) {
         timeout: 15000,
       }
     );
+    // ------------------------
     
     const data = response.data;
     
@@ -82,12 +83,10 @@ export async function POST(request: Request) {
       const responseData = data.data;
 
       // --- 4. "World-Class" Data Mapping (FIXED) ---
-      // This now matches the same structure we found in the logs
-      // -----------------------------------------------------
       const mappedData = {
         photo: responseData.photo,
-        firstname: responseData.firstname, // <-- FIX: Was responseData.firs_tname
-        surname: responseData.surname,   // <-- FIX: Was responseData.last_name
+        firstname: responseData.firstname, 
+        surname: responseData.surname,   
         middlename: responseData.middlename,
         birthdate: responseData.birthdate.replace(/-/g, '-'),
         nin: responseData.NIN,
@@ -97,7 +96,7 @@ export async function POST(request: Request) {
         gender: responseData.gender,
         residence_lga: responseData.residence_lga,
         residence_state: responseData.residence_state,
-        telephoneno: responseData.telephoneno, // <-- FIX: Was responseData.phone_number
+        telephoneno: responseData.telephoneno, 
         birthstate: responseData.birthstate,
         maritalstatus: responseData.maritalstatus,
         profession: responseData.profession,
