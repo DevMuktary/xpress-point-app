@@ -59,12 +59,13 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // Using the 10-digit format for the 'phone' key
-    const phoneToSend = phone.startsWith('0') ? phone.substring(1) : phone;
+    // --- FIX 1: Use the +234 format ---
+    // This converts "070..." to "+23470..."
+    const phoneToSend = phone.startsWith('0') ? `+234${phone.substring(1)}` : phone;
 
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phoneToSend 
+        phone: phoneToSend // Key is 'phone' and value is +234...
       },
       {
         headers: { 
@@ -74,15 +75,15 @@ export async function POST(request: Request) {
         timeout: 15000,
       }
     );
+    // ------------------------------------
     
     const data = response.data;
     
     // --- 3. Handle ConfirmIdent Response ---
-    // --- THIS IS THE FIX ---
+    // --- FIX 2: Use the if(data.data) logic ---
     // We only check if the data.data object exists.
-    // We ignore the "success" flag because the API sends confusing messages.
     if (data.data) {
-    // -----------------------
+    // -----------------------------------------
       
       const responseData = data.data;
 
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
 
       // --- 6. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
-        where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
+        where: { id: { in: ['NIN_S LIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { id: true, agentPrice: true, aggregatorPrice: true }
       });
       
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
       };
 
       return NextResponse.json({
-        message: 'Verification Successful', // This message goes to the frontend
+        message: 'Verification Successful', 
         verificationId: verificationRecord.id,
         data: mappedData,
         slipPrices: {
@@ -159,13 +160,12 @@ export async function POST(request: Request) {
       });
 
     } else {
-      // Now, this block will *only* catch real errors
+      // This block will now only catch real errors
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
 
-  } catch (error: any) {
-    const errorMessage = parseApiError(error);
+  } catch (error: any) =  const errorMessage = parseApiError(error);
     console.error(`NIN Lookup (Phone) Error:`, errorMessage);
     return NextResponse.json(
       { error: errorMessage },
