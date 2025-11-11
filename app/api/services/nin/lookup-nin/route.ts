@@ -4,12 +4,13 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// API credentials
-const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
-const NIN_VERIFY_ENDPOINT = 'https://raudah.com.ng/api/nin/v3';
+// --- THIS IS THE FIX ---
+// Using the new, stable Workbyte provider
+const WORKBYTE_API_TOKEN = process.env.WORKBYTE_API_TOKEN;
+const NIN_VERIFY_ENDPOINT = 'https://workbyte.com.ng/api/nin-search3/';
 
-if (!RAUDAH_API_KEY) {
-  console.error("CRITICAL: RAUDAH_API_KEY is not set.");
+if (!WORKBYTE_API_TOKEN) {
+  console.error("CRITICAL: WORKBYTE_API_TOKEN is not set.");
 }
 
 function parseApiError(error: any): string {
@@ -18,9 +19,7 @@ function parseApiError(error: any): string {
   }
   if (error.response && error.response.data) {
     const data = error.response.data;
-    if (data.message && data.response_code === "01") {
-      return `Sorry 😢 ${data.message}`; // "Record not found..."
-    }
+    // Check for Workbyte's error format
     if (data.message && typeof data.message === 'string') {
       return data.message;
     }
@@ -37,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
-  if (!RAUDAH_API_KEY) {
+  if (!WORKBYTE_API_TOKEN) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
@@ -49,6 +48,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'NIN is required.' }, { status: 400 });
     }
 
+    // --- 1. Get Price & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
@@ -60,34 +60,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 1. Call External API (Raudah) ---
-    let data: any;
-    try {
-      const response = await axios.post(NIN_VERIFY_ENDPOINT, 
-        { value: nin, ref: `XPRESSPOINT_NIN_${user.id}_${Date.now()}` },
-        {
-          headers: { 'Authorization': RAUDAH_API_KEY, 'Content-Type': 'application/json' },
-          timeout: 15000,
-        }
-      );
-      data = response.data; // This is the "happy path"
-    } catch (error: any) {
-      // This is the "buggy success" path
-      if (error.response && error.response.data && error.response.data.status === true) {
-        console.log("Raudah NIN API (Warning): Treating error-status payload as success.");
-        data = error.response.data;
-      } else {
-        // This is a *real* error
-        throw error;
+    // --- 2. Call External API (Workbyte) ---
+    const response = await axios.post(NIN_VERIFY_ENDPOINT, 
+      { 
+        nin: nin // Use 'nin' as per Workbyte docs
+      },
+      {
+        headers: { 
+          'Authorization': WORKBYTE_API_TOKEN, // Use 'Authorization: Token ...'
+          'Content-Type': 'application/json' 
+        },
+        timeout: 15000,
       }
-    }
+    );
 
-    // --- 2. Handle Raudah Response (Based on your logs) ---
-    if (data.status === true && data.response_code === "00" && data.nin_data) {
+    const data = response.data;
+    
+    // --- 3. Handle Workbyte Response (Based on your docs) ---
+    // This is the "world-class" stable structure: data.data.data
+    if (data.status === true && data.code === 200 && data.data?.status === true && data.data?.data) {
       
-      const responseData = data.nin_data; // This is the correct data path
+      const responseData = data.data.data; // This is the correct data path
 
-      // --- 3. Charge User & Save Transaction ---
+      // --- 4. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
         prisma.wallet.update({
           where: { userId: user.id },
@@ -96,7 +91,7 @@ export async function POST(request: Request) {
         prisma.ninVerification.create({
           data: {
             userId: user.id,
-            data: responseData, // Save the nin_data object
+            data: responseData, // Save the data.data.data object
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         }),
@@ -107,13 +102,13 @@ export async function POST(request: Request) {
             type: 'SERVICE_CHARGE',
             amount: price.negated(),
             description: `NIN Verification Lookup (${nin})`,
-            reference: `NIN-LOOKUP-${Date.now()}`,
+            reference: data.transaction_id || `NIN-LOOKUP-${Date.now()}`,
             status: 'COMPLETED',
           },
         }),
       ]);
 
-      // --- 4. Return Success Data to Frontend ---
+      // --- 5. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
         where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { id: true, agentPrice: true, aggregatorPrice: true }
