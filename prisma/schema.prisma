@@ -29,7 +29,7 @@ model User {
   virtualAccounts       VirtualAccount[]
   transactions          Transaction[]
   ninVerifications      NinVerification[]
-  personalizationRequests PersonalizationRequest[] // <-- NEW RELATION
+  personalizationRequests PersonalizationRequest[]
   otps                  Otp[]
 
   @@map("users")
@@ -101,27 +101,28 @@ model Service {
   @@map("services")
 }
 
-// --- NEW ENUM FOR STATUS ---
+// --- THIS IS THE FIX ---
 enum RequestStatus {
-  PENDING
+  PROCESSING // Changed from PENDING
   COMPLETED
   FAILED
 }
+// ----------------------
 
-// --- NEW TABLE FOR PERSONALIZATION ---
 model PersonalizationRequest {
   id             String        @id @default(uuid())
   userId         String        @map("user_id")
   trackingId     String        @map("tracking_id")
-  status         RequestStatus @default(PENDING)
-  statusMessage  String?       @map("status_message") // For failure message
-  data           Json?         // To store the successful response data
+  // --- THIS IS THE FIX ---
+  status         RequestStatus @default(PROCESSING) // Changed from PENDING
+  statusMessage  String?       @map("status_message")
+  data           Json?
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
   user           User          @relation(fields: [userId], references: [id])
   
-  @@unique([userId, trackingId]) // A user can only submit a tracking ID once
+  @@unique([userId, trackingId])
   @@map("personalization_requests")
 }
 // ---------------------------------
