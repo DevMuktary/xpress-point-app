@@ -80,27 +80,25 @@ export async function POST(request: Request) {
     
     // --- 4. Handle Robosttech Response ---
     if (data.success !== true) {
-      // If the submission itself fails
       throw new Error(data.message || "Submission failed. Please check the Tracking ID.");
     }
 
-    // --- 5. Charge User & Save as PENDING ---
+    // --- 5. Charge User & Save as PROCESSING ---
     await prisma.$transaction([
-      // a) Charge wallet
       prisma.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      // b) Create the new request
+      // --- THIS IS THE FIX ---
       prisma.personalizationRequest.create({
         data: {
           userId: user.id,
           trackingId: trackingId,
-          status: 'PENDING',
+          status: 'PROCESSING', // Changed from PENDING
           statusMessage: 'Submitted. Awaiting completion.'
         },
       }),
-      // c) Log the transaction
+      // ----------------------
       prisma.transaction.create({
         data: {
           userId: user.id,
@@ -109,7 +107,7 @@ export async function POST(request: Request) {
           amount: price.negated(),
           description: `NIN Personalization (${trackingId})`,
           reference: `NIN-PERS-${Date.now()}`,
-          status: 'COMPLETED', // The *charge* is completed
+          status: 'COMPLETED',
         },
       }),
     ]);
