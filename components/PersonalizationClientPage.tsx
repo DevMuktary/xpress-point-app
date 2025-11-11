@@ -24,26 +24,17 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
   // --- State Management ---
   const [requests, setRequests] = useState(initialRequests);
   const [trackingId, setTrackingId] = useState('');
-  
-  // This state is for the MAIN submit button
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // This state is for the individual "Check Status" buttons
   const [isCheckingId, setIsCheckingId] = useState<string | null>(null);
-
-  // States for your "on-screen" messages
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  
-  // State for the *history table's* messages
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-
-  // --- NEW: Filter States ---
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // --- THIS IS THE FIX ---
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // --- NEW: Filtered Requests ---
-  // This automatically filters the list when state changes
+  // --- Filtered Requests ---
   const filteredRequests = useMemo(() => {
     return requests.filter(req => {
       const matchesSearch = req.trackingId.toLowerCase().includes(searchTerm.toLowerCase());
@@ -51,6 +42,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
       return matchesSearch && matchesStatus;
     });
   }, [requests, searchTerm, statusFilter]);
+  // ----------------------
 
   // --- API 1: Submit New Request ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,10 +64,9 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSubmitSuccess(data.message); // "Request submitted successfully!"
-      setTrackingId(''); // Clear the input field
+      setSubmitSuccess(data.message);
+      setTrackingId('');
       
-      // Add the new request to the top of our history list
       const newRequests = await fetchHistory();
       setRequests(newRequests);
 
@@ -91,7 +82,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     setIsCheckingId(request.id);
     setSubmitError(null);
     setSubmitSuccess(null);
-    setStatusMessage(`Checking ${request.trackingId}...`); // On-screen message
+    setStatusMessage(`Checking ${request.trackingId}...`);
 
     try {
       const response = await fetch('/api/services/nin/personalization-check', {
@@ -105,10 +96,8 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         throw new Error(data.error || 'Failed to check status.');
       }
 
-      // --- "World-Class" On-Screen Message ---
-      setStatusMessage(data.message); // e.g., "Request is still processing."
+      setStatusMessage(data.message);
 
-      // Update the list of requests in our state
       const newRequests = await fetchHistory();
       setRequests(newRequests);
 
@@ -136,12 +125,13 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     });
   };
   
+  // --- THIS IS THE FIX ---
   // Helper to get "world-class" status colors
   const getStatusColor = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED':
         return 'bg-green-100 text-green-800';
-      case 'PENDING':
+      case 'PROCESSING': // Changed from PENDING
         return 'bg-yellow-100 text-yellow-800';
       case 'FAILED':
         return 'bg-red-100 text-red-800';
@@ -149,6 +139,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         return 'bg-gray-100 text-gray-800';
     }
   };
+  // ----------------------
   
   // Helper for the "smart" button
   const renderActionButton = (request: PersonalizationRequest) => {
@@ -164,7 +155,8 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             View Result
           </Link>
         );
-      case 'PENDING':
+      // --- THIS IS THE FIX ---
+      case 'PROCESSING': // Changed from PENDING
         return (
           <button
             onClick={() => handleCheckStatus(request)}
@@ -178,6 +170,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             )}
           </button>
         );
+      // ----------------------
       case 'FAILED':
         return (
           <span className="text-sm text-red-600" title={request.statusMessage || 'Failed'}>
@@ -192,7 +185,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
 
-      {/* --- 1. The "No Refund" Warning (Your Design) --- */}
+      {/* --- 1. The "No Refund" Warning --- */}
       <div className="rounded-lg bg-red-50 p-4 border border-red-200">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -254,9 +247,8 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-900">My Requests</h3>
         
-        {/* --- NEW: Filter & Search Bar --- */}
+        {/* --- Filter & Search Bar --- */}
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search Box */}
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
@@ -269,25 +261,24 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
               className="w-full rounded-lg border border-gray-300 p-2.5 pl-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="ALL">All Statuses</option>
-            <option value="PENDING">Pending</option>
+            {/* --- THIS IS THE FIX --- */}
+            <option value="PROCESSING">Processing</option> 
             <option value="COMPLETED">Completed</option>
             <option value="FAILED">Failed</option>
           </select>
         </div>
         
-        {/* On-screen message for the "Check Status" button */}
         {statusMessage && (
           <p className="mt-4 text-sm font-medium text-center text-blue-600">{statusMessage}</p>
         )}
         
-        {/* --- NEW: "One-by-One" Card List --- */}
+        {/* --- "One-by-One" Card List --- */}
         <div className="mt-6 space-y-4">
           {filteredRequests.length === 0 && (
             <div className="py-8 text-center text-gray-500">
@@ -301,7 +292,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
               className="rounded-lg border border-gray-200 p-4"
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                {/* Left Side (ID & Date) */}
                 <div>
                   <p className="text-base font-semibold text-gray-900 break-all">
                     {request.trackingId}
@@ -311,7 +301,6 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
                   </p>
                 </div>
                 
-                {/* Right Side (Status & Button) */}
                 <div className="mt-4 sm:mt-0 sm:ml-4 flex flex-col sm:items-end gap-2">
                   <span 
                     className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(request.status)}`}
