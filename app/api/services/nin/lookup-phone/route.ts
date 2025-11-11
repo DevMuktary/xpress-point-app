@@ -4,14 +4,13 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// --- THIS IS THE FIX (Part 1) ---
+// Using the new, stable ConfirmIdent provider
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const PHONE_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_phone';
 
 if (!CONFIRMIDENT_API_KEY) {
   console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
-// ------------------------------
 
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
@@ -48,6 +47,8 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Get Price & Check Wallet ---
+    // NOTE: This is still using the 'NIN_LOOKUP' service price.
+    // You might want a separate service ID like 'NIN_LOOKUP_PHONE'
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
@@ -60,33 +61,33 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // --- THIS IS THE FIX (Part 2) ---
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
         phone: phone
       },
       {
         headers: { 
-          'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
+          'api-key': CONFIRMIDENT_API_KEY, 
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
       }
     );
-    // ---------------------------------
     
     const data = response.data;
     
-    // --- 3. Handle ConfirmIdent Response (Based on your docs) ---
+    // --- 3. Handle ConfirmIdent Response ---
     if (data.success === true && data.data) {
       
       const responseData = data.data;
 
-      // --- 4. "World-Class" Data Mapping (Fixing field names) ---
+      // --- 4. "World-Class" Data Mapping (FIXED) ---
+      // This now matches the same structure we found in the logs
+      // -----------------------------------------------------
       const mappedData = {
         photo: responseData.photo,
-        firstname: responseData.firs_tname, // Handling their typo
-        surname: responseData.last_name,
+        firstname: responseData.firstname, // <-- FIX: Was responseData.firs_tname
+        surname: responseData.surname,   // <-- FIX: Was responseData.last_name
         middlename: responseData.middlename,
         birthdate: responseData.birthdate.replace(/-/g, '-'),
         nin: responseData.NIN,
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
         gender: responseData.gender,
         residence_lga: responseData.residence_lga,
         residence_state: responseData.residence_state,
-        telephoneno: responseData.phone_number,
+        telephoneno: responseData.telephoneno, // <-- FIX: Was responseData.phone_number
         birthstate: responseData.birthstate,
         maritalstatus: responseData.maritalstatus,
         profession: responseData.profession,
