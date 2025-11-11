@@ -209,7 +209,7 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-900">Submit New Request</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Enter the Tracking ID from your NIN registration slip.
+          Enter  Tracking ID To Get your NIN Number.
         </p>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="relative">
