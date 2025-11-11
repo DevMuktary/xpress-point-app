@@ -12,12 +12,10 @@ if (!RAUDAH_API_KEY) {
   console.error("CRITICAL: RAUDAH_API_KEY is not set.");
 }
 
-// --- NEW: Helper function to parse API errors ---
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
-  // Check for the "Record not found" error from your log
   if (error.response && error.response.data) {
     const data = error.response.data;
     if (data.message && data.response_code === "01") {
@@ -51,7 +49,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'NIN is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
@@ -63,28 +60,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call External API (Raudah) ---
-    const response = await axios.post(NIN_VERIFY_ENDPOINT, 
-      { 
-        value: nin,
-        ref: `XPRESSPOINT_NIN_${user.id}_${Date.now()}`
-      },
-      {
-        headers: { 
-          'Authorization': RAUDAH_API_KEY,
-          'Content-Type': 'application/json' 
-        },
-        timeout: 15000,
+    // --- 1. Call External API (Raudah) ---
+    let data: any;
+    try {
+      const response = await axios.post(NIN_VERIFY_ENDPOINT, 
+        { value: nin, ref: `XPRESSPOINT_NIN_${user.id}_${Date.now()}` },
+        {
+          headers: { 'Authorization': RAUDAH_API_KEY, 'Content-Type': 'application/json' },
+          timeout: 15000,
+        }
+      );
+      data = response.data; // This is the "happy path"
+    } catch (error: any) {
+      // This is the "buggy success" path
+      if (error.response && error.response.data && error.response.data.status === true) {
+        console.log("Raudah NIN API (Warning): Treating error-status payload as success.");
+        data = error.response.data;
+      } else {
+        // This is a *real* error
+        throw error;
       }
-    );
+    }
 
-    const data = response.data;
-    
-    // --- 3. Handle Raudah Response (Based on your logs) ---
+    // --- 2. Handle Raudah Response (Based on your logs) ---
     if (data.status === true && data.response_code === "00" && data.nin_data) {
-      // This is a SUCCESS
       
-      // --- 4. Charge User & Save Transaction ---
+      const responseData = data.nin_data; // This is the correct data path
+
+      // --- 3. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
         prisma.wallet.update({
           where: { userId: user.id },
@@ -93,7 +96,7 @@ export async function POST(request: Request) {
         prisma.ninVerification.create({
           data: {
             userId: user.id,
-            data: data.nin_data, // <-- Save the nin_data object
+            data: responseData, // Save the nin_data object
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         }),
@@ -110,7 +113,7 @@ export async function POST(request: Request) {
         }),
       ]);
 
-      // --- 5. Return Success Data to Frontend ---
+      // --- 4. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
         where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { id: true, agentPrice: true, aggregatorPrice: true }
@@ -125,7 +128,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         message: 'Verification Successful',
         verificationId: verificationRecord.id,
-        data: data.nin_data, // <-- Send the nin_data object
+        data: responseData,
         slipPrices: {
           Regular: getPrice('NIN_SLIP_REGULAR'),
           Standard: getPrice('NIN_SLIP_STANDARD'),
@@ -140,12 +143,11 @@ export async function POST(request: Request) {
     }
 
   } catch (error: any) {
-    // This catches axios errors (timeout, 500, etc)
     const errorMessage = parseApiError(error);
     console.error(`NIN Lookup (NIN) Error:`, errorMessage);
     return NextResponse.json(
       { error: errorMessage },
-      { status: 400 } // Send 400, not 500
+      { status: 400 }
     );
   }
 }
