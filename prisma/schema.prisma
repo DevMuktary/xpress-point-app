@@ -34,9 +34,9 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[]
   newspaperRequests            NewspaperRequest[]
-  cacRequests                  CacRequest[] // <-- NEW RELATION
+  cacRequests                  CacRequest[]
+  tinRequests                  TinRequest[] // <-- NEW RELATION
   otps                         Otp[]
 
   @@map("users")
@@ -113,7 +113,8 @@ model Service {
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
-  CacRequest          CacRequest[] // <-- NEW RELATION
+  CacRequest          CacRequest[]
+  TinRequest          TinRequest[] // <-- NEW RELATION
   
   @@map("services")
 }
@@ -212,23 +213,39 @@ model NewspaperRequest {
   @@map("newspaper_requests")
 }
 
-// --- NEW TABLE FOR CAC ---
 model CacRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
-  serviceId         String        @map("service_id")     // e.g., "CAC_REG_BN"
-  status            RequestStatus @default(PENDING)   // <-- Starts as PENDING
-  statusMessage     String?       @map("status_message") // For Admin's reason
-  formData          Json          // Stores all form fields (names, address, etc.)
-  
-  // --- User Uploads ---
+  serviceId         String        @map("service_id")
+  status            RequestStatus @default(PENDING)
+  statusMessage     String?       @map("status_message")
+  formData          Json
   passportUrl       String?       @map("passport_url")
   signatureUrl      String?       @map("signature_url")
   ninSlipUrl        String?       @map("nin_slip_url")
-  
-  // --- Admin Uploads (Your Design) ---
   certificateUrl    String?       @map("certificate_url")
   statusReportUrl   String?       @map("status_report_url")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  user              User          @relation(fields: [userId], references: [id])
+  service           Service       @relation(fields: [serviceId], references: [id])
+  @@map("cac_requests")
+}
+
+// --- NEW TABLE FOR TIN ---
+model TinRequest {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  serviceId         String        @map("service_id") // "TIN_REG_PERSONAL", etc.
+  status            RequestStatus @default(PENDING)
+  statusMessage     String?       @map("status_message")
+  formData          Json
+  
+  // User Uploads
+  statusReportUrl   String?       @map("status_report_url") // For Business Reg
+  
+  // Admin Uploads
+  certificateUrl    String?       @map("certificate_url")
   
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
@@ -236,7 +253,7 @@ model CacRequest {
   user              User          @relation(fields: [userId], references: [id])
   service           Service       @relation(fields: [serviceId], references: [id])
   
-  @@map("cac_requests")
+  @@map("tin_requests")
 }
 // -------------------------
 
