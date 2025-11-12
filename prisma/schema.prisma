@@ -30,7 +30,8 @@ model User {
   transactions          Transaction[]
   ninVerifications      NinVerification[]
   personalizationRequests PersonalizationRequest[]
-  ipeRequests           IpeRequest[] // <-- NEW RELATION
+  ipeRequests           IpeRequest[]
+  validationRequests    ValidationRequest[] // <-- NEW RELATION
   otps                  Otp[]
 
   @@map("users")
@@ -122,23 +123,38 @@ model PersonalizationRequest {
   @@map("personalization_requests")
 }
 
-// --- NEW TABLE FOR IPE CLEARANCE ---
 model IpeRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
   trackingId      String        @map("tracking_id")
+  newTrackingId   String?       @map("new_tracking_id")
+  status          RequestStatus @default(PROCESSING)
+  statusMessage   String?       @map("status_message")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User          @relation(fields: [userId], references: [id])
+  @@unique([userId, trackingId])
+  @@map("ipe_requests")
+}
+
+// --- NEW TABLE FOR NIN VALIDATION ---
+model ValidationRequest {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  nin             String        @map("nin")
+  scode           String        // The reason code, e.g., "47"
   newTrackingId   String?       @map("new_tracking_id") // For the result
   status          RequestStatus @default(PROCESSING)
-  statusMessage   String?       @map("status_message") // For failure message
+  statusMessage   String?       @map("status_message")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   user            User          @relation(fields: [userId], references: [id])
   
-  @@unique([userId, trackingId])
-  @@map("ipe_requests")
+  @@unique([userId, nin, scode]) // A user can only submit one type of validation per NIN
+  @@map("validation_requests")
 }
-// ---------------------------------
+// ----------------------------------
 
 enum Role {
   AGENT
