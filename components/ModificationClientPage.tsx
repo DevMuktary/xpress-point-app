@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { PersonalizationRequest, RequestStatus } from '@prisma/client';
+import { PersonalizationRequest, RequestStatus } from '@prisma/client'; // This is ok, we're importing the type
 import { 
   ExclamationTriangleIcon, 
   IdentificationIcon,
@@ -14,7 +14,8 @@ import {
   MapPinIcon,
   CheckCircleIcon,
   ArrowUpTrayIcon,
-  ArrowPathIcon // <-- THIS IS THE FIX
+  ArrowPathIcon,
+  CalendarDaysIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -39,7 +40,7 @@ const ConsentText = () => (
     <p>NIMC recommends that NIN modifications be done personally. By agreeing, I confirm that due to technical difficulty, illiteracy, or convenience, I <strong className="font-semibold">voluntarily authorize</strong> Xpress Point to perform this modification on my behalf. This applies whether I am the NIN owner or an agent acting with the full consent of the owner.</p>
     
     <h4 className="font-bold text-gray-900">3. Service Fees & No-Refund Policy</h4>
-    <p>I agree to pay the non-refundable service fee. I understand that wallet funds are <strong className="font-semibold">non-withdrawable</strong>. If a service fails due to an Admin or provider error (as specified in our auto-refund logic), the fee will be credited to my wallet, but it cannot be withdrawn. <strong className="font-semibold">A ₦500 charge for wrong submissions will be deducted from the refund.</strong></p>
+    <p>I agree to pay the non-refundable service fee. I understand that wallet funds are <strong className="font-semibold">non-withdrawable</strong>. If a service fails due to an Admin or provider error (as specified in our auto-refund logic), the fee will be credited to my wallet, but it cannot be withdrawn. <strong className="font-semibold">A ₦500 charge for wrong submissions will be deducted from any refund.</strong></p>
     
     <h4 className="font-bold text-gray-900">4. Your Responsibilities</h4>
     <ul className="list-disc list-inside space-y-1">
@@ -128,7 +129,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
     if (modType === 'PHONE') return 1000;
     if (modType === 'ADDRESS') return 1500;
     if (modType === 'DOB') {
-      return isDobGap ? 15000 + 7000 : 15000; // Base (15k) + 7k fee
+      return isDobGap ? 15000 + 7000 : 15000;
     }
     return 0;
   };
