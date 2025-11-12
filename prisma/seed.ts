@@ -41,15 +41,46 @@ const services = [
     agentPrice: new Decimal(1000.00),
     aggregatorPrice: new Decimal(950.00),
   },
-  // --- NEW SERVICE ---
   {
     id: 'NIN_IPE_CLEARANCE',
     name: 'NIN IPE Clearance',
     category: 'NIN',
-    agentPrice: new Decimal(2500.00), // You can change this price
+    agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2450.00),
   },
-  // -------------------
+  
+  // --- THIS IS THE FIX ---
+  // We have "refurbished" the Validation service
+  // to have a "world-class" price for each type.
+  {
+    id: 'NIN_VALIDATION_47', // No Record
+    name: 'NIN Validation (No Record)',
+    category: 'NIN',
+    agentPrice: new Decimal(500.00), // You can change this price
+    aggregatorPrice: new Decimal(480.00),
+  },
+  {
+    id: 'NIN_VALIDATION_48', // Sim Card Issues
+    name: 'NIN Validation (Sim Card Issues)',
+    category: 'NIN',
+    agentPrice: new Decimal(550.00), // Example of a different price
+    aggregatorPrice: new Decimal(530.00),
+  },
+  {
+    id: 'NIN_VALIDATION_49', // Bank Validation
+    name: 'NIN Validation (Bank Validation)',
+    category: 'NIN',
+    agentPrice: new Decimal(500.00),
+    aggregatorPrice: new Decimal(480.00),
+  },
+  {
+    id: 'NIN_VALIDATION_50', // Photographer error
+    name: 'NIN Validation (Photographer error)',
+    category: 'NIN',
+    agentPrice: new Decimal(600.00), // Example of a different price
+    aggregatorPrice: new Decimal(580.00),
+  },
+  // -----------------------
 ];
 
 async function main() {
