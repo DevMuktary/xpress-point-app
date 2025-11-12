@@ -1,32 +1,25 @@
-import type { Metadata } from 'next';
-import './globals.css'; // We import our new styles
+import React from 'react';
+import { redirect } from 'next/navigation';
+import { getUserFromSession } from '@/lib/auth';
+import DashboardClientContainer from '@/components/DashboardClientContainer';
 
-export const metadata: Metadata = {
-  title: 'Xpress Point',
-  description: 'Your Hub for Digital, Reliable, Secure Services',
-};
-
-/*
-  This RootLayout wraps every page. 
-  The "children" prop is whatever page Next.js is trying to render.
-*/
-export default function RootLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getUserFromSession();
+  
+  if (!user) {
+    // --- THIS IS THE FIX ---
+    // We "refurbish" the redirect to send your "world-class" message
+    redirect('/login?error=Please+login+to+continue');
+    // -----------------------
+  }
+
   return (
-    <html lang="en">
-      <body>
-        {/* We can add a shared Header or Sidebar here later */}
-        {/* <MyHeader /> */}
-        
-        <main>
-          {children} {/* This is where your pages will be rendered */}
-        </main>
-        
-        {/* <MyFooter /> */}
-      </body>
-    </html>
+    <DashboardClientContainer user={user}>
+      {children}
+    </DashboardClientContainer>
   );
 }
