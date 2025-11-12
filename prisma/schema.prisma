@@ -33,7 +33,7 @@ model User {
   personalizationRequests PersonalizationRequest[]
   ipeRequests           IpeRequest[]
   validationRequests    ValidationRequest[]
-  modificationRequests  ModificationRequest[] // <-- Relation is already here
+  modificationRequests  ModificationRequest[]
   otps                  Otp[]
 
   @@map("users")
@@ -69,8 +69,12 @@ model Transaction {
   reference   String   @unique
   status      String
   createdAt   DateTime @default(now()) @map("created_at")
+  
+  // --- THIS IS THE FIX ---
   serviceId   String?  @map("service_id")
-  service     Service? @relation(fields: [id], references: [id]) // 'id' is correct
+  service     Service? @relation(fields: [serviceId], references: [id]) // Changed from [id] to [serviceId]
+  // -----------------------
+  
   user        User     @relation(fields: [userId], references: [id])
   @@map("transactions")
 }
@@ -105,19 +109,21 @@ model Service {
   @@map("services")
 }
 
-// "PENDING" is correct for this manual service
+// --- THIS IS THE FIX ---
+// "PENDING" is re-added for your manual services
 enum RequestStatus {
   PENDING
   PROCESSING
   COMPLETED
   FAILED
 }
+// ----------------------
 
 model PersonalizationRequest {
   id             String        @id @default(uuid())
   userId         String        @map("user_id")
   trackingId     String        @map("tracking_id")
-  status         RequestStatus @default(PROCESSING)
+  status         RequestStatus @default(PROCESSING) // Automatic = PROCESSING
   statusMessage  String?       @map("status_message")
   data           Json?
   createdAt      DateTime      @default(now()) @map("created_at")
@@ -132,7 +138,7 @@ model IpeRequest {
   userId          String        @map("user_id")
   trackingId      String        @map("tracking_id")
   newTrackingId   String?       @map("new_tracking_id")
-  status          RequestStatus @default(PROCESSING)
+  status          RequestStatus @default(PROCESSING) // Automatic = PROCESSING
   statusMessage   String?       @map("status_message")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
@@ -147,7 +153,7 @@ model ValidationRequest {
   nin             String        @map("nin")
   scode           String
   newTrackingId   String?       @map("new_tracking_id")
-  status          RequestStatus @default(PROCESSING)
+  status          RequestStatus @default(PROCESSING) // Automatic = PROCESSING
   statusMessage   String?       @map("status_message")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
@@ -156,20 +162,17 @@ model ValidationRequest {
   @@map("validation_requests")
 }
 
-// --- "Refurbished" Modification Request Table ---
 model ModificationRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
-  serviceId       String        @map("service_id")     // e.g., "NIN_MOD_NAME" or "NIN_MOD_DOB"
-  status          RequestStatus @default(PENDING)   // <-- Starts as PENDING
-  statusMessage   String?       @map("status_message") // Admin's reason for failure
-  formData        Json          // Stores all form fields (NIN, new name, email, password)
-  
-  // --- NEW FIELDS ---
-  attestationUrl  String?       @map("attestation_url") // For the user to upload
-  uploadedSlipUrl String?       @map("uploaded_slip_url") // For the admin to upload
-  // ------------------
-  
+  serviceId       String        @map("service_id")
+  // --- THIS IS THE FIX ---
+  status          RequestStatus @default(PENDING)   // Manual = PENDING
+  // -----------------------
+  statusMessage   String?       @map("status_message")
+  formData        Json
+  attestationUrl  String?       @map("attestation_url")
+  uploadedSlipUrl String?       @map("uploaded_slip_url")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
@@ -177,7 +180,6 @@ model ModificationRequest {
   
   @@map("modification_requests")
 }
-// ------------------------------------
 
 enum Role {
   AGENT
