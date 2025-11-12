@@ -8,7 +8,8 @@ import {
   ArrowPathIcon,
   ClockIcon,
   MagnifyingGlassIcon,
-  DocumentArrowDownIcon
+  DocumentArrowDownIcon,
+  DocumentMagnifyingGlassIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
