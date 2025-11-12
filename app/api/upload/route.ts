@@ -2,15 +2,13 @@ import { NextResponse } from 'next/server';
 import { getUserFromSession } from '@/lib/auth';
 import { v2 as cloudinary } from 'cloudinary';
 
-// --- THIS IS THE FIX ---
-// Configure Cloudinary with your "world-class" keys from Railway
+// Configure Cloudinary with your "world-class" keys
 cloudinary.config({ 
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
   api_key: process.env.CLOUDINARY_API_KEY, 
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true
 });
-// -----------------------
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -32,12 +30,15 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes);
 
     // 3. Upload the buffer to Cloudinary
-    // We must use a "Promise" to handle the upload stream
     const uploadResponse = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: 'auto', // Allows PDF, PNG, JPG
-          folder: 'attestations' // Organizes files in your Cloudinary account
+          // --- THIS IS THE "WORLD-CLASS" FIX ---
+          // We force 'raw' for PDFs, not 'auto' or 'image'
+          resource_type: 'raw',
+          // ------------------------------------
+          folder: 'attestations', // Organizes files
+          public_id: file.name    // Uses the original file name
         },
         (error, result) => {
           if (error) {
@@ -58,9 +59,11 @@ export async function POST(request: Request) {
     }
 
     // 5. Return the "world-class" permanent URL
+    // This URL will now correctly be:
+    // https://res.cloudinary.com/.../raw/upload/.../attestation.pdf
     return NextResponse.json({ 
       message: 'File uploaded successfully',
-      url: data.secure_url // This is the permanent https:// URL
+      url: data.secure_url 
     });
 
   } catch (error: any) {
