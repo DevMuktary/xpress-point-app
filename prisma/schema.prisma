@@ -8,34 +8,34 @@ datasource db {
 }
 
 model User {
-  id                    String    @id @default(uuid())
-  firstName             String    @map("first_name")
-  lastName              String    @map("last_name")
-  businessName          String?   @map("business_name")
-  address               String?
-  email                 String    @unique
-  phoneNumber           String    @unique @map("phone_number")
-  passwordHash          String    @map("password_hash")
-  role                  Role      @default(AGENT)
-  isPhoneVerified       Boolean   @default(false) @map("is_phone_verified")
-  isEmailVerified       Boolean   @default(false) @map("is_email_verified")
-  isIdentityVerified    Boolean   @default(false) @map("is_identity_verified")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  bvn                   String?
-  nin                   String?
-  hasAgreedToModificationTerms Boolean @default(false) @map("has_agreed_to_mod_terms")
+  id                           String                 @id @default(uuid())
+  firstName                    String                 @map("first_name")
+  lastName                     String                 @map("last_name")
+  businessName                 String?                @map("business_name")
+  address                      String?
+  email                        String                 @unique
+  phoneNumber                  String                 @unique @map("phone_number")
+  passwordHash                 String                 @map("password_hash")
+  role                         Role                   @default(AGENT)
+  isPhoneVerified              Boolean                @default(false) @map("is_phone_verified")
+  isEmailVerified              Boolean                @default(false) @map("is_email_verified")
+  isIdentityVerified           Boolean                @default(false) @map("is_identity_verified")
+  createdAt                    DateTime               @default(now()) @map("created_at")
+  bvn                          String?
+  nin                          String?
+  hasAgreedToModificationTerms Boolean                @default(false) @map("has_agreed_to_mod_terms")
   
   // --- Relations ---
-  wallet                Wallet?
-  virtualAccounts       VirtualAccount[]
-  transactions          Transaction[]
-  ninVerifications      NinVerification[]
-  personalizationRequests PersonalizationRequest[]
-  ipeRequests           IpeRequest[]
-  validationRequests    ValidationRequest[]
-  modificationRequests  ModificationRequest[]
-  delinkRequests        DelinkRequest[] // <-- It is now here
-  otps                  Otp[]
+  wallet                       Wallet?
+  virtualAccounts              VirtualAccount[]
+  transactions                 Transaction[]
+  ninVerifications             NinVerification[]
+  personalizationRequests      PersonalizationRequest[]
+  ipeRequests                  IpeRequest[]
+  validationRequests           ValidationRequest[]
+  modificationRequests         ModificationRequest[]
+  newspaperRequests            NewspaperRequest[] // <-- THIS IS THE "WORLD-CLASS" FIX
+  otps                         Otp[]
 
   @@map("users")
 }
@@ -71,7 +71,6 @@ model Transaction {
   status      String
   createdAt   DateTime @default(now()) @map("created_at")
   
-  // This is the "world-class" fix from before
   serviceId   String?  @map("service_id")
   service     Service? @relation(fields: [serviceId], references: [id])
   
@@ -105,21 +104,20 @@ model Otp {
 }
 
 model Service {
-  id               String    @id
-  name             String
-  category         String
-  agentPrice       Decimal   @map("agent_price") @db.Decimal(10, 2)
-  aggregatorPrice  Decimal   @map("aggregator_price") @db.Decimal(10, 2)
-  isActive         Boolean   @default(true) @map("is_active")
+  id                  String                 @id
+  name                String
+  category            String
+  agentPrice          Decimal                @map("agent_price") @db.Decimal(10, 2)
+  aggregatorPrice     Decimal                @map("aggregator_price") @db.Decimal(10, 2)
+  isActive            Boolean                @default(true) @map("is_active")
   
-  Transaction      Transaction[]
+  Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
-  NewspaperRequest    NewspaperRequest[]
+  NewspaperRequest    NewspaperRequest[] // <-- Relation is already here
   
   @@map("services")
 }
 
-// "PENDING" is correct for manual services
 enum RequestStatus {
   PENDING
   PROCESSING
@@ -186,8 +184,6 @@ model ModificationRequest {
   @@map("modification_requests")
 }
 
-// --- THIS IS THE "WORLD-CLASS" FIX ---
-// The missing model is now restored.
 model DelinkRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
@@ -196,12 +192,9 @@ model DelinkRequest {
   statusMessage   String?       @map("status_message")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
-
   user            User          @relation(fields: [userId], references: [id])
-  
   @@map("delink_requests")
 }
-// ---------------------------------
 
 model NewspaperRequest {
   id              String        @id @default(uuid())
