@@ -113,9 +113,13 @@ export default function CacClientPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [hasAttested, setHasAttested] = useState(false);
-
+  
+  // --- THIS IS THE FIX (Part 1) ---
+  // The state for your confirmation modal
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  // ---------------------------------
+  
   // --- Form Data States ---
-  // Business Reg
   const [bizName1, setBizName1] = useState('');
   const [bizName2, setBizName2] = useState('');
   const [bizNature, setBizNature] = useState('');
@@ -125,7 +129,6 @@ export default function CacClientPage() {
   const [bizPhone, setBizPhone] = useState('');
   const [bizEmail, setBizEmail] = useState('');
   
-  // Proprietor
   const [propFirstName, setPropFirstName] = useState('');
   const [propLastName, setPropLastName] = useState('');
   const [propMiddleName, setPropMiddleName] = useState('');
@@ -136,7 +139,6 @@ export default function CacClientPage() {
   const [propState, setPropState] = useState('');
   const [propLga, setPropLga] = useState('');
 
-  // Doc Retrieval
   const [docType, setDocType] = useState<'Certificate' | 'Status Report' | null>(null);
   const [fullBizName, setFullBizName] = useState('');
   const [bizNumber, setBizNumber] = useState('');
@@ -170,7 +172,7 @@ export default function CacClientPage() {
 
     try {
       const formData = new FormData();
-      formData.append('attestation', file); // API expects 'attestation'
+      formData.append('attestation', file);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -189,19 +191,37 @@ export default function CacClientPage() {
     }
   };
 
-  // --- API: Handle Form Submission ---
-  const handleSubmit = async (e: React.FormEvent) => {
+  // --- This is the *first* step of submitting ---
+  const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setSubmitError(null);
     setSuccess(null);
 
     if (!hasAttested) {
       setSubmitError("You must agree to the attestation before submitting.");
-      setIsSubmitting(false);
       return;
     }
-
+    if (!serviceType) {
+      setSubmitError("Please select a service type.");
+      return;
+    }
+    if (serviceType === 'REG_BN' && (!passportUrl || !signatureUrl || !ninSlipUrl)) {
+      setSubmitError("All 3 documents (Passport, Signature, NIN Slip) must be uploaded.");
+      return;
+    }
+    if (serviceType === 'DOC_RETRIEVAL' && !docType) {
+      setSubmitError("Please select a document type (Certificate or Status Report).");
+      return;
+    }
+    
+    setIsConfirmModalOpen(true);
+  };
+  
+  // --- This is the *final* submit, called by the modal's "YES" button ---
+  const handleFinalSubmit = async () => {
+    setIsConfirmModalOpen(false);
+    setIsSubmitting(true);
+    
     let serviceId = '';
     let formData: any = {};
     let attestationUrls: any = {};
@@ -212,11 +232,6 @@ export default function CacClientPage() {
         bizName1, bizName2, bizNature, bizAddress, bizState, bizLga, bizPhone, bizEmail,
         propFirstName, propLastName, propMiddleName, propNin, propAddress, propPhone, propEmail, propState, propLga
       };
-      if (!passportUrl || !signatureUrl || !ninSlipUrl) {
-        setSubmitError("All 3 documents (Passport, Signature, NIN Slip) must be uploaded.");
-        setIsSubmitting(false);
-        return;
-      }
       attestationUrls = {
         passportUrl: passportUrl,
         signatureUrl: signatureUrl,
@@ -226,14 +241,10 @@ export default function CacClientPage() {
       serviceId = 'CAC_DOC_RETRIEVAL';
       formData = {
         docType, fullBizName, bizNumber, 
-        proprietorName: propFirstName, // Re-using state
+        proprietorName: propFirstName,
         proprietorPhone: propPhone,
         proprietorEmail: propEmail
       };
-    } else {
-      setSubmitError("Please select a service type.");
-      setIsSubmitting(false);
-      return;
     }
 
     try {
@@ -248,7 +259,7 @@ export default function CacClientPage() {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSuccess(data.message); // Your "Sweet Alert" - style message
+      setSuccess(data.message);
       // Reset the form
       setServiceType(null); setHasAttested(false);
       setBizName1(''); setBizName2(''); setBizNature(''); setBizAddress(''); setBizState(''); setBizLga(''); setBizPhone(''); setBizEmail('');
@@ -299,9 +310,9 @@ export default function CacClientPage() {
 
       {/* --- 2. The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
-        {/* --- THIS IS THE FIX (Part 4) --- */}
+        {/* --- THIS IS THE FIX (Part 2) --- */}
         {/* The form now calls the 'handleOpenConfirmModal' function first */}
-        <form onSubmit={(e) => { e.preventDefault(); setIsConfirmModalOpen(true); }} className="space-y-6">
+        <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
           {/* --- "Modern Buttons" for Service Type --- */}
           <div>
@@ -420,7 +431,6 @@ export default function CacClientPage() {
           {/* --- Attestation & Submit Button --- */}
           {serviceType && (
             <div className="border-t border-gray-200 pt-6 space-y-6">
-              {/* --- Your "World-Class" Attestation --- */}
               <div className="relative flex items-start rounded-lg bg-gray-50 p-4 border border-gray-200">
                 <div className="flex h-6 items-center">
                   <input
@@ -473,10 +483,11 @@ export default function CacClientPage() {
             
             {/* Modal Body */}
             <div className="p-6">
+              {/* --- THIS IS THE FIX (Part 3) --- */}
               <p className="text-center text-gray-600">
-                Please confirm you have filled in the right details. This action
-                is unreverse-able.
+                Please confirm you have filled in the right details. This action is irreversible.
               </p>
+              {/* --------------------------------- */}
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
                 Total Fee: ₦{getFee()}
               </p>
