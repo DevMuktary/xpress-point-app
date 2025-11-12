@@ -9,64 +9,66 @@ import { CreditCardIcon, PlusIcon } from "@heroicons/react/24/outline";
 // --- We import our "world-class" components ---
 import EmailVerifyAlert from "@/components/EmailVerifyAlert";
 import ServiceItemCard from "@/components/ServiceItemCard";
-import QuickActions from "@/components/QuickActions"; // <-- Import the NEW component
+import QuickActions from "@/components/QuickActions";
 
-// --- This is the list of all 8 service categories ---
+// --- THIS IS THE "WORLD-CLASS" FIX ---
+// All services are now "refurbished" with a real link
 const allServices = [
   { 
     title: "NIN Services", 
     description: "Verify NIN, print slips, and manage modifications.", 
     logo: "/logos/nin.png", 
-    href: "/dashboard/services/nin" 
+    href: "/dashboard/services/nin" // (Already built)
   },
   { 
     title: "BVN Services", 
     description: "Verify BVN details, retrieve, and print verification.", 
     logo: "/logos/bvn.png", 
-    href: "#" 
+    href: "/dashboard/services/bvn" // (New page)
   },
   { 
     title: "JAMB Services", 
     description: "Print original results, admission letters, etc.", 
     logo: "/logos/jamb.png", 
-    href: "#" 
+    href: "/dashboard/services/jamb" // (New page)
   },
   { 
     title: "JTB-TIN", 
     description: "Register and retrieve JTB-TIN certificates.", 
     logo: "/logos/tin.png", 
-    href: "#" 
+    href: "/dashboard/services/tin" // (New page)
   },
   { 
     title: "Result Checker", 
     description: "Get WAEC, NECO, and NABTEB result pins.", 
     logo: "/logos/waec.png", 
-    href: "#" 
+    href: "/dashboard/services/exam-pins" // (New page)
   },
   { 
     title: "CAC Services", 
     description: "Register your business name with the CAC.", 
     logo: "/logos/cac.png", 
-    href: "#" 
+    href: "/dashboard/services/cac" // (New page)
   },
   { 
     title: "VTU Services", 
     description: "Buy airtime, data, and pay electricity bills.", 
     logo: "/logos/vtu.png", 
-    href: "#" 
+    href: "/dashboard/services/vtu" // (New page)
   },
   { 
     title: "Newspaper", 
     description: "Publish change of name and other notices.", 
     logo: "/logos/news.png", 
-    href: "#" 
+    href: "/dashboard/services/newspaper" // (Already built)
   },
 ];
+// -----------------------------------------
 
 export default async function DashboardPage() {
   const user = await getUserFromSession();
   if (!user) {
-    redirect("/login");
+    redirect("/login?error=Please+login+to+continue");
   }
 
   // Get their *real* wallet balance
@@ -120,8 +122,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* --- UPDATED Quick Actions --- */}
-      {/* We render the new Client Component and pass the user's role */}
+      {/* --- Quick Actions --- */}
       <QuickActions userRole={user.role} />
 
       {/* --- "Our Services" Grid --- */}
@@ -129,10 +130,7 @@ export default async function DashboardPage() {
         <h2 className="mb-4 text-xl font-bold text-gray-900">
           All Services
         </h2>
-        {/* --- THIS IS THE FIX --- */}
         {/* "grid-cols-1" = 1 card per row on mobile (stable) */}
-        {/* "md:grid-cols-2" = 2 cards per row on tablet */}
-        {/* "lg:grid-cols-3" = 3 cards per row on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {allServices.map((service) => (
             <ServiceItemCard
