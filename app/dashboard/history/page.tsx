@@ -6,43 +6,38 @@ import {
   ClockIcon, 
   IdentificationIcon, 
   DocumentMagnifyingGlassIcon, 
-  ShieldCheckIcon 
+  LinkIcon // <-- NEW Icon for Delink
 } from '@heroicons/react/24/outline';
 
 // This is a Server Component, so it's very fast.
 export default function HistoryHubPage() {
   
-  // --- This is the list of History Categories ---
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // The list is "refurbished" to remove IPE and Validation
   const historyCategories = [
     {
       title: 'Wallet Transaction History',
       description: 'View all your wallet debits and credits.',
-      href: '/dashboard/history/wallet', // We will build this page
+      href: '/dashboard/history/wallet', // We will build this
       logo: ClockIcon,
     },
     {
       title: 'NIN Modification History',
       description: 'Check and monitor your NIN modification status here.',
-      href: '/dashboard/history/modification', // We will build this page
+      href: '/dashboard/history/modification',
       logo: IdentificationIcon,
     },
     {
       title: 'NIN Verification History',
       description: 'Regenerate your exact NIN verification slip here (slips expire in 24 hrs).',
-      href: '/dashboard/history/verification', // We will build this page
+      href: '/dashboard/history/verification',
       logo: DocumentMagnifyingGlassIcon,
     },
     {
-      title: 'IPE Clearance History',
-      description: 'Check the status of your IPE clearance requests.',
-      href: '/dashboard/history/ipe', // We will build this page
-      logo: ShieldCheckIcon,
-    },
-    {
-      title: 'NIN Validation History',
-      description: 'Check the status of your NIN validation requests.',
-      href: '/dashboard/history/validation', // We will build this page
-      logo: ShieldCheckIcon,
+      title: 'NIN Delink History',
+      description: 'Check the status of your NIN delink requests.',
+      href: '/dashboard/history/delink', // We will build this
+      logo: LinkIcon,
     },
   ];
 
