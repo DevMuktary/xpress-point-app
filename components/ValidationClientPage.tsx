@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ValidationRequest, RequestStatus } from '@prisma/client'; // Import the correct type
+import { ValidationRequest, RequestStatus } from '@prisma/client';
 import { 
   ExclamationTriangleIcon, 
   ArrowPathIcon, 
@@ -10,7 +10,8 @@ import {
   DocumentMagnifyingGlassIcon,
   MagnifyingGlassIcon,
   ClipboardIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  IdentificationIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -65,7 +66,7 @@ export default function ValidationClientPage({ initialRequests }: Props) {
   // --- State Management ---
   const [requests, setRequests] = useState(initialRequests);
   const [nin, setNin] = useState('');
-  const [selectedScode, setSelectedScode] = useState<string | null>(null); // For the "modern buttons"
+  const [selectedScode, setSelectedScode] = useState<string | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingId, setIsCheckingId] = useState<string | null>(null);
@@ -92,7 +93,6 @@ export default function ValidationClientPage({ initialRequests }: Props) {
     setSubmitSuccess(null);
     setStatusMessage(null);
 
-    // "World-class" validation
     if (!selectedScode) {
       setSubmitError("You must select a reason for validation.");
       setIsSubmitting(false);
@@ -149,7 +149,7 @@ export default function ValidationClientPage({ initialRequests }: Props) {
         throw new Error(data.error || 'Failed to check status.');
       }
 
-      setStatusMessage(data.message); // Your "on-screen" message
+      setStatusMessage(data.message);
 
       const newRequests = await fetchHistory();
       setRequests(newRequests);
@@ -163,7 +163,7 @@ export default function ValidationClientPage({ initialRequests }: Props) {
 
   // Helper function to re-fetch the history
   const fetchHistory = async () => {
-    const res = await fetch('/api/services/nin/validation-history'); // We will create this API
+    const res = await fetch('/api/services/nin/validation-history');
     if (!res.ok) return [];
     const data = await res.json();
     return data.requests;
