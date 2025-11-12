@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run db:fixstatus && prisma db push --accept-data-loss && prisma generate && npm run seed && next build",
+    "build": "prisma db push --accept-data-loss && prisma generate && npm run seed && next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
