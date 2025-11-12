@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // Define our services and their prices
 const services = [
-  // NIN Services
+  // (All your existing NIN services...)
   {
     id: 'NIN_LOOKUP',
     name: 'NIN Verification Lookup',
@@ -111,16 +111,30 @@ const services = [
     agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2450.00),
   },
-
-  // --- NEW SERVICE ---
   {
     id: 'NEWSPAPER_NAME_CHANGE',
     name: 'Newspaper Change of Name',
     category: 'NEWSPAPER',
-    agentPrice: new Decimal(4500.00), // You can change this price
+    agentPrice: new Decimal(4500.00),
     aggregatorPrice: new Decimal(4450.00),
   },
-  // -------------------
+
+  // --- NEW CAC SERVICES ---
+  {
+    id: 'CAC_REG_BN',
+    name: 'CAC Business Name Registration',
+    category: 'CAC',
+    agentPrice: new Decimal(18000.00), // You can change this price
+    aggregatorPrice: new Decimal(17500.00),
+  },
+  {
+    id: 'CAC_DOC_RETRIEVAL',
+    name: 'CAC Document Retrieval',
+    category: 'CAC',
+    agentPrice: new Decimal(5000.00), // You can change this price
+    aggregatorPrice: new Decimal(4800.00),
+  },
+  // ------------------------
 ];
 
 async function main() {
