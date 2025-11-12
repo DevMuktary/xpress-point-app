@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { PersonalizationRequest, RequestStatus } from '@prisma/client';
 import { 
   ExclamationTriangleIcon, 
   IdentificationIcon,
@@ -13,7 +14,7 @@ import {
   MapPinIcon,
   CheckCircleIcon,
   ArrowUpTrayIcon,
-  CalendarDaysIcon
+  ArrowPathIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -38,12 +39,12 @@ const ConsentText = () => (
     <p>NIMC recommends that NIN modifications be done personally. By agreeing, I confirm that due to technical difficulty, illiteracy, or convenience, I <strong className="font-semibold">voluntarily authorize</strong> Xpress Point to perform this modification on my behalf. This applies whether I am the NIN owner or an agent acting with the full consent of the owner.</p>
     
     <h4 className="font-bold text-gray-900">3. Service Fees & No-Refund Policy</h4>
-    <p>I agree to pay the non-refundable service fee. I understand that wallet funds are <strong className="font-semibold">non-withdrawable</strong>. If a service fails due to an Admin or provider error, the payment is refunded to my wallet but still cannot be withdrawn. <strong className="font-semibold">A ₦500 charge for wrong submissions will be deducted from the refund.</strong></p>
+    <p>I agree to pay the non-refundable service fee. I understand that wallet funds are <strong className="font-semibold">non-withdrawable</strong>. If a service fails due to an Admin or provider error (as specified in our auto-refund logic), the fee will be credited to my wallet, but it cannot be withdrawn. <strong className="font-semibold">A ₦500 charge for wrong submissions will be deducted from the refund.</strong></p>
     
     <h4 className="font-bold text-gray-900">4. Your Responsibilities</h4>
     <ul className="list-disc list-inside space-y-1">
-      <li>I confirm all information I provide is 100% correct.</li>
-      <li>I will <strong className="font-semibold">not</strong> submit the same request on another platform while it is <strong className="font-semibold">PROCESSING</strong> or <strong className="font-semibold">PENDING</strong> here. Doing so will forfeit my payment.</li>
+      <li>I confirm all information I provide (like "New First Name" or "New Address") is 100% correct.</li>
+      <li>I will <strong className="font-semibold">not</strong> submit the same request on another platform while it is <strong className="font-semibold">PROCESSING</strong> here. Doing so will forfeit my payment.</li>
       <li>If submitting for someone else, I confirm I have the NIN owner's full legal authorization.</li>
     </ul>
     
@@ -102,7 +103,6 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   const [address, setAddress] = useState('');
   const [state, setState] = useState('');
   const [lga, setLga] = useState('');
-  // --- NEW DOB Fields ---
   const [oldDob, setOldDob] = useState('');
   const [newDob, setNewDob] = useState('');
   const [attestation, setAttestation] = useState<File | null>(null);
@@ -168,7 +168,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       if (!response.ok) {
         throw new Error(data.error || 'File upload failed.');
       }
-      setAttestationUrl(data.url); // Save the "world-class" URL
+      setAttestationUrl(data.url);
     } catch (err: any) {
       setSubmitError(err.message);
     } finally {
@@ -216,8 +216,8 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
         body: JSON.stringify({ 
           serviceId, 
           formData, 
-          isDobGap, // Send the 7k fee flag
-          attestationUrl // Send the file URL
+          isDobGap,
+          attestationUrl
         }),
       });
       
@@ -227,7 +227,6 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       }
       
       setSuccess(data.message);
-      // Reset the form
       setNin(''); setPhone(''); setEmail(''); setPassword('');
       setFirstName(''); setLastName(''); setMiddleName('');
       setNewPhone(''); setAddress(''); setState(''); setLga('');
@@ -247,10 +246,13 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         {isSubmitting && <Loading />}
         <h2 className="text-xl font-bold text-gray-900 mb-4">Authorization Agreement</h2>
+        
         <ConsentText />
+        
         {submitError && (
           <p className="mt-4 text-sm font-medium text-red-600">{submitError}</p>
         )}
+        
         <div className="mt-6 flex gap-4 border-t border-gray-200 pt-4">
           <Link 
             href="/dashboard/services/nin"
@@ -385,7 +387,6 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                   <DataInput label="Old Date of Birth*" id="oldDob" value={oldDob} onChange={setOldDob} Icon={CalendarDaysIcon} type="date" />
                   <DataInput label="New Date of Birth*" id="newDob" value={newDob} onChange={setNewDob} Icon={CalendarDaysIcon} type="date" />
                   
-                  {/* "World-Class" Dynamic Fee Warning */}
                   {isDobGap && (
                     <div className="rounded-md bg-yellow-50 p-4">
                       <div className="flex">
@@ -400,7 +401,6 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                     </div>
                   )}
 
-                  {/* "World-Class" File Upload */}
                   <div>
                     <label htmlFor="attestation" className="block text-sm font-medium text-gray-700">Upload Attestation Document*</label>
                     <div className="mt-1 flex items-center gap-4">
