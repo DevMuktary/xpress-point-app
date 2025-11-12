@@ -6,45 +6,59 @@ import {
   ClockIcon, 
   IdentificationIcon, 
   DocumentMagnifyingGlassIcon, 
-  LinkIcon, // Icon for Delink
-  NewspaperIcon // Icon for Newspaper
+  LinkIcon,
+  NewspaperIcon,
+  BriefcaseIcon, // <-- NEW Icon for CAC
+  RectangleStackIcon // <-- NEW Icon for TIN
 } from '@heroicons/react/24/outline';
 
 // This is a Server Component, so it's very fast.
 export default function HistoryHubPage() {
   
   // --- THIS IS THE "WORLD-CLASS" REBURBISHED LIST ---
-  // IPE and Validation have been REMOVED, as you requested.
+  // CAC and JTB TIN are now included.
   const historyCategories = [
     {
       title: 'Wallet Transaction History',
       description: 'View all your wallet debits and credits.',
-      href: '/dashboard/history/wallet', // We will build this
+      href: '/dashboard/history/wallet', 
       logo: ClockIcon,
-    },
-    {
-      title: 'NIN Modification History',
-      description: 'Check and monitor your NIN modification status here.',
-      href: '/dashboard/history/modification', // We already built this
-      logo: IdentificationIcon,
     },
     {
       title: 'NIN Verification History',
       description: 'Regenerate your exact NIN verification slip here (slips expire in 24 hrs).',
-      href: '/dashboard/history/verification', // We already built this
+      href: '/dashboard/history/verification',
       logo: DocumentMagnifyingGlassIcon,
+    },
+    {
+      title: 'NIN Modification History',
+      description: 'Check and monitor your NIN modification status here.',
+      href: '/dashboard/history/modification',
+      logo: IdentificationIcon,
     },
     {
       title: 'NIN Delink History',
       description: 'Check the status of your NIN delink requests.',
-      href: '/dashboard/history/delink', // We already built this
+      href: '/dashboard/history/delink',
       logo: LinkIcon,
     },
     {
       title: 'Newspaper History',
       description: 'Check the status and download your completed publications.',
-      href: '/dashboard/history/newspaper', // We will build this next
+      href: '/dashboard/history/newspaper',
       logo: NewspaperIcon,
+    },
+    {
+      title: 'CAC History',
+      description: 'Check the status and download your CAC documents.',
+      href: '/dashboard/history/cac', // We will build this next
+      logo: BriefcaseIcon,
+    },
+    {
+      title: 'JTB TIN History',
+      description: 'Check the status of your TIN registrations.',
+      href: '/dashboard/history/tin', // We will build this later
+      logo: RectangleStackIcon,
     },
   ];
 
