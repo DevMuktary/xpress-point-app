@@ -69,6 +69,9 @@ export async function POST(request: Request) {
           description: `${service.name} (${(verification.data as any).nin})`,
           reference: `NIN-SLIP-${Date.now()}`,
           status: 'COMPLETED',
+          // --- THIS IS THE "WORLD-CLASS" FIX ---
+          verificationId: verification.id, // Link the transaction to the verification
+          // ------------------------------------
         },
       }),
     ]);
@@ -89,8 +92,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    // --- THIS IS THE FIX ---
-    // We log the FULL error, not just error.message
     console.error("NIN Slip Generation Error:", error); 
     
     let errorMessage = "An internal server error occurred.";
@@ -100,7 +101,6 @@ export async function POST(request: Request) {
       errorMessage = error.toString();
     }
     
-    // Check for the most likely error (File Not Found)
     if (error.code === 'ENOENT') {
       errorMessage = "Service configuration error: Missing required template files. Please contact support.";
     }
