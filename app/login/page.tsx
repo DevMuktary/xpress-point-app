@@ -1,22 +1,33 @@
-"use client"; // This is an interactive form
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation'; // Import useSearchParams
 import Link from 'next/link';
-import Loading from '@/app/loading'; // Use our global loader
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; // Corrected icon name
+import Loading from '@/app/loading';
+import { EyeIcon, EyeSlashIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // Get URL parameters
   
   // --- Form States ---
-  const [loginIdentifier, setLoginIdentifier] = useState(''); // This will be email or phone
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
   
   // --- UI States ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // --- THIS IS THE FIX ---
+  // We check for an error message from the URL when the page loads
+  useEffect(() => {
+    const urlError = searchParams.get('error');
+    if (urlError) {
+      setError(urlError.replace(/\+/g, ' ')); // Show the message
+    }
+  }, [searchParams]);
+  // -----------------------
 
   // --- Form Submission Handler ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,18 +50,11 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed. Please check your credentials.');
       }
 
-      // Success! The API sets a cookie.
-      // We use window.location.href for a full page refresh
-      // This correctly re-loads the dashboard layout as a logged-in user.
       window.location.href = '/dashboard';
 
     } catch (err: any) {
-      // --- THIS IS THE FIX ---
-      // Added the missing curly braces for the catch block
-      {
-        setError(err.message);
-        setIsLoading(false); // Stop loading only on error
-      }
+      setError(err.message);
+      setIsLoading(false);
     }
   };
 
@@ -58,7 +62,6 @@ export default function LoginPage() {
     <>
       {isLoading && <Loading />}
       
-      {/* We use Tailwind classes for a clean, centered layout */}
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
         <div className="w-full max-w-md space-y-8">
           {/* Header */}
@@ -70,6 +73,23 @@ export default function LoginPage() {
               Sign in to your Agent account
             </h2>
           </div>
+
+          {/* --- "Refurbished" Error/Message Display --- */}
+          {error && (
+            <div className="rounded-lg bg-red-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <InformationCircleIcon className="h-5 w-5 text-red-500" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-red-700">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* ------------------------------------------- */}
 
           {/* Login Form */}
           <form 
@@ -124,13 +144,6 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="text-center text-sm font-medium text-red-600">
-                {error}
-              </div>
-            )}
 
             {/* Submit Button */}
             <div>
