@@ -25,7 +25,6 @@ model User {
   nin                   String?
   hasAgreedToModificationTerms Boolean @default(false) @map("has_agreed_to_mod_terms")
   
-  // --- Relations ---
   wallet                Wallet?
   virtualAccounts       VirtualAccount[]
   transactions          Transaction[]
@@ -69,13 +68,16 @@ model Transaction {
   reference   String   @unique
   status      String
   createdAt   DateTime @default(now()) @map("created_at")
-  
-  // --- THIS IS THE FIX ---
   serviceId   String?  @map("service_id")
-  service     Service? @relation(fields: [serviceId], references: [id]) // Changed from [id] to [serviceId]
-  // -----------------------
-  
+  service     Service? @relation(fields: [serviceId], references: [id])
   user        User     @relation(fields: [userId], references: [id])
+
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // Link this Transaction to the *specific* verification it was for
+  verificationId String?            @map("verification_id")
+  verification   NinVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+  // ------------------------------------
+
   @@map("transactions")
 }
 
@@ -85,6 +87,12 @@ model NinVerification {
   data            Json
   expiresAt       DateTime @map("expires_at")
   user            User     @relation(fields: [userId], references: [id])
+  
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // A verification can have MANY slip transactions
+  transactions    Transaction[]
+  // ------------------------------------
+
   @@map("nin_verifications")
 }
 
@@ -109,21 +117,18 @@ model Service {
   @@map("services")
 }
 
-// --- THIS IS THE FIX ---
-// "PENDING" is re-added for your manual services
 enum RequestStatus {
   PENDING
   PROCESSING
   COMPLETED
   FAILED
 }
-// ----------------------
 
 model PersonalizationRequest {
   id             String        @id @default(uuid())
   userId         String        @map("user_id")
   trackingId     String        @map("tracking_id")
-  status         RequestStatus @default(PROCESSING) // Automatic = PROCESSING
+  status         RequestStatus @default(PROCESSING)
   statusMessage  String?       @map("status_message")
   data           Json?
   createdAt      DateTime      @default(now()) @map("created_at")
@@ -138,7 +143,7 @@ model IpeRequest {
   userId          String        @map("user_id")
   trackingId      String        @map("tracking_id")
   newTrackingId   String?       @map("new_tracking_id")
-  status          RequestStatus @default(PROCESSING) // Automatic = PROCESSING
+  status          RequestStatus @default(PROCESSING)
   statusMessage   String?       @map("status_message")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
@@ -153,7 +158,7 @@ model ValidationRequest {
   nin             String        @map("nin")
   scode           String
   newTrackingId   String?       @map("new_tracking_id")
-  status          RequestStatus @default(PROCESSING) // Automatic = PROCESSING
+  status          RequestStatus @default(PROCESSING)
   statusMessage   String?       @map("status_message")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
@@ -166,18 +171,14 @@ model ModificationRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
   serviceId       String        @map("service_id")
-  // --- THIS IS THE FIX ---
-  status          RequestStatus @default(PENDING)   // Manual = PENDING
-  // -----------------------
+  status          RequestStatus @default(PENDING)
   statusMessage   String?       @map("status_message")
   formData        Json
   attestationUrl  String?       @map("attestation_url")
   uploadedSlipUrl String?       @map("uploaded_slip_url")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
-
   user            User          @relation(fields: [userId], references: [id])
-  
   @@map("modification_requests")
 }
 
