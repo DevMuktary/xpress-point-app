@@ -34,7 +34,7 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- THIS IS THE "WORLD-CLASS" FIX
+  newspaperRequests            NewspaperRequest[] // <-- THIS IS THE "WORLD-CLASS" FIX
   otps                         Otp[]
 
   @@map("users")
@@ -113,7 +113,7 @@ model Service {
   
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
-  NewspaperRequest    NewspaperRequest[]
+  NewspaperRequest    NewspaperRequest[] // <-- Relation is already here
   
   @@map("services")
 }
