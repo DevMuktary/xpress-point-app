@@ -1,7 +1,8 @@
 "use client"; // This is an interactive component
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { PersonalizationRequest, RequestStatus } from '@prisma/client'; // This is ok, we're importing the type
 import { 
   ExclamationTriangleIcon, 
   IdentificationIcon,
@@ -84,10 +85,10 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   // --- State Management ---
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
   const [modType, setModType] = useState<ModType | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   
   // --- THIS IS THE FIX ---
-  // Using one consistent name for the error state
+  // Renamed 'isLoading' to 'isSubmitting' for consistency
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // -----------------------
   
@@ -108,23 +109,23 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
 
   // --- API 1: Handle Agreeing to Terms ---
   const handleAgree = async () => {
-    setIsLoading(true);
-    setSubmitError(null); // Use setSubmitError
+    setIsSubmitting(true); // Use the same loading state
+    setSubmitError(null);
     try {
       const response = await fetch('/api/auth/agree-mod-terms', { method: 'POST' });
       if (!response.ok) throw new Error('Failed to save agreement.');
       setHasAgreed(true);
     } catch (err: any) {
-      setSubmitError(err.message); // Use setSubmitError
+      setSubmitError(err.message);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false); // Use the same loading state
     }
   };
 
   // --- API 2: Handle Form Submission ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     setSubmitError(null);
     setSuccess(null);
 
@@ -142,7 +143,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       formData = { ...formData, address, state, lga };
     } else {
       setSubmitError("Please select a modification type.");
-      setIsLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
@@ -165,9 +166,9 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       setModType(null);
 
     } catch (err: any) {
-      setSubmitError(err.message); // Use setSubmitError
+      setSubmitError(err.message);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
   
@@ -175,12 +176,12 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   if (!hasAgreed) {
     return (
       <div className="rounded-2xl bg-white p-6 shadow-lg">
-        {isLoading && <Loading />}
+        {isSubmitting && <Loading />}
         <h2 className="text-xl font-bold text-gray-900 mb-4">Authorization Agreement</h2>
         
         <ConsentText />
         
-        {submitError && ( // Use submitError
+        {submitError && (
           <p className="mt-4 text-sm font-medium text-red-600">{submitError}</p>
         )}
         
@@ -193,7 +194,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
           </Link>
           <button
             onClick={handleAgree}
-            disabled={isLoading}
+            disabled={isSubmitting} // Use isSubmitting
             className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
           >
             I AGREED
@@ -206,7 +207,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   // --- This is the "World-Class" Submission Form ---
   return (
     <div className="space-y-6">
-      {(isLoading) && <Loading />}
+      {(isSubmitting) && <Loading />}
       
       {/* --- 1. The "No Refund" Warning --- */}
       <div className="rounded-lg bg-red-50 p-4 border border-red-200">
@@ -338,10 +339,10 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
               )}
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting} // <-- THIS IS THE FIX
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Modification Request'}
+                {isSubmitting ? 'Submitting...' : 'Submit Modification Request'} 
               </button>
             </div>
           )}
