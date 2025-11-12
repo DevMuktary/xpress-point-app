@@ -23,6 +23,8 @@ model User {
   createdAt             DateTime  @default(now()) @map("created_at")
   bvn                   String?
   nin                   String?
+  // --- NEW: For the consent form ---
+  hasAgreedToModificationTerms Boolean @default(false) @map("has_agreed_to_mod_terms")
   
   // --- Relations ---
   wallet                Wallet?
@@ -31,7 +33,8 @@ model User {
   ninVerifications      NinVerification[]
   personalizationRequests PersonalizationRequest[]
   ipeRequests           IpeRequest[]
-  validationRequests    ValidationRequest[] // <-- NEW RELATION
+  validationRequests    ValidationRequest[]
+  modificationRequests  ModificationRequest[] // <-- NEW RELATION
   otps                  Otp[]
 
   @@map("users")
@@ -103,11 +106,15 @@ model Service {
   @@map("services")
 }
 
+// --- THIS IS THE FIX ---
+// Added "PENDING" for your new manual flow
 enum RequestStatus {
+  PENDING
   PROCESSING
   COMPLETED
   FAILED
 }
+// ----------------------
 
 model PersonalizationRequest {
   id             String        @id @default(uuid())
@@ -137,24 +144,38 @@ model IpeRequest {
   @@map("ipe_requests")
 }
 
-// --- NEW TABLE FOR NIN VALIDATION ---
 model ValidationRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
   nin             String        @map("nin")
-  scode           String        // The reason code, e.g., "47"
-  newTrackingId   String?       @map("new_tracking_id") // For the result
+  scode           String
+  newTrackingId   String?       @map("new_tracking_id")
   status          RequestStatus @default(PROCESSING)
   statusMessage   String?       @map("status_message")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User          @relation(fields: [userId], references: [id])
+  @@unique([userId, nin, scode])
+  @@map("validation_requests")
+}
+
+// --- NEW TABLE FOR NIN MODIFICATION ---
+model ModificationRequest {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  serviceId       String        @map("service_id")     // e.g., "NIN_MOD_NAME"
+  status          RequestStatus @default(PENDING)   // <-- Starts as PENDING
+  statusMessage   String?       @map("status_message")
+  formData        Json          // Stores all form fields (NIN, new name, email, password)
+  uploadedSlipUrl String?       @map("uploaded_slip_url") // For admin
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   user            User          @relation(fields: [userId], references: [id])
   
-  @@unique([userId, nin, scode]) // A user can only submit one type of validation per NIN
-  @@map("validation_requests")
+  @@map("modification_requests")
 }
-// ----------------------------------
+// ------------------------------------
 
 enum Role {
   AGENT
