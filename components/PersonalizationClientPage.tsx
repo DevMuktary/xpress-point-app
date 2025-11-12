@@ -8,7 +8,9 @@ import {
   ArrowPathIcon, 
   CheckCircleIcon,
   DocumentMagnifyingGlassIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  ClipboardIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -17,6 +19,37 @@ import Link from 'next/link';
 type Props = {
   initialRequests: PersonalizationRequest[];
 };
+
+// --- "Sleek Copy Button" Component ---
+const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    });
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all
+        ${copied 
+          ? 'bg-green-100 text-green-700' 
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        }`}
+    >
+      {copied ? (
+        <ClipboardDocumentCheckIcon className="h-4 w-4" />
+      ) : (
+        <ClipboardIcon className="h-4 w-4" />
+      )}
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+};
+// ------------------------------------
 
 export default function PersonalizationClientPage({ initialRequests }: Props) {
   const router = useRouter();
@@ -49,14 +82,11 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     setSubmitSuccess(null);
     setStatusMessage(null);
 
-    // --- THIS IS THE FIX ---
-    // "World-Class" Validation for EXACTLY 15 characters
     if (trackingId.length !== 15) {
       setSubmitError("Tracking ID must be exactly 15 characters.");
       setIsSubmitting(false);
       return;
     }
-    // ----------------------------
 
     try {
       const response = await fetch('/api/services/nin/personalization-submit', {
@@ -145,19 +175,25 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
     }
   };
   
-  // Helper for the "smart" button
+  // --- THIS IS THE FIX ---
+  // Helper for the "smart" button (Refurbished)
   const renderActionButton = (request: PersonalizationRequest) => {
     const isLoading = isCheckingId === request.id;
     
     switch (request.status) {
       case 'COMPLETED':
+        // Get the NIN from the 'data' object
+        // The 'data' object is the full JSON response from Robosttech
+        const nin = (request.data as any)?.nin || (request.data as any)?.idNumber;
+        
         return (
-          <Link 
-            href={`/dashboard/services/nin/personalize/result/${request.id}`}
-            className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
-          >
-            View Result
-          </Link>
+          <div className="text-left">
+            <p className="text-xs text-gray-500">NIN Result:</p>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-green-700">{nin || 'Error'}</span>
+              {nin && <CopyButton textToCopy={nin} />}
+            </div>
+          </div>
         );
       case 'PROCESSING':
         return (
@@ -181,13 +217,13 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         );
     }
   };
-
+  // -----------------------
 
   return (
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
 
-      {/* --- 1. The "No Refund" Warning (Refurbished) --- */}
+      {/* --- 1. The "No Refund" Warning --- */}
       <div className="rounded-lg bg-red-50 p-4 border border-red-200">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -207,11 +243,11 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         </div>
       </div>
 
-      {/* --- 2. The "Submit New Request" Form (Refurbished) --- */}
+      {/* --- 2. The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-900">Submit New Request</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Enter 15-Characters Tracking ID to get NIN NUMBER/SLIP..
+          Enter 15-Characters Tracking ID to get NIN NUMBER.
         </p>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="relative">
@@ -221,9 +257,9 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
             <input
               type="text"
               value={trackingId}
-              onChange={(e) => setTrackingId(e.target.value.toUpperCase())} // Always use uppercase
+              onChange={(e) => setTrackingId(e.target.value.toUpperCase())}
               placeholder="Enter 15-character Tracking ID"
-              maxLength={15} // Enforce max length
+              maxLength={15}
               className="w-full rounded-lg border border-gray-300 p-3 pl-10 text-lg uppercase shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               required
             />
@@ -315,6 +351,20 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
                   </div>
                 </div>
               </div>
+              
+              {/* --- THIS IS THE FIX (Part 2) --- */}
+              {/* Your "World-Class" Instruction */}
+              {request.status === 'COMPLETED' && (
+                <div className="mt-4 border-t border-gray-100 pt-3">
+                  <p className="text-sm text-gray-600">
+                    Need slip? Go to
+                    <Link href="/dashboard/services/nin/verify-by-nin" className="font-medium text-blue-600 hover:underline">
+                      'NIN Verification by NIN'
+                    </Link>
+                    and use your new NIN to get your slip.
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>
