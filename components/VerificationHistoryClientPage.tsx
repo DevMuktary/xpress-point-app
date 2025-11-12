@@ -6,13 +6,14 @@ import {
   CheckCircleIcon,
   InformationCircleIcon, 
   PrinterIcon,
-  XMarkIcon
+  XMarkIcon,
+  DocumentMagnifyingGlassIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Image from 'next/image';
 
-// --- THIS IS THE FIX ---
-// The data from our server now includes transactions
+// Define the props to receive the initial data from the server
+// We add 'data: any' because Prisma's Json type is not specific
 type HistoryRequest = {
   id: string;
   expiresAt: Date; // We use expiresAt
@@ -23,8 +24,8 @@ type HistoryRequest = {
 type Props = {
   initialRequests: HistoryRequest[];
 };
-// -----------------------
 
+// --- "World-Class" Types for the Modal ---
 type ModalState = {
   isOpen: boolean;
   isPaidModal: boolean; // TRUE = We are charging, FALSE = Re-print
@@ -70,12 +71,15 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
     });
   };
   
-  // --- "World-Class" Helpers to get data ---
+  // --- "World-Class" Helper to get the Name ---
   const getName = (data: any) => {
+    // Handles data from BOTH API providers (ConfirmIdent and Raudah)
     const firstName = data.firstname || data.firs_tname || 'N/A';
     const lastName = data.surname || data.last_name || 'N/A';
     return `${firstName} ${lastName}`;
   };
+  
+  // --- "World-Class" Helper to get the NIN ---
   const getNin = (data: any) => data.nin || data.NIN || 'N/A';
   
   // --- "World-Class" Helper to get PAID slips ---
@@ -185,7 +189,7 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
         )}
 
         {requests.map((request) => {
-          const paidSlips = getPaidSlips(request); // e.g., ["Regular", "Standard"]
+          const paidSlips = getPaidSlips(request);
           
           return (
             <div 
@@ -211,9 +215,9 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
                   <button
                     onClick={() => setModalState({ 
                       isOpen: true, 
-                      isPaidModal: paidSlips.length === 0, // It's a PAID modal if no slips bought
+                      isPaidModal: paidSlips.length === 0,
                       verificationId: request.id,
-                      slipPrices: { Regular: 100, Standard: 150, Premium: 200 }, // Prices
+                      slipPrices: { Regular: 100, Standard: 150, Premium: 200 },
                       alreadyPaidSlips: paidSlips
                     })}
                     className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 flex items-center gap-2"
@@ -224,7 +228,6 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
                 </div>
               </div>
               
-              {/* --- "World-Class" List of Paid Slips --- */}
               {paidSlips.length > 0 && (
                 <div className="mt-3 border-t border-gray-100 pt-3">
                   <p className="text-xs font-medium text-gray-500">Slips already purchased:</p>
@@ -259,7 +262,6 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
             
             {/* Modal Body */}
             <div className="p-6">
-              {/* "World-Class" Context-Aware Message */}
               {modalState.isPaidModal ? (
                 <p className="text-sm text-center text-gray-600">
                   This verification has no slips. Select a slip to purchase.
@@ -270,7 +272,6 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
                 </p>
               )}
               
-              {/* "World-Class" "Smart" Buttons */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 
                 {/* Regular Slip */}
@@ -281,7 +282,6 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
                 >
                   <Image src={exampleImageMap.Regular} alt="Regular Slip" width={150} height={95} className="rounded-md border" />
                   <span className="font-bold text-gray-800 mt-3">Regular Slip</span>
-                  {/* "World-Class" Pricing Logic */}
                   {modalState.alreadyPaidSlips.includes('Regular') ? (
                     <span className="text-sm font-medium text-green-600">Free Re-print</span>
                   ) : (
