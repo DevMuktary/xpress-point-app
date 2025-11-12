@@ -1,14 +1,16 @@
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
+import { Role } from '@prisma/client'; // Import Role
 
 // Define the shape of our token
 interface UserPayload {
   userId: string;
   email: string;
-  role: string;
+  role: Role;
 }
 
+// This is the "world-class" function to get the user from their cookie
 export async function getUserFromSession() {
   const token = cookies().get('auth_token')?.value;
 
@@ -23,18 +25,20 @@ export async function getUserFromSession() {
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       // --- THIS IS THE FIX ---
-      // We must select all the fields we need, including bvn and phoneNumber
+      // We must select the new field we added to the schema.
       select: {
         id: true,
         email: true,
         firstName: true,
         lastName: true,
+        phoneNumber: true,
         role: true,
         isEmailVerified: true,
         isIdentityVerified: true,
-        bvn: true,              // <-- ADDED
-        phoneNumber: true       // <-- ADDED
+        bvn: true,
+        hasAgreedToModificationTerms: true, // <-- THE MISSING LINE
       }
+      // -----------------------
     });
 
     return user;
