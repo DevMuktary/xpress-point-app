@@ -3,6 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
 
+// --- Your "World-Class" Fees ---
+const DOB_5_YEAR_FEE = new Decimal(7000);
+const FAILED_SUBMISSION_FEE = new Decimal(500);
+// ------------------------------
+
+export { FAILED_SUBMISSION_FEE }; // Export for other APIs
+
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) {
@@ -11,39 +18,48 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { serviceId, formData } = body; // serviceId = "NIN_MOD_NAME", etc.
+    const { serviceId, formData, isDobGap, attestationUrl } = body; 
 
     if (!serviceId || !formData) {
       return NextResponse.json({ error: 'Service ID and Form Data are required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Base Price From Database ---
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    
+    let finalPrice = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
 
-    if (!wallet || wallet.balance.lessThan(price)) {
-      return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
+    // --- 2. "World-Class" Dynamic Pricing Logic ---
+    if (serviceId === 'NIN_MOD_DOB' && isDobGap === true) {
+      finalPrice = finalPrice.plus(DOB_5_YEAR_FEE);
+    }
+    // ------------------------------------------
+
+    // --- 3. Check User Wallet ---
+    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    if (!wallet || wallet.balance.lessThan(finalPrice)) {
+      return NextResponse.json({ error: `Insufficient funds. This service costs ₦${finalPrice}.` }, { status: 402 });
     }
 
-    // --- 2. Charge User & Save as PENDING ---
+    // --- 4. Charge User & Save as PENDING ---
     await prisma.$transaction([
       // a) Charge wallet
       prisma.wallet.update({
         where: { userId: user.id },
-        data: { balance: { decrement: price } },
+        data: { balance: { decrement: finalPrice } },
       }),
       // b) Create the new request
       prisma.modificationRequest.create({
         data: {
           userId: user.id,
           serviceId: serviceId,
-          status: 'PENDING', // <-- PENDING, as you requested
+          status: 'PENDING', // <-- PENDING, as you designed
           statusMessage: 'Request submitted. Awaiting admin review.',
-          formData: formData as any, // Save all the form data as JSON
+          formData: formData as any, // Save all the form data
+          attestationUrl: attestationUrl || null,
         },
       }),
       // c) Log the transaction
@@ -52,7 +68,7 @@ export async function POST(request: Request) {
           userId: user.id,
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: price.negated(),
+          amount: finalPrice.negated(), // Charge the FINAL price
           description: `${service.name} (${formData.nin})`,
           reference: `NIN-MOD-${Date.now()}`,
           status: 'COMPLETED',
