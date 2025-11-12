@@ -104,13 +104,21 @@ const services = [
     agentPrice: new Decimal(15000.00),
     aggregatorPrice: new Decimal(14500.00),
   },
-  // --- NEW SERVICE ---
   {
     id: 'NIN_DELINK',
     name: 'NIN Delink / Retrieve Email',
     category: 'NIN',
-    agentPrice: new Decimal(2500.00), // Your ₦2500 price
+    agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2450.00),
+  },
+
+  // --- NEW SERVICE ---
+  {
+    id: 'NEWSPAPER_NAME_CHANGE',
+    name: 'Newspaper Change of Name',
+    category: 'NEWSPAPER',
+    agentPrice: new Decimal(4500.00), // You can change this price
+    aggregatorPrice: new Decimal(4450.00),
   },
   // -------------------
 ];
