@@ -25,6 +25,7 @@ model User {
   nin                   String?
   hasAgreedToModificationTerms Boolean @default(false) @map("has_agreed_to_mod_terms")
   
+  // --- Relations ---
   wallet                Wallet?
   virtualAccounts       VirtualAccount[]
   transactions          Transaction[]
@@ -33,6 +34,7 @@ model User {
   ipeRequests           IpeRequest[]
   validationRequests    ValidationRequest[]
   modificationRequests  ModificationRequest[]
+  delinkRequests        DelinkRequest[] // <-- NEW RELATION
   otps                  Otp[]
 
   @@map("users")
@@ -106,11 +108,10 @@ model Service {
   aggregatorPrice  Decimal   @map("aggregator_price") @db.Decimal(10, 2)
   isActive         Boolean   @default(true) @map("is_active")
   Transaction      Transaction[]
-  ModificationRequest ModificationRequest[] // <-- NEW: Relation to Mod Request
+  ModificationRequest ModificationRequest[]
   @@map("services")
 }
 
-// "PENDING" is correct for this manual service
 enum RequestStatus {
   PENDING
   PROCESSING
@@ -172,16 +173,26 @@ model ModificationRequest {
   uploadedSlipUrl String?       @map("uploaded_slip_url")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User          @relation(fields: [userId], references: [id])
+  service         Service       @relation(fields: [serviceId], references: [id])
+  @@map("modification_requests")
+}
+
+// --- NEW TABLE FOR NIN DELINK ---
+model DelinkRequest {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  nin             String        @map("nin")
+  status          RequestStatus @default(PENDING)   // <-- Starts as PENDING
+  statusMessage   String?       @map("status_message") // For Admin's reason
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
   user            User          @relation(fields: [userId], references: [id])
   
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // This line was missing. It links 'serviceId' to the 'Service' table.
-  service         Service       @relation(fields: [serviceId], references: [id])
-  // ------------------------------------
-  
-  @@map("modification_requests")
+  @@map("delink_requests")
 }
+// ---------------------------------
 
 enum Role {
   AGENT
