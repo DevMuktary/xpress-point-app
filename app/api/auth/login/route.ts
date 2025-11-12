@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = '1d'; // Login expires in 1 day
+const JWT_EXPIRES_IN = '1d'; // The token *inside* the cookie is valid for 1 day
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Find the user by EITHER email or phone number
+    // 1. Find the user
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Check if the password is correct
+    // 2. Check password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
@@ -46,15 +46,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Create a login token (JWT)
-    
-    // --- THIS IS THE FIX ---
-    // We must check for JWT_SECRET *inside* the function.
+    // 3. Create a login token
     if (!JWT_SECRET) {
       console.error('JWT_SECRET environment variable is not set.');
       throw new Error('Server configuration error.');
     }
-    // ----------------------
 
     const token = jwt.sign(
       { 
@@ -63,18 +59,20 @@ export async function POST(request: Request) {
         role: user.role,
         firstName: user.firstName,
       },
-      JWT_SECRET, // TypeScript now knows this is a string
+      JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    // 4. Set the token in a secure, httpOnly cookie to log the user in
+    // --- THIS IS THE FIX ---
+    // We set the "session cookie"
     cookies().set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 24 * 60 * 60, // 1 day
+      // 'maxAge' is REMOVED. The cookie is now a session cookie.
       path: '/',
     });
+    // -----------------------
 
     return NextResponse.json(
       { message: 'Login successful' },
@@ -83,7 +81,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Login Error:', error);
-    // Don't leak server errors to the client
     if (error instanceof Error && error.message.includes('Server configuration error')) {
       return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
     }
