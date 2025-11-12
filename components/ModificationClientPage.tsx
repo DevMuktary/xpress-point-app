@@ -10,7 +10,8 @@ import {
   EnvelopeIcon,
   LockClosedIcon,
   HomeIcon,
-  MapPinIcon
+  MapPinIcon,
+  CheckCircleIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -48,6 +49,7 @@ const ConsentText = () => (
     <ul className="list-disc list-inside space-y-1">
       <li><strong className="font-semibold">Bank/SIM Updates:</strong> I understand that modifications reflect immediately on the NIMC portal, but banks and SIM providers may take a long time to sync. If I need this for an urgent bank transaction, I will not proceed.</li>
       <li><strong className="font-semibold">NIMC Delays:</strong> If NIMC's network is down, I agree to wait patiently and will not submit duplicate requests.</li>
+      <li><strong className="font-semibold">Alias Emails:</strong> I understand that this platform uses secure, platform-owned "alias emails" to process all modifications, as required by NIMC.</li>
     </ul>
     
     <p>I have read, understood, and agree to all the terms above. I authorize Xpress Point to proceed with my NIN modification.</p>
@@ -71,7 +73,7 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
       }`}
   >
     <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-gray-600">{description}</p>
+    <p className="text-sm text-blue-600 font-medium">{description}</p>
   </button>
 );
 
@@ -303,7 +305,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                 <>
                   <DataInput label="New First Name*" id="fname" value={firstName} onChange={setFirstName} Icon={UserIcon} />
                   <DataInput label="New Last Name*" id="lname" value={lastName} onChange={setLastName} Icon={UserIcon} />
-                  <DataInput label="New Middle Name (Optional)" id="mname" value={middleName} onChange={setMiddleName} Icon={UserIcon} />
+                  <DataInput label="New Middle Name (Optional)" id="mname" value={middleName} onChange={setMiddleName} Icon={UserIcon} isRequired={false} />
                 </>
               )}
               {modType === 'PHONE' && (
@@ -346,13 +348,14 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
 }
 
 // --- "World-Class" Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text" }: {
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true }: {
   label: string,
   id: string,
   value: string,
   onChange: (value: string) => void,
   Icon: React.ElementType,
-  type?: string
+  type?: string,
+  isRequired?: boolean
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -366,7 +369,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text" }: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required
+        required={isRequired}
       />
     </div>
   </div>
