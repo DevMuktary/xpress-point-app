@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
-import { sendVerificationEmail } from '@/lib/email'; // <-- Import our new email function
+import { sendVerificationEmail } from '@/lib/email';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1d';
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Find the OTP in the database
+    // 1. Find the OTP
     const otpRecord = await prisma.otp.findFirst({
       where: {
         code: otp,
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         expiresAt: { gt: new Date() }, 
       },
       include: {
-        user: true, // Include the user data
+        user: true,
       },
     });
 
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     const user = otpRecord.user;
 
-    // 2. Mark the user as verified
+    // 2. Mark user as verified
     await prisma.user.update({
       where: { id: user.id },
       data: { isPhoneVerified: true },
@@ -61,27 +61,26 @@ export async function POST(request: Request) {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    // 5. Set the login cookie
+    // --- THIS IS THE FIX ---
+    // We set the "session cookie"
     cookies().set('auth_token', loginToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 24 * 60 * 60,
+      // 'maxAge' is REMOVED.
       path: '/',
     });
+    // -----------------------
     
-    // --- 6. NEW: Send the Verification Email ---
-    // We create a *separate, short-lived* token just for email verification
+    // 6. Send the Verification Email
     const emailVerifyToken = jwt.sign(
       { userId: user.id, email: user.email },
       JWT_SECRET,
-      { expiresIn: '1h' } // This link will only be valid for 1 hour
+      { expiresIn: '1h' }
     );
     
-    // Call our new Brevo helper function
     await sendVerificationEmail(user.email, user.firstName, emailVerifyToken);
-    // ------------------------------------------
-
+    
     return NextResponse.json(
       { message: 'Verification successful. User logged in.' }, { status: 200 }
     );
