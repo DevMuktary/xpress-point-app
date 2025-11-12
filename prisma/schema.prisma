@@ -34,8 +34,9 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
+  delinkRequests               DelinkRequest[]
   newspaperRequests            NewspaperRequest[]
-  delinkRequests               DelinkRequest[] // <--- ADDED THIS LINE
+  cacRequests                  CacRequest[] // <-- NEW RELATION
   otps                         Otp[]
 
   @@map("users")
@@ -71,12 +72,9 @@ model Transaction {
   reference   String   @unique
   status      String
   createdAt   DateTime @default(now()) @map("created_at")
-  
   serviceId   String?  @map("service_id")
   service     Service? @relation(fields: [serviceId], references: [id])
-  
   user        User     @relation(fields: [userId], references: [id])
-  
   verificationId String?            @map("verification_id")
   verification   NinVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
 
@@ -115,6 +113,7 @@ model Service {
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
+  CacRequest          CacRequest[] // <-- NEW RELATION
   
   @@map("services")
 }
@@ -208,16 +207,41 @@ model NewspaperRequest {
   pageNumber      String?       @map("page_number")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
-
   user            User          @relation(fields: [userId], references: [id])
   service         Service       @relation(fields: [serviceId], references: [id])
-  
   @@map("newspaper_requests")
 }
+
+// --- NEW TABLE FOR CAC ---
+model CacRequest {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  serviceId         String        @map("service_id")     // e.g., "CAC_REG_BN"
+  status            RequestStatus @default(PENDING)   // <-- Starts as PENDING
+  statusMessage     String?       @map("status_message") // For Admin's reason
+  formData          Json          // Stores all form fields (names, address, etc.)
+  
+  // --- User Uploads ---
+  passportUrl       String?       @map("passport_url")
+  signatureUrl      String?       @map("signature_url")
+  ninSlipUrl        String?       @map("nin_slip_url")
+  
+  // --- Admin Uploads (Your Design) ---
+  certificateUrl    String?       @map("certificate_url")
+  statusReportUrl   String?       @map("status_report_url")
+  
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user              User          @relation(fields: [userId], references: [id])
+  service           Service       @relation(fields: [serviceId], references: [id])
+  
+  @@map("cac_requests")
+}
+// -------------------------
 
 enum Role {
   AGENT
   AGGREGATOR
   ADMIN
 }
-
