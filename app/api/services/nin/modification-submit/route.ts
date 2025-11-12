@@ -2,13 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
-
-// --- Your "World-Class" Fees ---
-const DOB_5_YEAR_FEE = new Decimal(7000);
-const FAILED_SUBMISSION_FEE = new Decimal(500);
-// ------------------------------
-
-export { FAILED_SUBMISSION_FEE }; // Export for other APIs
+import { DOB_5_YEAR_FEE } from '@/lib/config'; // <-- Import from our new config
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -56,9 +50,9 @@ export async function POST(request: Request) {
         data: {
           userId: user.id,
           serviceId: serviceId,
-          status: 'PENDING', // <-- PENDING, as you designed
+          status: 'PENDING',
           statusMessage: 'Request submitted. Awaiting admin review.',
-          formData: formData as any, // Save all the form data
+          formData: formData as any,
           attestationUrl: attestationUrl || null,
         },
       }),
@@ -68,7 +62,7 @@ export async function POST(request: Request) {
           userId: user.id,
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: finalPrice.negated(), // Charge the FINAL price
+          amount: finalPrice.negated(),
           description: `${service.name} (${formData.nin})`,
           reference: `NIN-MOD-${Date.now()}`,
           status: 'COMPLETED',
