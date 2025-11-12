@@ -34,9 +34,10 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
+  delinkRequests               DelinkRequest[] // <-- FIX IS HERE
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
-  tinRequests                  TinRequest[] // <-- NEW RELATION
+  tinRequests                  TinRequest[]
   otps                         Otp[]
 
   @@map("users")
@@ -114,7 +115,7 @@ model Service {
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
-  TinRequest          TinRequest[] // <-- NEW RELATION
+  TinRequest          TinRequest[]
   
   @@map("services")
 }
