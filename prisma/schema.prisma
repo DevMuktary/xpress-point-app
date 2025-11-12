@@ -23,7 +23,6 @@ model User {
   createdAt             DateTime  @default(now()) @map("created_at")
   bvn                   String?
   nin                   String?
-  // --- NEW: For the consent form ---
   hasAgreedToModificationTerms Boolean @default(false) @map("has_agreed_to_mod_terms")
   
   // --- Relations ---
@@ -34,7 +33,7 @@ model User {
   personalizationRequests PersonalizationRequest[]
   ipeRequests           IpeRequest[]
   validationRequests    ValidationRequest[]
-  modificationRequests  ModificationRequest[] // <-- NEW RELATION
+  modificationRequests  ModificationRequest[] // <-- Relation is already here
   otps                  Otp[]
 
   @@map("users")
@@ -71,7 +70,7 @@ model Transaction {
   status      String
   createdAt   DateTime @default(now()) @map("created_at")
   serviceId   String?  @map("service_id")
-  service     Service? @relation(fields: [serviceId], references: [id])
+  service     Service? @relation(fields: [id], references: [id]) // 'id' is correct
   user        User     @relation(fields: [userId], references: [id])
   @@map("transactions")
 }
@@ -106,15 +105,13 @@ model Service {
   @@map("services")
 }
 
-// --- THIS IS THE FIX ---
-// Added "PENDING" for your new manual flow
+// "PENDING" is correct for this manual service
 enum RequestStatus {
   PENDING
   PROCESSING
   COMPLETED
   FAILED
 }
-// ----------------------
 
 model PersonalizationRequest {
   id             String        @id @default(uuid())
@@ -159,15 +156,20 @@ model ValidationRequest {
   @@map("validation_requests")
 }
 
-// --- NEW TABLE FOR NIN MODIFICATION ---
+// --- "Refurbished" Modification Request Table ---
 model ModificationRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
-  serviceId       String        @map("service_id")     // e.g., "NIN_MOD_NAME"
+  serviceId       String        @map("service_id")     // e.g., "NIN_MOD_NAME" or "NIN_MOD_DOB"
   status          RequestStatus @default(PENDING)   // <-- Starts as PENDING
-  statusMessage   String?       @map("status_message")
+  statusMessage   String?       @map("status_message") // Admin's reason for failure
   formData        Json          // Stores all form fields (NIN, new name, email, password)
-  uploadedSlipUrl String?       @map("uploaded_slip_url") // For admin
+  
+  // --- NEW FIELDS ---
+  attestationUrl  String?       @map("attestation_url") // For the user to upload
+  uploadedSlipUrl String?       @map("uploaded_slip_url") // For the admin to upload
+  // ------------------
+  
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
