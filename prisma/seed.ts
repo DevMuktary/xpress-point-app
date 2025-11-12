@@ -48,39 +48,58 @@ const services = [
     agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2450.00),
   },
-  
-  // --- THIS IS THE FIX ---
-  // We have "refurbished" the Validation service
-  // to have a "world-class" price for each type.
   {
-    id: 'NIN_VALIDATION_47', // No Record
+    id: 'NIN_VALIDATION_47',
     name: 'NIN Validation (No Record)',
     category: 'NIN',
-    agentPrice: new Decimal(500.00), // You can change this price
+    agentPrice: new Decimal(500.00),
     aggregatorPrice: new Decimal(480.00),
   },
   {
-    id: 'NIN_VALIDATION_48', // Sim Card Issues
+    id: 'NIN_VALIDATION_48',
     name: 'NIN Validation (Sim Card Issues)',
     category: 'NIN',
-    agentPrice: new Decimal(550.00), // Example of a different price
+    agentPrice: new Decimal(550.00),
     aggregatorPrice: new Decimal(530.00),
   },
   {
-    id: 'NIN_VALIDATION_49', // Bank Validation
+    id: 'NIN_VALIDATION_49',
     name: 'NIN Validation (Bank Validation)',
     category: 'NIN',
     agentPrice: new Decimal(500.00),
     aggregatorPrice: new Decimal(480.00),
   },
   {
-    id: 'NIN_VALIDATION_50', // Photographer error
+    id: 'NIN_VALIDATION_50',
     name: 'NIN Validation (Photographer error)',
     category: 'NIN',
-    agentPrice: new Decimal(600.00), // Example of a different price
+    agentPrice: new Decimal(600.00),
     aggregatorPrice: new Decimal(580.00),
   },
-  // -----------------------
+  
+  // --- NEW SERVICES ---
+  {
+    id: 'NIN_MOD_NAME',
+    name: 'NIN Modification (Name)',
+    category: 'NIN',
+    agentPrice: new Decimal(2000.00), // You can change this price
+    aggregatorPrice: new Decimal(1950.00),
+  },
+  {
+    id: 'NIN_MOD_PHONE',
+    name: 'NIN Modification (Phone)',
+    category: 'NIN',
+    agentPrice: new Decimal(1000.00), // You can change this price
+    aggregatorPrice: new Decimal(950.00),
+  },
+  {
+    id: 'NIN_MOD_ADDRESS',
+    name: 'NIN Modification (Address)',
+    category: 'NIN',
+    agentPrice: new Decimal(1500.00), // You can change this price
+    aggregatorPrice: new Decimal(1450.00),
+  },
+  // --------------------
 ];
 
 async function main() {
