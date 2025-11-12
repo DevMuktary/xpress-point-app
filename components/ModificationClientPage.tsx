@@ -11,7 +11,7 @@ import {
   LockClosedIcon,
   HomeIcon,
   MapPinIcon,
-  CheckCircleIcon // <-- THIS IS THE FIX
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -85,7 +85,12 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
   const [modType, setModType] = useState<ModType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  // --- THIS IS THE FIX ---
+  // Using one consistent name for the error state
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  // -----------------------
+  
   const [success, setSuccess] = useState<string | null>(null); // Your "Sweet Alert" message
   
   // --- Form Data State ---
@@ -104,12 +109,13 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   // --- API 1: Handle Agreeing to Terms ---
   const handleAgree = async () => {
     setIsLoading(true);
+    setSubmitError(null); // Use setSubmitError
     try {
       const response = await fetch('/api/auth/agree-mod-terms', { method: 'POST' });
       if (!response.ok) throw new Error('Failed to save agreement.');
-      setHasAgreed(true); // "World-class" - now show the form
+      setHasAgreed(true);
     } catch (err: any) {
-      setError(err.message);
+      setSubmitError(err.message); // Use setSubmitError
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +125,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setSubmitError(null);
     setSuccess(null);
 
     let serviceId = '';
@@ -135,7 +141,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       serviceId = 'NIN_MOD_ADDRESS';
       formData = { ...formData, address, state, lga };
     } else {
-      setError("Please select a modification type.");
+      setSubmitError("Please select a modification type.");
       setIsLoading(false);
       return;
     }
@@ -152,16 +158,14 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      // Your "Sweet Alert" - style message
       setSuccess(data.message);
-      // Reset the form
       setNin(''); setPhone(''); setEmail(''); setPassword('');
       setFirstName(''); setLastName(''); setMiddleName('');
       setNewPhone(''); setAddress(''); setState(''); setLga('');
       setModType(null);
 
     } catch (err: any) {
-      setError(err.message);
+      setSubmitError(err.message); // Use setSubmitError
     } finally {
       setIsLoading(false);
     }
@@ -176,8 +180,8 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
         
         <ConsentText />
         
-        {error && (
-          <p className="mt-4 text-sm font-medium text-red-600">{error}</p>
+        {submitError && ( // Use submitError
+          <p className="mt-4 text-sm font-medium text-red-600">{submitError}</p>
         )}
         
         <div className="mt-6 flex gap-4 border-t border-gray-200 pt-4">
@@ -329,7 +333,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
           {/* --- Submit Button --- */}
           {modType && (
             <div className="border-t border-gray-200 pt-6">
-              {submitError && (
+              {submitError && ( // <-- THIS IS THE FIX
                 <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
               )}
               <button
