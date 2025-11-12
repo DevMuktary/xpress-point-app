@@ -76,8 +76,6 @@ const services = [
     agentPrice: new Decimal(600.00),
     aggregatorPrice: new Decimal(580.00),
   },
-  
-  // --- NIN Modification Services ---
   {
     id: 'NIN_MOD_NAME',
     name: 'NIN Modification (Name)',
@@ -99,15 +97,22 @@ const services = [
     agentPrice: new Decimal(1500.00),
     aggregatorPrice: new Decimal(1450.00),
   },
-  // --- NEW SERVICE (NIN_MOD_DOB) ---
   {
     id: 'NIN_MOD_DOB',
     name: 'NIN Modification (Date of Birth)',
     category: 'NIN',
-    agentPrice: new Decimal(15000.00), // This is the BASE price
+    agentPrice: new Decimal(15000.00),
     aggregatorPrice: new Decimal(14500.00),
   },
-  // --------------------
+  // --- NEW SERVICE ---
+  {
+    id: 'NIN_DELINK',
+    name: 'NIN Delink / Retrieve Email',
+    category: 'NIN',
+    agentPrice: new Decimal(2500.00), // Your ₦2500 price
+    aggregatorPrice: new Decimal(2450.00),
+  },
+  // -------------------
 ];
 
 async function main() {
