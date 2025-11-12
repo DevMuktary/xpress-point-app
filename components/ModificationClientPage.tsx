@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { PersonalizationRequest, RequestStatus } from '@prisma/client'; // This is ok, we're importing the type
+import { PersonalizationRequest, RequestStatus } from '@prisma/client';
 import { 
   ExclamationTriangleIcon, 
   IdentificationIcon,
@@ -15,7 +15,8 @@ import {
   CheckCircleIcon,
   ArrowUpTrayIcon,
   ArrowPathIcon,
-  CalendarDaysIcon // <-- THIS IS THE FIX
+  CalendarDaysIcon,
+  XMarkIcon // For the modal close button
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -32,30 +33,24 @@ type ModType = 'NAME' | 'PHONE' | 'ADDRESS' | 'DOB';
 const ConsentText = () => (
   <div className="space-y-4 text-sm text-gray-700 max-h-[60vh] overflow-y-auto pr-2">
     <p>Before you proceed, you must read and agree to the following terms. This is a one-time agreement.</p>
-    
     <h4 className="font-bold text-gray-900">1. Authorization to Act on Your Behalf</h4>
     <p>I, the user, authorize Xpress Point and its trusted agents to access and use my personal data, including my NIN, to process the modification requested. I understand that Xpress Point is an independent agent and is <strong className="font-semibold">not</strong> affiliated with NIMC.</p>
-    
     <h4 className="font-bold text-gray-900">2. Your Voluntary Consent</h4>
     <p>NIMC recommends that NIN modifications be done personally. By agreeing, I confirm that due to technical difficulty, illiteracy, or convenience, I <strong className="font-semibold">voluntarily authorize</strong> Xpress Point to perform this modification on my behalf. This applies whether I am the NIN owner or an agent acting with the full consent of the owner.</p>
-    
     <h4 className="font-bold text-gray-900">3. Service Fees & No-Refund Policy</h4>
     <p>I agree to pay the non-refundable service fee. I understand that wallet funds are <strong className="font-semibold">non-withdrawable</strong>. If a service fails due to an Admin or provider error (as specified in our auto-refund logic), the fee will be credited to my wallet, but it cannot be withdrawn. <strong className="font-semibold">A ₦500 charge for wrong submissions will be deducted from any refund.</strong></p>
-    
     <h4 className="font-bold text-gray-900">4. Your Responsibilities</h4>
     <ul className="list-disc list-inside space-y-1">
       <li>I confirm all information I provide (like "New First Name" or "New Address") is 100% correct.</li>
       <li>I will <strong className="font-semibold">not</strong> submit the same request on another platform while it is <strong className="font-semibold">PROCESSING</strong> here. Doing so will forfeit my payment.</li>
       <li>If submitting for someone else, I confirm I have the NIN owner's full legal authorization.</li>
     </ul>
-    
     <h4 className="font-bold text-gray-900">5. Provider Delays & Service Terms</h4>
     <ul className="list-disc list-inside space-y-1">
       <li><strong className="font-semibold">Bank/SIM Updates:</strong> I understand that modifications reflect immediately on the NIMC portal, but banks and SIM providers may take a long time to sync. If I need this for an urgent bank transaction, I will not proceed.</li>
       <li><strong className="font-semibold">NIMC Delays:</strong> If NIMC's network is down, I agree to wait patiently and will not submit duplicate requests.</li>
       <li><strong className="font-semibold">Alias Emails:</strong> I understand that this platform uses secure, platform-owned "alias emails" to process all modifications.</li>
     </ul>
-    
     <p>I have read, understood, and agree to all the terms above. I authorize Xpress Point to proceed with my NIN modification.</p>
   </div>
 );
@@ -91,6 +86,11 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // --- THIS IS THE FIX (Part 1) ---
+  // State for your new confirmation modal
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  // ---------------------------------
   
   // --- Form Data State ---
   const [nin, setNin] = useState('');
@@ -148,18 +148,20 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
     }
   };
 
-  // --- NEW: Handle File Upload ---
+  // --- Handle File Upload ---
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     setAttestation(file);
     setIsUploading(true);
     setSubmitError(null);
+    setAttestationUrl(null); // Reset on new file
     
     try {
       const formData = new FormData();
       formData.append('attestation', file);
 
+      // This now calls our "refurbished" file.io API
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -172,18 +174,39 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       setAttestationUrl(data.url);
     } catch (err: any) {
       setSubmitError(err.message);
+      setAttestation(null); // Clear the file on error
     } finally {
       setIsUploading(false);
     }
   };
 
-  // --- API 2: Handle Form Submission ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  // --- THIS IS THE FIX (Part 2) ---
+  // This is the *first* step of submitting
+  const handleOpenConfirmModal = (e: React.FormEvent) => {
+    e.preventDefault(); // Stop the form from submitting
     setSubmitError(null);
     setSuccess(null);
 
+    // Run all our "world-class" validation
+    if (!modType) {
+      setSubmitError("Please select a modification type.");
+      return;
+    }
+    if (modType === 'DOB' && !attestationUrl) {
+      setSubmitError("Please wait for the Attestation Document to finish uploading.");
+      return;
+    }
+    
+    // If all validation passes, open your modal
+    setIsConfirmModalOpen(true);
+  };
+  
+  // --- THIS IS THE FIX (Part 3) ---
+  // This is the *final* submit, called by the modal's "YES" button
+  const handleFinalSubmit = async () => {
+    setIsConfirmModalOpen(false); // Close the modal
+    setIsSubmitting(true); // Start the global loader
+    
     let serviceId = '';
     let formData: any = { nin, phone, email, password };
 
@@ -199,15 +222,6 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
     } else if (modType === 'DOB') {
       serviceId = 'NIN_MOD_DOB';
       formData = { ...formData, oldDob, newDob };
-      if (!attestationUrl) {
-        setSubmitError("Please upload the Attestation Document.");
-        setIsSubmitting(false);
-        return;
-      }
-    } else {
-      setSubmitError("Please select a modification type.");
-      setIsSubmitting(false);
-      return;
     }
 
     try {
@@ -228,6 +242,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       }
       
       setSuccess(data.message);
+      // Reset the form
       setNin(''); setPhone(''); setEmail(''); setPassword('');
       setFirstName(''); setLastName(''); setMiddleName('');
       setNewPhone(''); setAddress(''); setState(''); setLga('');
@@ -323,7 +338,9 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
 
       {/* --- 2. The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* --- THIS IS THE FIX (Part 4) --- */}
+        {/* The form now calls the 'handleOpenConfirmModal' function first */}
+        <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
           {/* --- "Modern Buttons" for Mod Type --- */}
           <div>
@@ -362,7 +379,6 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
           {modType && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Required Details</h3>
-              {/* NIN */}
               <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} type="tel" maxLength={11} />
 
               {/* --- Conditional Fields --- */}
@@ -445,7 +461,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                 <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
               )}
               <button
-                type="submit"
+                type="submit" // This now opens the modal
                 disabled={isSubmitting || (modType === 'DOB' && isUploading)}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
@@ -455,6 +471,52 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
           )}
         </form>
       </div>
+
+      {/* --- THIS IS THE FIX (Part 5) --- */}
+      {/* Your "World-Class" Confirmation Modal */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 p-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Please Confirm
+              </h2>
+              <button onClick={() => setIsConfirmModalOpen(false)}>
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-6">
+              <p className="text-center text-gray-600">
+                Please confirm you have filled in the right details. This action
+                is non-refundable as per the terms you agreed to.
+              </p>
+              <p className="mt-4 text-center text-2xl font-bold text-blue-600">
+                Total Fee: ₦{getFee()}
+              </p>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleFinalSubmit} // This is the REAL submit
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                YES, SUBMIT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ------------------------------- */}
     </div>
   );
 }
