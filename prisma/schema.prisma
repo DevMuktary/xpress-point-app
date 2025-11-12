@@ -1,4 +1,4 @@
-generator client {
+Generator client {
   provider = "prisma-client-js"
 }
 
@@ -34,7 +34,8 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  newspaperRequests            NewspaperRequest[] // <-- THIS IS THE "WORLD-CLASS" FIX
+  newspaperRequests            NewspaperRequest[]
+  delinkRequests               DelinkRequest[] // <--- ADDED THIS LINE
   otps                         Otp[]
 
   @@map("users")
@@ -113,7 +114,7 @@ model Service {
   
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
-  NewspaperRequest    NewspaperRequest[] // <-- Relation is already here
+  NewspaperRequest    NewspaperRequest[]
   
   @@map("services")
 }
@@ -219,3 +220,4 @@ enum Role {
   AGGREGATOR
   ADMIN
 }
+
