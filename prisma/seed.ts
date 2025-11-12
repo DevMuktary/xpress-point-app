@@ -77,27 +77,35 @@ const services = [
     aggregatorPrice: new Decimal(580.00),
   },
   
-  // --- NEW SERVICES ---
+  // --- NIN Modification Services ---
   {
     id: 'NIN_MOD_NAME',
     name: 'NIN Modification (Name)',
     category: 'NIN',
-    agentPrice: new Decimal(2000.00), // You can change this price
+    agentPrice: new Decimal(2000.00),
     aggregatorPrice: new Decimal(1950.00),
   },
   {
     id: 'NIN_MOD_PHONE',
     name: 'NIN Modification (Phone)',
     category: 'NIN',
-    agentPrice: new Decimal(1000.00), // You can change this price
+    agentPrice: new Decimal(1000.00),
     aggregatorPrice: new Decimal(950.00),
   },
   {
     id: 'NIN_MOD_ADDRESS',
     name: 'NIN Modification (Address)',
     category: 'NIN',
-    agentPrice: new Decimal(1500.00), // You can change this price
+    agentPrice: new Decimal(1500.00),
     aggregatorPrice: new Decimal(1450.00),
+  },
+  // --- NEW SERVICE (NIN_MOD_DOB) ---
+  {
+    id: 'NIN_MOD_DOB',
+    name: 'NIN Modification (Date of Birth)',
+    category: 'NIN',
+    agentPrice: new Decimal(15000.00), // This is the BASE price
+    aggregatorPrice: new Decimal(14500.00),
   },
   // --------------------
 ];
