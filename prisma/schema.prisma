@@ -34,7 +34,7 @@ model User {
   ipeRequests           IpeRequest[]
   validationRequests    ValidationRequest[]
   modificationRequests  ModificationRequest[]
-  delinkRequests        DelinkRequest[] // <-- NEW RELATION
+  newspaperRequests     NewspaperRequest[] // <-- NEW RELATION
   otps                  Otp[]
 
   @@map("users")
@@ -109,6 +109,7 @@ model Service {
   isActive         Boolean   @default(true) @map("is_active")
   Transaction      Transaction[]
   ModificationRequest ModificationRequest[]
+  NewspaperRequest    NewspaperRequest[] // <-- NEW RELATION
   @@map("services")
 }
 
@@ -178,21 +179,25 @@ model ModificationRequest {
   @@map("modification_requests")
 }
 
-// --- NEW TABLE FOR NIN DELINK ---
-model DelinkRequest {
+// --- NEW TABLE FOR NEWSPAPER ---
+model NewspaperRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
-  nin             String        @map("nin")
+  serviceId       String        @map("service_id")     // e.g., "NEWSPAPER_NAME_CHANGE"
   status          RequestStatus @default(PENDING)   // <-- Starts as PENDING
   statusMessage   String?       @map("status_message") // For Admin's reason
+  formData        Json          // Stores all form fields (old/new names)
+  publicationUrl  String?       @map("publication_url") // For admin upload
+  pageNumber      String?       @map("page_number")     // For admin
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   user            User          @relation(fields: [userId], references: [id])
+  service         Service       @relation(fields: [serviceId], references: [id])
   
-  @@map("delink_requests")
+  @@map("newspaper_requests")
 }
-// ---------------------------------
+// -------------------------------
 
 enum Role {
   AGENT
