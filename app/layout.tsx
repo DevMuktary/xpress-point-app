@@ -1,25 +1,29 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
-import { getUserFromSession } from '@/lib/auth';
-import DashboardClientContainer from '@/components/DashboardClientContainer';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google"; // Using a "world-class" standard font
+import "./globals.css"; // This imports your Tailwind CSS
 
-export default async function DashboardLayout({
+// Setup the font
+const inter = Inter({ subsets: ["latin"] });
+
+// Setup "world-class" SEO and metadata
+export const metadata: Metadata = {
+  title: "Xpress Point",
+  description: "Your all-in-one platform for NIN, BVN, and VTU services.",
+};
+
+export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
-  const user = await getUserFromSession();
-  
-  if (!user) {
-    // --- THIS IS THE FIX ---
-    // We "refurbish" the redirect to send your "world-class" message
-    redirect('/login?error=Please+login+to+continue');
-    // -----------------------
-  }
-
+}>) {
   return (
-    <DashboardClientContainer user={user}>
-      {children}
-    </DashboardClientContainer>
+    <html lang="en">
+      <body className={inter.className}>
+        {/* This 'children' prop is where all your pages (like 'app/login/page.tsx' 
+          or 'app/dashboard/layout.tsx') will be rendered.
+        */}
+        {children}
+      </body>
+    </html>
   );
 }
