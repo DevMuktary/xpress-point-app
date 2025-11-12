@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // Define our services and their prices
 const services = [
-  // (All your existing NIN services...)
+  // NIN Services
   {
     id: 'NIN_LOOKUP',
     name: 'NIN Verification Lookup',
@@ -118,30 +118,57 @@ const services = [
     agentPrice: new Decimal(4500.00),
     aggregatorPrice: new Decimal(4450.00),
   },
-
-  // --- NEW CAC SERVICES ---
   {
     id: 'CAC_REG_BN',
     name: 'CAC Business Name Registration',
     category: 'CAC',
-    agentPrice: new Decimal(18000.00), // You can change this price
+    agentPrice: new Decimal(18000.00),
     aggregatorPrice: new Decimal(17500.00),
   },
   {
     id: 'CAC_DOC_RETRIEVAL',
     name: 'CAC Document Retrieval',
     category: 'CAC',
-    agentPrice: new Decimal(5000.00), // You can change this price
+    agentPrice: new Decimal(5000.00),
     aggregatorPrice: new Decimal(4800.00),
   },
-  // ------------------------
+
+  // --- NEW JTB TIN SERVICES ---
+  {
+    id: 'TIN_REG_PERSONAL',
+    name: 'TIN Registration (Personal)',
+    category: 'TIN',
+    agentPrice: new Decimal(3000.00), // Placeholder price
+    aggregatorPrice: new Decimal(2800.00),
+  },
+  {
+    id: 'TIN_REG_BUSINESS',
+    name: 'TIN Registration (Business)',
+    category: 'TIN',
+    agentPrice: new Decimal(5000.00), // Placeholder price
+    aggregatorPrice: new Decimal(4800.00),
+  },
+  {
+    id: 'TIN_RETRIEVAL_PERSONAL',
+    name: 'TIN Retrieval (Personal)',
+    category: 'TIN',
+    agentPrice: new Decimal(1500.00), // Placeholder price
+    aggregatorPrice: new Decimal(1400.00),
+  },
+  {
+    id: 'TIN_RETRIEVAL_BUSINESS',
+    name: 'TIN Retrieval (Business)',
+    category: 'TIN',
+    agentPrice: new Decimal(2500.00), // Placeholder price
+    aggregatorPrice: new Decimal(2400.00),
+  },
+  // ----------------------------
 ];
 
 async function main() {
   console.log('Start seeding services...');
   
   for (const service of services) {
-    // We use upsert to create or update the service
     await prisma.service.upsert({
       where: { id: service.id },
       update: {
