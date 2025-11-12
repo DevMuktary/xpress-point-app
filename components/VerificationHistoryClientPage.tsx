@@ -1,7 +1,7 @@
 "use client"; // This is an interactive component
 
 import React, { useState } from 'react';
-import { NinVerification } from '@prisma/client';
+import { NinVerification, Transaction } from '@prisma/client';
 import { 
   CheckCircleIcon,
   InformationCircleIcon, 
@@ -11,42 +11,52 @@ import {
 import Loading from '@/app/loading';
 import Image from 'next/image';
 
-// Define the props to receive the initial data from the server
-// We add 'data: any' because Prisma's Json type is not specific
+// --- THIS IS THE FIX ---
+// The data from our server now includes transactions
 type HistoryRequest = {
   id: string;
-  createdAt: Date;
+  expiresAt: Date; // We use expiresAt
   data: any; 
+  transactions: { serviceId: string | null }[]; // List of slips already bought
 };
 
 type Props = {
   initialRequests: HistoryRequest[];
 };
+// -----------------------
 
-// --- "World-Class" Types for the Modal ---
 type ModalState = {
   isOpen: boolean;
-  verificationId: string | null; // The ID of the request we are re-printing
+  isPaidModal: boolean; // TRUE = We are charging, FALSE = Re-print
+  verificationId: string | null;
   slipPrices: { Regular: number; Standard: number; Premium: number; };
+  alreadyPaidSlips: string[]; // e.g., ["NIN_SLIP_REGULAR"]
 };
+
 const exampleImageMap = {
   Regular: '/examples/nin_regular_example.png',
   Standard: '/examples/nin_standard_example.png',
   Premium: '/examples/nin_premium_example.png',
 };
-// ------------------------------------------
+
+// "World-class" map from serviceId to simple name
+const slipNameMap: { [key: string]: string } = {
+  NIN_SLIP_REGULAR: "Regular",
+  NIN_SLIP_STANDARD: "Standard",
+  NIN_SLIP_PREMIUM: "Premium",
+};
 
 export default function VerificationHistoryClientPage({ initialRequests }: Props) {
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // --- "World-Class" Modal State ---
   const [modalState, setModalState] = useState<ModalState>({ 
-    isOpen: false, 
+    isOpen: false,
+    isPaidModal: false, 
     verificationId: null, 
-    // We get these prices from our database seed file
-    slipPrices: { Regular: 100, Standard: 150, Premium: 200 }
+    slipPrices: { Regular: 100, Standard: 150, Premium: 200 }, // Prices
+    alreadyPaidSlips: []
   });
 
   // --- "World-Class" Helper to format the date ---
@@ -60,25 +70,26 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
     });
   };
   
-  // --- "World-Class" Helper to get the Name ---
+  // --- "World-Class" Helpers to get data ---
   const getName = (data: any) => {
-    // Handles data from BOTH API providers (ConfirmIdent and Raudah)
     const firstName = data.firstname || data.firs_tname || 'N/A';
     const lastName = data.surname || data.last_name || 'N/A';
     return `${firstName} ${lastName}`;
   };
+  const getNin = (data: any) => data.nin || data.NIN || 'N/A';
   
-  // --- "World-Class" Helper to get the NIN ---
-  const getNin = (data: any) => {
-    return data.nin || data.NIN || 'N/A';
+  // --- "World-Class" Helper to get PAID slips ---
+  const getPaidSlips = (request: HistoryRequest): string[] => {
+    return request.transactions.map(tx => slipNameMap[tx.serviceId!]).filter(Boolean);
   };
 
-  // --- "World-Class" API Call to Re-Print ---
+  // --- "World-Class" API Call to Generate Slip ---
   const handleGenerateSlip = async (slipType: string) => {
     if (!modalState.verificationId) return;
     
     setIsLoading(true);
     setError(null);
+    const verificationId = modalState.verificationId; // Save this before closing
     setModalState({ ...modalState, isOpen: false }); // Close modal
 
     try {
@@ -86,7 +97,7 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          verificationId: modalState.verificationId,
+          verificationId: verificationId,
           slipType: slipType,
         }),
       });
@@ -98,6 +109,19 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
 
       const buffer = await response.arrayBuffer();
       downloadPdf(buffer, `nin_slip_${slipType.toLowerCase()}.pdf`);
+      
+      // "Refurbish" the history list to show the new purchase
+      if (modalState.isPaidModal) {
+        const updatedRequests = requests.map(req => 
+          req.id === verificationId
+            ? { ...req, transactions: [
+                ...req.transactions, 
+                { serviceId: `NIN_SLIP_${slipType.toUpperCase()}` }
+              ]}
+            : req
+        );
+        setRequests(updatedRequests);
+      }
 
     } catch (err: any) {
       setError(err.message);
@@ -160,53 +184,73 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
           </div>
         )}
 
-        {requests.map((request) => (
-          <div 
-            key={request.id} 
-            className="rounded-lg border border-gray-200 p-4 bg-white shadow-sm"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              {/* Left Side (NIN & Name) */}
-              <div>
-                <p className="text-base font-semibold text-gray-900">
-                  {getName(request.data)}
-                </p>
-                <p className="text-sm text-gray-600">
-                  NIN: {getNin(request.data)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formatDate(request.createdAt)}
-                </p>
+        {requests.map((request) => {
+          const paidSlips = getPaidSlips(request); // e.g., ["Regular", "Standard"]
+          
+          return (
+            <div 
+              key={request.id} 
+              className="rounded-lg border border-gray-200 p-4 bg-white shadow-sm"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                {/* Left Side (NIN & Name) */}
+                <div>
+                  <p className="text-base font-semibold text-gray-900">
+                    {getName(request.data)}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    NIN: {getNin(request.data)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Expires: {formatDate(request.expiresAt)}
+                  </p>
+                </div>
+                
+                {/* Right Side (Button) */}
+                <div className="mt-4 sm:mt-0 sm:ml-4">
+                  <button
+                    onClick={() => setModalState({ 
+                      isOpen: true, 
+                      isPaidModal: paidSlips.length === 0, // It's a PAID modal if no slips bought
+                      verificationId: request.id,
+                      slipPrices: { Regular: 100, Standard: 150, Premium: 200 }, // Prices
+                      alreadyPaidSlips: paidSlips
+                    })}
+                    className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <PrinterIcon className="h-5 w-5" />
+                    {paidSlips.length > 0 ? 'Re-print Slips' : 'Generate Slip'}
+                  </button>
+                </div>
               </div>
               
-              {/* Right Side (Button) */}
-              <div className="mt-4 sm:mt-0 sm:ml-4">
-                <button
-                  onClick={() => setModalState({ 
-                    isOpen: true, 
-                    verificationId: request.id,
-                    // TODO: We can "refurbish" this to pass the real prices
-                    slipPrices: { Regular: 100, Standard: 150, Premium: 200 }
-                  })}
-                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <PrinterIcon className="h-5 w-5" />
-                  Re-print Slips
-                </button>
-              </div>
+              {/* --- "World-Class" List of Paid Slips --- */}
+              {paidSlips.length > 0 && (
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <p className="text-xs font-medium text-gray-500">Slips already purchased:</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {paidSlips.map(slipName => (
+                      <span key={slipName} className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        <CheckCircleIcon className="h-4 w-4" />
+                        {slipName} Slip
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* --- 3. The "Refurbished" Confirmation Modal --- */}
+      {/* --- 3. The "Refurbished" "Smart" Modal --- */}
       {modalState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                Select Slip to Re-print
+                {modalState.isPaidModal ? 'Generate New Slip' : 'Re-print Your Slips'}
               </h2>
               <button onClick={() => setModalState({ ...modalState, isOpen: false })}>
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
@@ -215,32 +259,64 @@ export default function VerificationHistoryClientPage({ initialRequests }: Props
             
             {/* Modal Body */}
             <div className="p-6">
-              <p className="text-sm text-center text-gray-600">
-                This is a free reprint. Your wallet will <strong className="font-semibold text-gray-900">not</strong> be charged.
-              </p>
+              {/* "World-Class" Context-Aware Message */}
+              {modalState.isPaidModal ? (
+                <p className="text-sm text-center text-gray-600">
+                  This verification has no slips. Select a slip to purchase.
+                </p>
+              ) : (
+                <p className="text-sm text-center text-gray-600">
+                  This is a free reprint. Your wallet will <strong className="font-semibold text-gray-900">not</strong> be charged.
+                </p>
+              )}
               
-              {/* Re-using our "world-class" buttons */}
+              {/* "World-Class" "Smart" Buttons */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                {/* Regular Slip */}
                 <button 
                   onClick={() => handleGenerateSlip('Regular')}
+                  disabled={isLoading}
                   className="group flex flex-col items-center justify-between rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50"
                 >
                   <Image src={exampleImageMap.Regular} alt="Regular Slip" width={150} height={95} className="rounded-md border" />
                   <span className="font-bold text-gray-800 mt-3">Regular Slip</span>
+                  {/* "World-Class" Pricing Logic */}
+                  {modalState.alreadyPaidSlips.includes('Regular') ? (
+                    <span className="text-sm font-medium text-green-600">Free Re-print</span>
+                  ) : (
+                    <span className="text-sm font-medium text-blue-600">Fee: ₦{modalState.slipPrices.Regular}</span>
+                  )}
                 </button>
+                
+                {/* Standard Slip */}
                 <button 
                   onClick={() => handleGenerateSlip('Standard')}
+                  disabled={isLoading}
                   className="group flex flex-col items-center justify-between rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50"
                 >
                   <Image src={exampleImageMap.Standard} alt="Standard Slip" width={150} height={95} className="rounded-md border" />
                   <span className="font-bold text-gray-800 mt-3">Standard Slip</span>
+                  {modalState.alreadyPaidSlips.includes('Standard') ? (
+                    <span className="text-sm font-medium text-green-600">Free Re-print</span>
+                  ) : (
+                    <span className="text-sm font-medium text-blue-600">Fee: ₦{modalState.slipPrices.Standard}</span>
+                  )}
                 </button>
+
+                {/* Premium Slip */}
                 <button 
                   onClick={() => handleGenerateSlip('Premium')}
+                  disabled={isLoading}
                   className="group flex flex-col items-center justify-between rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-blue-600 hover:bg-blue-50"
                 >
                   <Image src={exampleImageMap.Premium} alt="Premium Slip" width={150} height={95} className="rounded-md border" />
                   <span className="font-bold text-gray-800 mt-3">Premium Slip</span>
+                  {modalState.alreadyPaidSlips.includes('Premium') ? (
+                    <span className="text-sm font-medium text-green-600">Free Re-print</span>
+                  ) : (
+                    <span className="text-sm font-medium text-blue-600">Fee: ₦{modalState.slipPrices.Premium}</span>
+                  )}
                 </button>
               </div>
             </div>
