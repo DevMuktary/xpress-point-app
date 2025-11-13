@@ -13,7 +13,8 @@ import {
   ChevronLeftIcon,
   XMarkIcon,
   ClipboardIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  IdentificationIcon // <-- THIS IS THE FIX (Part 1)
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -61,7 +62,6 @@ const PinCard = ({ pinData }: { pinData: any }) => (
   </div>
 );
 
-// --- THIS IS THE FIX (Part 1) ---
 // --- "World-Class" Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
@@ -93,7 +93,6 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
     </div>
   </div>
 );
-// ---------------------------------
 
 // --- The Main "World-Class" Component ---
 export default function WaecPinPage() {
@@ -218,7 +217,6 @@ export default function WaecPinPage() {
               </h3>
               <div className="mt-2 text-sm text-green-700">
                 <p>{success.message}</p>
-                {/* "World-class" display of the new pins */}
                 <div className="mt-4 space-y-2 max-h-48 overflow-y-auto p-2 bg-white rounded-lg">
                   {success.pins.map((pin: any, index: number) => (
                     <PinCard key={index} pinData={pin} />
@@ -234,8 +232,6 @@ export default function WaecPinPage() {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- THIS IS THE FIX (Part 2) --- */}
-          {/* Now 'DataInput' is a defined component */}
           <DataInput 
             label="Phone Number*" 
             id="phone" 
@@ -246,7 +242,6 @@ export default function WaecPinPage() {
             maxLength={11}
             placeholder="Phone number to receive the PIN"
           />
-          {/* --------------------------------- */}
           
           <div>
             <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Quantity*</label>
@@ -265,13 +260,15 @@ export default function WaecPinPage() {
             {submitError && (
               <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
             )}
+            {/* --- THIS IS THE FIX (Part 2) --- */}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isLoading}
               className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
             >
-              {isSubmitting ? 'Purchasing...' : `Purchase PIN (Fee: ₦${totalFee})`}
+              {isLoading ? 'Purchasing...' : `Purchase PIN (Fee: ₦${totalFee})`}
             </button>
+            {/* --------------------------------- */}
           </div>
         </form>
       </div>
