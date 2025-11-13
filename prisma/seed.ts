@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // Define our services and their prices
 const services = [
-  // NIN Services
+  // (All your existing NIN, CAC, TIN, etc. services...)
   {
     id: 'NIN_LOOKUP',
     name: 'NIN Verification Lookup',
@@ -132,37 +132,65 @@ const services = [
     agentPrice: new Decimal(5000.00),
     aggregatorPrice: new Decimal(4800.00),
   },
-
-  // --- NEW JTB TIN SERVICES ---
   {
     id: 'TIN_REG_PERSONAL',
     name: 'TIN Registration (Personal)',
     category: 'TIN',
-    agentPrice: new Decimal(3000.00), // Placeholder price
+    agentPrice: new Decimal(3000.00),
     aggregatorPrice: new Decimal(2800.00),
   },
   {
     id: 'TIN_REG_BUSINESS',
     name: 'TIN Registration (Business)',
     category: 'TIN',
-    agentPrice: new Decimal(5000.00), // Placeholder price
+    agentPrice: new Decimal(5000.00),
     aggregatorPrice: new Decimal(4800.00),
   },
   {
     id: 'TIN_RETRIEVAL_PERSONAL',
     name: 'TIN Retrieval (Personal)',
     category: 'TIN',
-    agentPrice: new Decimal(1500.00), // Placeholder price
+    agentPrice: new Decimal(1500.00),
     aggregatorPrice: new Decimal(1400.00),
   },
   {
     id: 'TIN_RETRIEVAL_BUSINESS',
     name: 'TIN Retrieval (Business)',
     category: 'TIN',
-    agentPrice: new Decimal(2500.00), // Placeholder price
+    agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2400.00),
   },
-  // ----------------------------
+  
+  // --- NEW JAMB SERVICES ---
+  {
+    id: 'JAMB_RESULT_SLIP',
+    name: 'JAMB Original Result Slip',
+    category: 'JAMB',
+    agentPrice: new Decimal(1500.00), // You can change this price
+    aggregatorPrice: new Decimal(1450.00),
+  },
+  {
+    id: 'JAMB_REG_SLIP',
+    name: 'JAMB Registration Slip',
+    category: 'JAMB',
+    agentPrice: new Decimal(1000.00), // You can change this price
+    aggregatorPrice: new Decimal(950.00),
+  },
+  {
+    id: 'JAMB_ADMISSION_LETTER',
+    name: 'JAMB Admission Letter',
+    category: 'JAMB',
+    agentPrice: new Decimal(1000.00), // You can change this price
+    aggregatorPrice: new Decimal(950.00),
+  },
+  {
+    id: 'JAMB_PROFILE_CODE',
+    name: 'JAMB Profile Code Retrieval',
+    category: 'JAMB',
+    agentPrice: new Decimal(500.00), // You can change this price
+    aggregatorPrice: new Decimal(480.00),
+  },
+  // -------------------------
 ];
 
 async function main() {
