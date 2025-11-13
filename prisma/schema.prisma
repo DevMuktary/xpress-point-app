@@ -34,11 +34,11 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- FIX 1
+  delinkRequests               DelinkRequest[] // <-- THE MISSING FIX
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
-  tinRequests                  TinRequest[]    // <-- FIX 2
-  jambRequests                 JambRequest[]
+  tinRequests                  TinRequest[]
+  examPinRequests              ExamPinRequest[]
   otps                         Otp[]
 
   @@map("users")
@@ -111,13 +111,14 @@ model Service {
   agentPrice          Decimal                @map("agent_price") @db.Decimal(10, 2)
   aggregatorPrice     Decimal                @map("aggregator_price") @db.Decimal(10, 2)
   isActive            Boolean                @default(true) @map("is_active")
+  productCode         String?                @unique @map("product_code") // <-- NEW: For VTU
   
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
-  TinRequest          TinRequest[] // <-- FIX 3
-  JambRequest         JambRequest[]
+  TinRequest          TinRequest[]
+  ExamPinRequest      ExamPinRequest[]
   
   @@map("services")
 }
@@ -251,28 +252,25 @@ model TinRequest {
   @@map("tin_requests")
 }
 
-// --- NEW TABLE FOR JAMB ---
-model JambRequest {
-  id                String        @id @default(uuid())
-  userId            String        @map("user_id")
-  serviceId         String        @map("service_id") // "JAMB_RESULT_SLIP", etc.
-  status            RequestStatus @default(PENDING)
-  statusMessage     String?       @map("status_message")
-  formData          Json          // Stores Reg Number, Year, etc.
-  
-  // Admin Uploads
-  uploadedSlipUrl   String?       @map("uploaded_slip_url")
-  profileCodeResult String?       @map("profile_code_result") // For the profile code
-  
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+// --- NEW TABLE FOR EXAM PINS (VTU) ---
+model ExamPinRequest {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  serviceId      String    @map("service_id")     // e.g., "WAEC_PIN"
+  userReference  String    @unique @map("user_reference") // Our 'XPS-...' ref
+  phoneNumber    String    @map("phone_number")
+  quantity       Int
+  status         String    // "COMPLETED" or "FAILED"
+  apiResponse    Json?     // The full API response
+  pins           Json?     // The 'true_response' array of pins
+  createdAt      DateTime  @default(now()) @map("created_at")
 
-  user              User          @relation(fields: [userId], references: [id])
-  service           Service       @relation(fields: [serviceId], references: [id])
+  user           User      @relation(fields: [userId], references: [id])
+  service        Service   @relation(fields: [serviceId], references: [id])
   
-  @@map("jamb_requests")
+  @@map("exam_pin_requests")
 }
-// -------------------------
+// ------------------------------------
 
 enum Role {
   AGENT
