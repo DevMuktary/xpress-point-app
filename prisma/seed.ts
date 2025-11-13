@@ -12,6 +12,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(150.00),
     aggregatorPrice: new Decimal(140.00),
+    productCode: null,
   },
   {
     id: 'NIN_SLIP_REGULAR',
@@ -19,6 +20,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(100.00),
     aggregatorPrice: new Decimal(90.00),
+    productCode: null,
   },
   {
     id: 'NIN_SLIP_STANDARD',
@@ -26,6 +28,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(150.00),
     aggregatorPrice: new Decimal(140.00),
+    productCode: null,
   },
   {
     id: 'NIN_SLIP_PREMIUM',
@@ -33,6 +36,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(200.00),
     aggregatorPrice: new Decimal(180.00),
+    productCode: null,
   },
   {
     id: 'NIN_PERSONALIZATION',
@@ -40,6 +44,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(1000.00),
     aggregatorPrice: new Decimal(950.00),
+    productCode: null,
   },
   {
     id: 'NIN_IPE_CLEARANCE',
@@ -47,6 +52,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2450.00),
+    productCode: null,
   },
   {
     id: 'NIN_VALIDATION_47',
@@ -54,6 +60,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(500.00),
     aggregatorPrice: new Decimal(480.00),
+    productCode: null,
   },
   {
     id: 'NIN_VALIDATION_48',
@@ -61,6 +68,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(550.00),
     aggregatorPrice: new Decimal(530.00),
+    productCode: null,
   },
   {
     id: 'NIN_VALIDATION_49',
@@ -68,6 +76,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(500.00),
     aggregatorPrice: new Decimal(480.00),
+    productCode: null,
   },
   {
     id: 'NIN_VALIDATION_50',
@@ -75,6 +84,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(600.00),
     aggregatorPrice: new Decimal(580.00),
+    productCode: null,
   },
   {
     id: 'NIN_MOD_NAME',
@@ -82,6 +92,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(2000.00),
     aggregatorPrice: new Decimal(1950.00),
+    productCode: null,
   },
   {
     id: 'NIN_MOD_PHONE',
@@ -89,6 +100,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(1000.00),
     aggregatorPrice: new Decimal(950.00),
+    productCode: null,
   },
   {
     id: 'NIN_MOD_ADDRESS',
@@ -96,6 +108,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(1500.00),
     aggregatorPrice: new Decimal(1450.00),
+    productCode: null,
   },
   {
     id: 'NIN_MOD_DOB',
@@ -103,6 +116,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(15000.00),
     aggregatorPrice: new Decimal(14500.00),
+    productCode: null,
   },
   {
     id: 'NIN_DELINK',
@@ -110,6 +124,7 @@ const services = [
     category: 'NIN',
     agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2450.00),
+    productCode: null,
   },
   {
     id: 'NEWSPAPER_NAME_CHANGE',
@@ -117,6 +132,7 @@ const services = [
     category: 'NEWSPAPER',
     agentPrice: new Decimal(4500.00),
     aggregatorPrice: new Decimal(4450.00),
+    productCode: null,
   },
   {
     id: 'CAC_REG_BN',
@@ -124,6 +140,7 @@ const services = [
     category: 'CAC',
     agentPrice: new Decimal(18000.00),
     aggregatorPrice: new Decimal(17500.00),
+    productCode: null,
   },
   {
     id: 'CAC_DOC_RETRIEVAL',
@@ -131,6 +148,7 @@ const services = [
     category: 'CAC',
     agentPrice: new Decimal(5000.00),
     aggregatorPrice: new Decimal(4800.00),
+    productCode: null,
   },
   {
     id: 'TIN_REG_PERSONAL',
@@ -138,6 +156,7 @@ const services = [
     category: 'TIN',
     agentPrice: new Decimal(3000.00),
     aggregatorPrice: new Decimal(2800.00),
+    productCode: null,
   },
   {
     id: 'TIN_REG_BUSINESS',
@@ -145,6 +164,7 @@ const services = [
     category: 'TIN',
     agentPrice: new Decimal(5000.00),
     aggregatorPrice: new Decimal(4800.00),
+    productCode: null,
   },
   {
     id: 'TIN_RETRIEVAL_PERSONAL',
@@ -152,6 +172,7 @@ const services = [
     category: 'TIN',
     agentPrice: new Decimal(1500.00),
     aggregatorPrice: new Decimal(1400.00),
+    productCode: null,
   },
   {
     id: 'TIN_RETRIEVAL_BUSINESS',
@@ -159,36 +180,49 @@ const services = [
     category: 'TIN',
     agentPrice: new Decimal(2500.00),
     aggregatorPrice: new Decimal(2400.00),
+    productCode: null,
   },
   
-  // --- NEW JAMB SERVICES ---
+  // --- NEW EXAM PIN SERVICES ---
   {
-    id: 'JAMB_RESULT_SLIP',
-    name: 'JAMB Original Result Slip',
-    category: 'JAMB',
-    agentPrice: new Decimal(1500.00), // You can change this price
-    aggregatorPrice: new Decimal(1450.00),
+    id: 'WAEC_PIN',
+    name: 'WAEC Result Pin',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(3600.00), // Your Admin price
+    aggregatorPrice: new Decimal(3550.00),
+    productCode: 'waec_pin', // API provider's code
   },
   {
-    id: 'JAMB_REG_SLIP',
-    name: 'JAMB Registration Slip',
-    category: 'JAMB',
-    agentPrice: new Decimal(1000.00), // You can change this price
-    aggregatorPrice: new Decimal(950.00),
+    id: 'NECO_PIN',
+    name: 'NECO Result Pin',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(1350.00), // Your Admin price
+    aggregatorPrice: new Decimal(1300.00),
+    productCode: 'neco_pin', // API provider's code
   },
   {
-    id: 'JAMB_ADMISSION_LETTER',
-    name: 'JAMB Admission Letter',
-    category: 'JAMB',
-    agentPrice: new Decimal(1000.00), // You can change this price
-    aggregatorPrice: new Decimal(950.00),
+    id: 'NABTEB_PIN',
+    name: 'NABTEB Result Pin',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(1050.00), // Your Admin price
+    aggregatorPrice: new Decimal(1000.00),
+    productCode: 'nabteb_pin', // API provider's code
   },
   {
-    id: 'JAMB_PROFILE_CODE',
-    name: 'JAMB Profile Code Retrieval',
-    category: 'JAMB',
-    agentPrice: new Decimal(500.00), // You can change this price
+    id: 'JAMB_UTME_PIN',
+    name: 'JAMB UTME Pin',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(500.00), // Your Admin price
     aggregatorPrice: new Decimal(480.00),
+    productCode: 'utme_pin', // API provider's code
+  },
+  {
+    id: 'JAMB_DE_PIN',
+    name: 'JAMB Direct Entry (DE) Pin',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(500.00), // Your Admin price
+    aggregatorPrice: new Decimal(480.00),
+    productCode: 'direct_entry_de', // API provider's code
   },
   // -------------------------
 ];
@@ -202,6 +236,7 @@ async function main() {
       update: {
         agentPrice: service.agentPrice,
         aggregatorPrice: service.aggregatorPrice,
+        productCode: service.productCode,
       },
       create: service,
     });
