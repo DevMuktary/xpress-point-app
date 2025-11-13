@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
-import ServiceItemCard from '@/components/ServiceItemCard'; // We re-use our "world-class" card
+import ServiceItemCard from '@/components/ServiceItemCard';
 import { 
   ClockIcon, 
   IdentificationIcon, 
@@ -10,14 +10,12 @@ import {
   NewspaperIcon,
   BriefcaseIcon,
   RectangleStackIcon,
-  AcademicCapIcon // <-- THIS IS THE "WORLD-CLASS" FIX
+  AcademicCapIcon,
+  PhoneIcon // <-- NEW Icon for VTU
 } from '@heroicons/react/24/outline';
 
-// This is a Server Component, so it's very fast.
 export default function HistoryHubPage() {
   
-  // --- THIS IS THE "WORLD-CLASS" REBURBISHED LIST ---
-  // JAMB History is now included.
   const historyCategories = [
     {
       title: 'Wallet Transaction History',
@@ -61,12 +59,18 @@ export default function HistoryHubPage() {
       href: '/dashboard/history/tin',
       logo: RectangleStackIcon,
     },
-    // --- THIS IS THE "WORLD-CLASS" FIX ---
     {
       title: 'JAMB History',
       description: 'Check the status and download your JAMB slips.',
       href: '/dashboard/history/jamb',
       logo: AcademicCapIcon,
+    },
+    // --- THIS IS THE "WORLD-CLASS" FIX ---
+    {
+      title: 'VTU History (Airtime/Data/Elec)',
+      description: 'View your history for all VTU purchases.',
+      href: '/dashboard/history/vtu',
+      logo: PhoneIcon,
     },
     // ------------------------------------
   ];
@@ -87,7 +91,6 @@ export default function HistoryHubPage() {
       {/* --- "Refurbished" Card List (1-column, stable on phone) --- */}
       <div className="grid grid-cols-1 gap-6">
         {historyCategories.map((service) => (
-          // This is a "refurbished" ServiceItemCard, using the Icon
           <Link
             key={service.title}
             href={service.href}
@@ -95,9 +98,7 @@ export default function HistoryHubPage() {
                        transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
           >
             <div>
-              {/* This is a "world-class" way to render the icon */}
               <service.logo className="h-10 w-10 text-blue-600" />
-              
               <h3 className="mt-4 text-lg font-bold text-gray-900">{service.title}</h3>
               <p className="mt-1 text-sm text-gray-600 line-clamp-2">{service.description}</p>
             </div>
