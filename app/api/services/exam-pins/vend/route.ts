@@ -11,6 +11,28 @@ if (!API_KEY) {
   console.error("CRITICAL: CHEAPDATASALES_API_KEY is not set.");
 }
 
+// --- THIS IS THE FIX (Part 1) ---
+// We add the missing "world-class" error parser
+function parseApiError(error: any): string {
+  if (error.code === 'ECONNABORTED') {
+    return 'The service timed out. Please try again.';
+  }
+  if (error.response && error.response.data) {
+    const data = error.response.data;
+    if (data.server_message && typeof data.server_message === 'string') {
+      return data.server_message;
+    }
+    if (data.message && typeof data.message === 'string') {
+      return data.message;
+    }
+  }
+  if (error.message) {
+    return error.message;
+  }
+  return 'An internal server error occurred.';
+}
+// ---------------------------------
+
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) {
@@ -147,9 +169,14 @@ export async function POST(request: Request) {
     }
 
   } catch (error: any) {
+    // --- THIS IS THE FIX (Part 2) ---
+    // We now call the function we added at the top
     const errorMessage = parseApiError(error);
     console.error(`Exam Pin (Vend) Error:`, errorMessage);
-    // TODO: Implement a "refund-on-crash" logic here
+    
+    // TODO: We must "refurbish" this to refund the user if the app crashes *after* charging
+    // but *before* the API call. This is a "world-class" edge case.
+    
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
