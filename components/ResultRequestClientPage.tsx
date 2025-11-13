@@ -16,7 +16,8 @@ import {
   UserIcon,
   CalendarDaysIcon,
   HashtagIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  XCircleIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -118,11 +119,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
   type ServiceID = 'RESULT_REQUEST_WAEC' | 'RESULT_REQUEST_NECO' | 'RESULT_REQUEST_NABTEB';
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
   
-  // --- THIS IS THE FIX ---
-  // Renamed 'allRequests' to 'requests' to match the error
   const [requests, setRequests] = useState(initialRequests);
-  // -----------------------
-  
   const [isLoading, setIsLoading] = useState(false); // For main submit
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -160,7 +157,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       const res = await fetch(`/api/services/exam-pins/history-request`);
       if (!res.ok) throw new Error('Failed to fetch history.');
       const data = await res.json();
-      setRequests(data.requests); // <-- THIS IS THE FIX
+      setRequests(data.requests);
     } catch (err: any) {
       setSubmitError(err.message);
     } finally {
@@ -222,14 +219,14 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
   
   // --- "World-Class" Filtering Logic ---
   const filteredRequests = useMemo(() => {
-    return requests.filter(req => { // <-- THIS IS THE FIX
+    return requests.filter(req => {
       const formData = req.formData as any;
       const searchData = formData.regNumber || formData.name || '';
       const matchesSearch = searchData.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = (statusFilter === 'ALL' || req.status === statusFilter);
       return matchesSearch && matchesStatus;
     });
-  }, [requests, searchTerm, statusFilter]); // <-- THIS IS THE FIX
+  }, [requests, searchTerm, statusFilter]);
 
   // Helper to format the date
   const formatDate = (dateString: Date) => {
