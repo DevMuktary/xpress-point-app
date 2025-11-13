@@ -8,7 +8,7 @@ import { DocumentTextIcon } from '@heroicons/react/24/outline';
 // This is a Server Component, so it's very fast.
 export default function ExamPinsHubPage() {
   
-  // --- This is the 4-Card "Hub" you designed ---
+  // --- THIS IS THE "WORLD-CLASS" REFURBISHED LIST ---
   const examServices = [
     {
       title: 'WAEC Result Pin',
@@ -20,19 +20,26 @@ export default function ExamPinsHubPage() {
       title: 'NECO Result Pin',
       description: 'Purchase PINs to check NECO results.',
       href: '/dashboard/services/exam-pins/neco',
-      logo: '/logos/neco.png', // You will upload this
+      logo: '/logos/neco.png',
     },
     {
       title: 'NABTEB Result Pin',
       description: 'Purchase PINs to check NABTEB results.',
       href: '/dashboard/services/exam-pins/nabteb',
-      logo: '/logos/nabteb.png', // You will upload this
+      logo: '/logos/nabteb.png',
     },
     {
       title: 'JAMB Services',
       description: 'Purchase UTME or Direct Entry (DE) PINs.',
       href: '/dashboard/services/exam-pins/jamb',
       logo: '/logos/jamb.png',
+    },
+    // --- NEW "WORLD-CLASS" CARD (Your Design) ---
+    {
+      title: 'Request Result (Manual)',
+      description: 'Admin will check and get your result slip for you.',
+      href: '/dashboard/services/exam-pins/request-result',
+      logo: '/logos/waec.png', // We can re-use the WAEC logo
     },
   ];
 
@@ -49,7 +56,7 @@ export default function ExamPinsHubPage() {
         </h1>
       </div>
 
-      {/* --- "Refurbished" Card List (1-column, stable on phone) --- */}
+      {/* --- "Refurbished" Card List (stable on phone) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {examServices.map((service) => (
           <ServiceItemCard
