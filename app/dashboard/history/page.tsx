@@ -8,15 +8,16 @@ import {
   DocumentMagnifyingGlassIcon, 
   LinkIcon,
   NewspaperIcon,
-  BriefcaseIcon, // <-- NEW Icon for CAC
-  RectangleStackIcon // <-- NEW Icon for TIN
+  BriefcaseIcon,
+  RectangleStackIcon,
+  AcademicCapIcon // <-- THIS IS THE "WORLD-CLASS" FIX
 } from '@heroicons/react/24/outline';
 
 // This is a Server Component, so it's very fast.
 export default function HistoryHubPage() {
   
   // --- THIS IS THE "WORLD-CLASS" REBURBISHED LIST ---
-  // CAC and JTB TIN are now included.
+  // JAMB History is now included.
   const historyCategories = [
     {
       title: 'Wallet Transaction History',
@@ -51,15 +52,23 @@ export default function HistoryHubPage() {
     {
       title: 'CAC History',
       description: 'Check the status and download your CAC documents.',
-      href: '/dashboard/history/cac', // We will build this next
+      href: '/dashboard/history/cac',
       logo: BriefcaseIcon,
     },
     {
       title: 'JTB TIN History',
       description: 'Check the status of your TIN registrations.',
-      href: '/dashboard/history/tin', // We will build this later
+      href: '/dashboard/history/tin',
       logo: RectangleStackIcon,
     },
+    // --- THIS IS THE "WORLD-CLASS" FIX ---
+    {
+      title: 'JAMB History',
+      description: 'Check the status and download your JAMB slips.',
+      href: '/dashboard/history/jamb',
+      logo: AcademicCapIcon,
+    },
+    // ------------------------------------
   ];
 
   return (
