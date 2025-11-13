@@ -117,7 +117,6 @@ export default function TinClientPage() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   // --- Form Data States ---
-  // Personal Reg
   const [bvn, setBvn] = useState('');
   const [nin, setNin] = useState('');
   const [email, setEmail] = useState('');
@@ -128,17 +127,11 @@ export default function TinClientPage() {
   const [address, setAddress] = useState('');
   const [state, setState] = useState('');
   const [lga, setLga] = useState('');
-
-  // Business Reg
   const [bizName, setBizName] = useState('');
   const [bizNumber, setBizNumber] = useState('');
-
-  // Personal Retrieval
   const [tin, setTin] = useState('');
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
-  
-  // Business Retrieval
   const [incorpDate, setIncorpDate] = useState('');
 
   // --- File Upload State ---
@@ -147,10 +140,12 @@ export default function TinClientPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // --- "World-Class" File Upload Handler ---
+  // --- THIS IS THE FIX ---
+  // "Refurbished" File Upload Handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
+    
     setStatusReportFile(file);
     setIsUploading(true);
     setUploadError(null);
@@ -177,6 +172,7 @@ export default function TinClientPage() {
       setIsUploading(false);
     }
   };
+  // -------------------------
 
   // --- "World-Class" Dynamic Pricing & Service ID ---
   const { serviceId, fee } = useMemo(() => {
@@ -231,9 +227,9 @@ export default function TinClientPage() {
     } else if (serviceType === 'REG' && subType === 'BUSINESS') {
       formData = { bizName, bizNumber };
     } else if (serviceType === 'RETRIEVAL' && subType === 'PERSONAL') {
-      formData = { bvnOrNin: bvn, fullName, dob }; // Re-use BVN state for "BVN or TIN"
+      formData = { bvnOrNin: bvn, fullName, dob };
     } else if (serviceType === 'RETRIEVAL' && subType === 'BUSINESS') {
-      formData = { bizName, bizNumber, incorpDate }; // Re-use Business Reg states
+      formData = { bizName, bizNumber, incorpDate };
     }
 
     try {
@@ -373,12 +369,7 @@ export default function TinClientPage() {
                     label="Upload Status Report*" id="statusReport" 
                     file={statusReportFile} fileUrl={statusReportUrl} 
                     isUploading={isUploading} error={uploadError}
-                    onChange={(e) => { 
-                      if(e.target.files) {
-                        setStatusReportFile(e.target.files[0]); 
-                        handleFileUpload(e.target.files[0], setIsUploading, setStatusReportUrl, setUploadError);
-                      }
-                    }} 
+                    onChange={handleFileUpload} // <-- THIS IS THE FIX
                   />
                 </div>
               )}
