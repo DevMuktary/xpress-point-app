@@ -61,6 +61,40 @@ const PinCard = ({ pinData }: { pinData: any }) => (
   </div>
 );
 
+// --- THIS IS THE FIX (Part 1) ---
+// --- "World-Class" Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
+  label: string,
+  id: string,
+  value: string,
+  onChange: (value: string) => void,
+  Icon: React.ElementType,
+  type?: string,
+  isRequired?: boolean,
+  placeholder?: string,
+  maxLength?: number
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="relative mt-1">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        required={isRequired}
+        placeholder={placeholder}
+        maxLength={maxLength}
+      />
+    </div>
+  </div>
+);
+// ---------------------------------
+
 // --- The Main "World-Class" Component ---
 export default function WaecPinPage() {
   
@@ -104,6 +138,13 @@ export default function WaecPinPage() {
     e.preventDefault();
     setSubmitError(null);
     setSuccess(null);
+
+    // "World-Class" validation
+    if (phoneNumber.length !== 11 || !/^[0-9]+$/.test(phoneNumber)) {
+      setSubmitError("Phone number must be exactly 11 digits.");
+      return;
+    }
+    
     setIsConfirmModalOpen(true);
   };
   
@@ -193,6 +234,8 @@ export default function WaecPinPage() {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
+          {/* --- THIS IS THE FIX (Part 2) --- */}
+          {/* Now 'DataInput' is a defined component */}
           <DataInput 
             label="Phone Number*" 
             id="phone" 
@@ -203,6 +246,7 @@ export default function WaecPinPage() {
             maxLength={11}
             placeholder="Phone number to receive the PIN"
           />
+          {/* --------------------------------- */}
           
           <div>
             <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Quantity*</label>
