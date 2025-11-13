@@ -18,11 +18,10 @@ import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
 import { VtuRequest } from '@prisma/client';
 
-// --- THIS IS THE FIX (Part 1) ---
-// The component prop is changed from 'name' to 'title'
+// --- "Modern Button" Component ---
 const NetworkButton = ({ logo, title, selected, onClick }: {
   logo: string,
-  title: string, // <-- Refurbished from 'name'
+  title: string,
   selected: boolean,
   onClick: () => void
 }) => (
@@ -36,13 +35,12 @@ const NetworkButton = ({ logo, title, selected, onClick }: {
       }`}
   >
     <SafeImage src={logo} alt={title} width={40} height={40} className="rounded-full" fallbackSrc="/logos/default.png" />
-    <span className="mt-2 text-sm font-semibold text-gray-900">{title}</span> {/* <-- Refurbished from 'name' */}
+    <span className="mt-2 text-sm font-semibold text-gray-900">{title}</span>
   </button>
 );
-// ---------------------------------
 
-// --- "World-Class" Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+// --- "World-Class" Reusable Input Component (THIS IS THE FIX) ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
   id: string,
   value: string,
@@ -50,7 +48,8 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   Icon: React.ElementType,
   type?: string,
   isRequired?: boolean,
-  placeholder?: string
+  placeholder?: string,
+  maxLength?: number // <-- "Refurbished" to accept maxLength
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -66,10 +65,13 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
         placeholder={placeholder}
+        maxLength={maxLength} // <-- It is now correctly passed
       />
     </div>
   </div>
 );
+// -----------------------------------------------------------
+
 
 // --- "World-Class" Service ID Map ---
 const serviceIdMap: { [key: string]: string } = {
@@ -126,7 +128,7 @@ export default function AirtimePage() {
       setSubmitError("Please select a network.");
       return;
     }
-    if (phoneNumber.length < 11 || !/^[0-9]+$/.test(phoneNumber)) {
+    if (phoneNumber.length !== 11 || !/^[0-9]+$/.test(phoneNumber)) {
       setSubmitError("Phone number must be exactly 11 digits.");
       return;
     }
@@ -170,6 +172,8 @@ export default function AirtimePage() {
       setIsLoading(false);
     }
   };
+  
+  const totalFee = useMemo(() => Number(amount), [amount]);
   
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -215,8 +219,6 @@ export default function AirtimePage() {
               1. Select Network
             </label>
             <div className="mt-2 grid grid-cols-4 gap-3">
-              {/* --- THIS IS THE FIX (Part 2) --- */}
-              {/* We now use 'title' to call the component */}
               <NetworkButton
                 title="MTN" logo="/logos/mtn.png"
                 selected={network === 'MTN'}
@@ -237,7 +239,6 @@ export default function AirtimePage() {
                 selected={network === '9MOBILE'}
                 onClick={() => setNetwork('9MOBILE')}
               />
-              {/* --------------------------------- */}
             </div>
           </div>
 
@@ -279,7 +280,7 @@ export default function AirtimePage() {
                 disabled={isLoading}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isLoading ? 'Purchasing...' : `Purchase Airtime`}
+                {isLoading ? 'Purchasing...' : `Purchase Airtime (Fee: ₦${totalFee})`}
               </button>
             </div>
           )}
@@ -345,7 +346,7 @@ export default function AirtimePage() {
                 Are you sure you want to send <strong className="text-gray-900">₦{amount}</strong> of {network} airtime to <strong className="text-gray-900">{phoneNumber}</strong>?
               </p>
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{amount}
+                Total Fee: ₦{totalFee}
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
