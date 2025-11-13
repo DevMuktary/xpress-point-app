@@ -34,10 +34,11 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- THE MISSING FIX
+  delinkRequests               DelinkRequest[]
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
   tinRequests                  TinRequest[]
+  jambRequests                 JambRequest[] // <-- FIX 1 (WAS MISSING)
   examPinRequests              ExamPinRequest[]
   otps                         Otp[]
 
@@ -118,6 +119,7 @@ model Service {
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
   TinRequest          TinRequest[]
+  JambRequest         JambRequest[] // <-- FIX 2 (WAS MISSING)
   ExamPinRequest      ExamPinRequest[]
   
   @@map("services")
@@ -251,6 +253,29 @@ model TinRequest {
   service           Service       @relation(fields: [serviceId], references: [id])
   @@map("tin_requests")
 }
+
+// --- FIX 3: ADD THIS MODEL BACK ---
+model JambRequest {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  serviceId         String        @map("service_id") // "JAMB_RESULT_SLIP", etc.
+  status            RequestStatus @default(PENDING)
+  statusMessage     String?       @map("status_message")
+  formData          Json          // Stores Reg Number, Year, etc.
+  
+  // Admin Uploads
+  uploadedSlipUrl   String?       @map("uploaded_slip_url")
+  profileCodeResult String?       @map("profile_code_result") // For the profile code
+  
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user              User          @relation(fields: [userId], references: [id])
+  service           Service       @relation(fields: [serviceId], references: [id])
+  
+  @@map("jamb_requests")
+}
+// ------------------------------------
 
 // --- NEW TABLE FOR EXAM PINS (VTU) ---
 model ExamPinRequest {
