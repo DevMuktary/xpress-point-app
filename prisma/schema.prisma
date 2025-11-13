@@ -38,9 +38,10 @@ model User {
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
   tinRequests                  TinRequest[]
-  jambRequests                 JambRequest[] // <-- FIX 2 (WAS MISSING)
+  jambRequests                 JambRequest[]   // <-- FIX 2 (WAS MISSING)
   examPinRequests              ExamPinRequest[]
   resultRequests               ResultRequest[]
+  vtuRequests                  VtuRequest[]
   otps                         Otp[]
 
   @@map("users")
@@ -123,6 +124,7 @@ model Service {
   JambRequest         JambRequest[] // <-- FIX 3 (WAS MISSING)
   ExamPinRequest      ExamPinRequest[]
   ResultRequest       ResultRequest[]
+  VtuRequest          VtuRequest[]
   
   @@map("services")
 }
@@ -234,7 +236,7 @@ model CacRequest {
   certificateUrl    String?       @map("certificate_url")
   statusReportUrl   String?       @map("status_report_url")
   createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
   user              User          @relation(fields: [userId], references: [id])
   service           Service       @relation(fields: [serviceId], references: [id])
   @@map("cac_requests")
@@ -295,27 +297,44 @@ model ExamPinRequest {
   @@map("exam_pin_requests")
 }
 
-// --- NEW TABLE FOR MANUAL RESULT REQUESTS ---
 model ResultRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
-  serviceId         String        @map("service_id") // "RESULT_REQUEST_WAEC", etc.
+  serviceId         String        @map("service_id")
   status            RequestStatus @default(PENDING)
   statusMessage     String?       @map("status_message")
   formData          Json
-  
-  // Admin Uploads
   uploadedSlipUrl   String?       @map("uploaded_slip_url")
-  
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
-
   user              User          @relation(fields: [userId], references: [id])
   service           Service       @relation(fields: [serviceId], references: [id])
-  
   @@map("result_requests")
 }
-// ------------------------------------------
+
+// --- NEW TABLE FOR VTU ---
+model VtuRequest {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  serviceId      String    @map("service_id")
+  userReference  String    @unique @map("user_reference")
+  phoneNumber    String?   @map("phone_number")
+  meterNumber    String?   @map("meter_number")
+  amount         Decimal   @db.Decimal(12, 2)
+  quantity       Int?      @default(1)
+  status         String    // "COMPLETED" or "FAILED"
+  apiResponse    Json?     // The full API response
+  token          String?   // For electricity
+  units          String?   // For electricity
+  
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  user           User      @relation(fields: [userId], references: [id])
+  service        Service   @relation(fields: [serviceId], references: [id])
+  
+  @@map("vtu_requests")
+}
+// -------------------------
 
 enum Role {
   AGENT
