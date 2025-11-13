@@ -8,7 +8,10 @@ import {
   ClockIcon,
   DocumentMagnifyingGlassIcon,
   ChevronLeftIcon,
-  XMarkIcon
+  XMarkIcon,
+  ClipboardIcon,
+  ClipboardDocumentCheckIcon,
+  IdentificationIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -31,7 +34,9 @@ const NetworkButton = ({ logo, name, selected, onClick }: {
         : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    <SafeImage src={logo} alt={name} width={40} height={40} className="rounded-full" />
+    {/* --- THIS IS THE FIX --- */}
+    <SafeImage src={logo} alt={name} width={40} height={40} className="rounded-full" fallbackSrc="/logos/default.png" />
+    {/* ----------------------- */}
     <span className="mt-2 text-sm font-semibold text-gray-900">{name}</span>
   </button>
 );
