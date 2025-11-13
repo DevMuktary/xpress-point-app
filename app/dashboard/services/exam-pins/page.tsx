@@ -10,6 +10,13 @@ export default function ExamPinsHubPage() {
   
   // --- THIS IS THE "WORLD-CLASS" REFURBISHED LIST ---
   const examServices = [
+    // --- NEW "WORLD-CLASS" CARD (Your Design) ---
+    {
+      title: 'Request Result',
+      description: 'We will check and get your result slip for you.',
+      href: '/dashboard/services/exam-pins/request-result',
+      logo: '/logos/waec.png', // We can re-use the WAEC logo
+    },
     {
       title: 'WAEC Result Pin',
       description: 'Purchase PINs to check WAEC results.',
@@ -33,13 +40,6 @@ export default function ExamPinsHubPage() {
       description: 'Purchase UTME or Direct Entry (DE) PINs.',
       href: '/dashboard/services/exam-pins/jamb',
       logo: '/logos/jamb.png',
-    },
-    // --- NEW "WORLD-CLASS" CARD (Your Design) ---
-    {
-      title: 'Request Result',
-      description: 'We will check and get your result slip for you.',
-      href: '/dashboard/services/exam-pins/request-result',
-      logo: '/logos/waec.png', // We can re-use the WAEC logo
     },
   ];
 
