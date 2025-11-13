@@ -36,8 +36,8 @@ export default function ExamPinsHubPage() {
     },
     // --- NEW "WORLD-CLASS" CARD (Your Design) ---
     {
-      title: 'Request Result (Manual)',
-      description: 'Admin will check and get your result slip for you.',
+      title: 'Request Result',
+      description: 'We will check and get your result slip for you.',
       href: '/dashboard/services/exam-pins/request-result',
       logo: '/logos/waec.png', // We can re-use the WAEC logo
     },
