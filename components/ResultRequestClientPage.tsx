@@ -118,7 +118,11 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
   type ServiceID = 'RESULT_REQUEST_WAEC' | 'RESULT_REQUEST_NECO' | 'RESULT_REQUEST_NABTEB';
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
   
+  // --- THIS IS THE FIX ---
+  // Renamed 'allRequests' to 'requests' to match the error
   const [requests, setRequests] = useState(initialRequests);
+  // -----------------------
+  
   const [isLoading, setIsLoading] = useState(false); // For main submit
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -156,7 +160,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       const res = await fetch(`/api/services/exam-pins/history-request`);
       if (!res.ok) throw new Error('Failed to fetch history.');
       const data = await res.json();
-      setRequests(data.requests);
+      setRequests(data.requests); // <-- THIS IS THE FIX
     } catch (err: any) {
       setSubmitError(err.message);
     } finally {
@@ -185,9 +189,9 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     if (serviceId === 'RESULT_REQUEST_NECO') {
       formData = { regNumber, name, phone, network };
     } else if (serviceId === 'RESULT_REQUEST_WAEC') {
-      formData = { regNumber, year, sector, serial }; // Re-use regNumber for Exam No.
+      formData = { regNumber, year, sector, serial };
     } else if (serviceId === 'RESULT_REQUEST_NABTEB') {
-      formData = { regNumber, examType, year, serial }; // Re-use regNumber for Candidate No.
+      formData = { regNumber, examType, year, serial };
     }
 
     try {
@@ -218,14 +222,14 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
   
   // --- "World-Class" Filtering Logic ---
   const filteredRequests = useMemo(() => {
-    return allRequests.filter(req => {
+    return requests.filter(req => { // <-- THIS IS THE FIX
       const formData = req.formData as any;
       const searchData = formData.regNumber || formData.name || '';
       const matchesSearch = searchData.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = (statusFilter === 'ALL' || req.status === statusFilter);
       return matchesSearch && matchesStatus;
     });
-  }, [allRequests, searchTerm, statusFilter]);
+  }, [requests, searchTerm, statusFilter]); // <-- THIS IS THE FIX
 
   // Helper to format the date
   const formatDate = (dateString: Date) => {
@@ -259,7 +263,9 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
         return (
           <a 
             href={request.uploadedSlipUrl || '#'}
-            target="_blank" rel="noopener noreferrer" download
+            target="_blank"
+            rel="noopener noreferrer"
+            download
             className={`rounded-lg px-3 py-2 text-sm font-semibold text-white flex items-center justify-center gap-2
               ${request.uploadedSlipUrl 
                 ? 'bg-green-600 hover:bg-green-700' 
@@ -289,7 +295,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
 
   return (
     <div className="space-y-6">
-      {(isSubmitting) && <Loading />}
+      {(isLoading) && <Loading />}
       
       {/* --- Your "Sweet Alert" Style Message --- */}
       {success && (
@@ -402,10 +408,10 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
               )}
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isLoading}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSubmitting ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
+                {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
               </button>
             </div>
           )}
