@@ -34,9 +34,11 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
+  delinkRequests               DelinkRequest[] // <-- FIX 1
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
-  jambRequests                 JambRequest[] // <-- NEW RELATION
+  tinRequests                  TinRequest[]    // <-- FIX 2
+  jambRequests                 JambRequest[]
   otps                         Otp[]
 
   @@map("users")
@@ -114,7 +116,8 @@ model Service {
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
-  JambRequest         JambRequest[] // <-- NEW RELATION
+  TinRequest          TinRequest[] // <-- FIX 3
+  JambRequest         JambRequest[]
   
   @@map("services")
 }
