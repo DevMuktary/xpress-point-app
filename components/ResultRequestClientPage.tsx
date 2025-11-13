@@ -17,7 +17,7 @@ import {
   CalendarDaysIcon,
   HashtagIcon,
   GlobeAltIcon,
-  XCircleIcon // <-- THIS IS THE FIX
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -53,8 +53,8 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- "World-Class" Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+// --- "World-Class" Reusable Input Component (THIS IS THE FIX) ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
   id: string,
   value: string,
@@ -62,7 +62,8 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   Icon: React.ElementType,
   type?: string,
   isRequired?: boolean,
-  placeholder?: string
+  placeholder?: string,
+  maxLength?: number // <-- "Refurbished" to accept maxLength
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -78,10 +79,12 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
         placeholder={placeholder}
+        maxLength={maxLength} // <-- It is now correctly passed
       />
     </div>
   </div>
 );
+// -----------------------------------------------------------
 
 // --- "World-Class" Reusable Select Component ---
 const DataSelect = ({ label, id, value, onChange, Icon, children, isRequired = true }: {
