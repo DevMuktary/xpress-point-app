@@ -18,10 +18,11 @@ import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
 import { VtuRequest } from '@prisma/client';
 
-// --- "Modern Button" Component ---
-const NetworkButton = ({ logo, name, selected, onClick }: {
+// --- THIS IS THE FIX (Part 1) ---
+// The component prop is changed from 'name' to 'title'
+const NetworkButton = ({ logo, title, selected, onClick }: {
   logo: string,
-  name: string,
+  title: string, // <-- Refurbished from 'name'
   selected: boolean,
   onClick: () => void
 }) => (
@@ -34,12 +35,11 @@ const NetworkButton = ({ logo, name, selected, onClick }: {
         : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    {/* --- THIS IS THE FIX --- */}
-    <SafeImage src={logo} alt={name} width={40} height={40} className="rounded-full" fallbackSrc="/logos/default.png" />
-    {/* ----------------------- */}
-    <span className="mt-2 text-sm font-semibold text-gray-900">{name}</span>
+    <SafeImage src={logo} alt={title} width={40} height={40} className="rounded-full" fallbackSrc="/logos/default.png" />
+    <span className="mt-2 text-sm font-semibold text-gray-900">{title}</span> {/* <-- Refurbished from 'name' */}
   </button>
 );
+// ---------------------------------
 
 // --- "World-Class" Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
@@ -215,6 +215,8 @@ export default function AirtimePage() {
               1. Select Network
             </label>
             <div className="mt-2 grid grid-cols-4 gap-3">
+              {/* --- THIS IS THE FIX (Part 2) --- */}
+              {/* We now use 'title' to call the component */}
               <NetworkButton
                 title="MTN" logo="/logos/mtn.png"
                 selected={network === 'MTN'}
@@ -235,6 +237,7 @@ export default function AirtimePage() {
                 selected={network === '9MOBILE'}
                 onClick={() => setNetwork('9MOBILE')}
               />
+              {/* --------------------------------- */}
             </div>
           </div>
 
