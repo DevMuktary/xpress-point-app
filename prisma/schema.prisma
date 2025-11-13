@@ -34,10 +34,9 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- FIX IS HERE
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
-  tinRequests                  TinRequest[]
+  jambRequests                 JambRequest[] // <-- NEW RELATION
   otps                         Otp[]
 
   @@map("users")
@@ -115,7 +114,7 @@ model Service {
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
-  TinRequest          TinRequest[]
+  JambRequest         JambRequest[] // <-- NEW RELATION
   
   @@map("services")
 }
@@ -233,20 +232,34 @@ model CacRequest {
   @@map("cac_requests")
 }
 
-// --- NEW TABLE FOR TIN ---
 model TinRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
-  serviceId         String        @map("service_id") // "TIN_REG_PERSONAL", etc.
+  serviceId         String        @map("service_id")
   status            RequestStatus @default(PENDING)
   statusMessage     String?       @map("status_message")
   formData          Json
-  
-  // User Uploads
-  statusReportUrl   String?       @map("status_report_url") // For Business Reg
+  statusReportUrl   String?       @map("status_report_url")
+  certificateUrl    String?       @map("certificate_url")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  user              User          @relation(fields: [userId], references: [id])
+  service           Service       @relation(fields: [serviceId], references: [id])
+  @@map("tin_requests")
+}
+
+// --- NEW TABLE FOR JAMB ---
+model JambRequest {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  serviceId         String        @map("service_id") // "JAMB_RESULT_SLIP", etc.
+  status            RequestStatus @default(PENDING)
+  statusMessage     String?       @map("status_message")
+  formData          Json          // Stores Reg Number, Year, etc.
   
   // Admin Uploads
-  certificateUrl    String?       @map("certificate_url")
+  uploadedSlipUrl   String?       @map("uploaded_slip_url")
+  profileCodeResult String?       @map("profile_code_result") // For the profile code
   
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
@@ -254,7 +267,7 @@ model TinRequest {
   user              User          @relation(fields: [userId], references: [id])
   service           Service       @relation(fields: [serviceId], references: [id])
   
-  @@map("tin_requests")
+  @@map("jamb_requests")
 }
 // -------------------------
 
