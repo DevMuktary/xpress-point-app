@@ -34,12 +34,13 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[]
+  delinkRequests               DelinkRequest[] // <-- FIX 1 (WAS MISSING)
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
   tinRequests                  TinRequest[]
-  jambRequests                 JambRequest[] // <-- FIX 1 (WAS MISSING)
+  jambRequests                 JambRequest[] // <-- FIX 2 (WAS MISSING)
   examPinRequests              ExamPinRequest[]
+  resultRequests               ResultRequest[]
   otps                         Otp[]
 
   @@map("users")
@@ -112,15 +113,16 @@ model Service {
   agentPrice          Decimal                @map("agent_price") @db.Decimal(10, 2)
   aggregatorPrice     Decimal                @map("aggregator_price") @db.Decimal(10, 2)
   isActive            Boolean                @default(true) @map("is_active")
-  productCode         String?                @unique @map("product_code") // <-- NEW: For VTU
+  productCode         String?                @unique @map("product_code")
   
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
   TinRequest          TinRequest[]
-  JambRequest         JambRequest[] // <-- FIX 2 (WAS MISSING)
+  JambRequest         JambRequest[] // <-- FIX 3 (WAS MISSING)
   ExamPinRequest      ExamPinRequest[]
+  ResultRequest       ResultRequest[]
   
   @@map("services")
 }
@@ -254,7 +256,7 @@ model TinRequest {
   @@map("tin_requests")
 }
 
-// --- FIX 3: ADD THIS MODEL BACK ---
+// --- FIX 4: ADD THIS MODEL BACK ---
 model JambRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
@@ -277,25 +279,43 @@ model JambRequest {
 }
 // ------------------------------------
 
-// --- NEW TABLE FOR EXAM PINS (VTU) ---
 model ExamPinRequest {
   id             String    @id @default(uuid())
   userId         String    @map("user_id")
-  serviceId      String    @map("service_id")     // e.g., "WAEC_PIN"
-  userReference  String    @unique @map("user_reference") // Our 'XPS-...' ref
+  serviceId      String    @map("service_id")
+  userReference  String    @unique @map("user_reference")
   phoneNumber    String    @map("phone_number")
   quantity       Int
-  status         String    // "COMPLETED" or "FAILED"
-  apiResponse    Json?     // The full API response
-  pins           Json?     // The 'true_response' array of pins
+  status         String
+  apiResponse    Json?
+  pins           Json?
   createdAt      DateTime  @default(now()) @map("created_at")
-
   user           User      @relation(fields: [userId], references: [id])
   service        Service   @relation(fields: [serviceId], references: [id])
-  
   @@map("exam_pin_requests")
 }
-// ------------------------------------
+
+// --- NEW TABLE FOR MANUAL RESULT REQUESTS ---
+model ResultRequest {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  serviceId         String        @map("service_id") // "RESULT_REQUEST_WAEC", etc.
+  status            RequestStatus @default(PENDING)
+  statusMessage     String?       @map("status_message")
+  formData          Json
+  
+  // Admin Uploads
+  uploadedSlipUrl   String?       @map("uploaded_slip_url")
+  
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user              User          @relation(fields: [userId], references: [id])
+  service           Service       @relation(fields: [serviceId], references: [id])
+  
+  @@map("result_requests")
+}
+// ------------------------------------------
 
 enum Role {
   AGENT
