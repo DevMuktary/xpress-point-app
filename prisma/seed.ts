@@ -182,49 +182,73 @@ const services = [
     aggregatorPrice: new Decimal(2400.00),
     productCode: null,
   },
-  
-  // --- NEW EXAM PIN SERVICES ---
   {
     id: 'WAEC_PIN',
     name: 'WAEC Result Pin',
     category: 'EXAM_PINS',
-    agentPrice: new Decimal(3600.00), // Your Admin price
+    agentPrice: new Decimal(3600.00),
     aggregatorPrice: new Decimal(3550.00),
-    productCode: 'waec_pin', // API provider's code
+    productCode: 'waec_pin',
   },
   {
     id: 'NECO_PIN',
     name: 'NECO Result Pin',
     category: 'EXAM_PINS',
-    agentPrice: new Decimal(1350.00), // Your Admin price
+    agentPrice: new Decimal(1350.00),
     aggregatorPrice: new Decimal(1300.00),
-    productCode: 'neco_pin', // API provider's code
+    productCode: 'neco_pin',
   },
   {
     id: 'NABTEB_PIN',
     name: 'NABTEB Result Pin',
     category: 'EXAM_PINS',
-    agentPrice: new Decimal(1050.00), // Your Admin price
+    agentPrice: new Decimal(1050.00),
     aggregatorPrice: new Decimal(1000.00),
-    productCode: 'nabteb_pin', // API provider's code
+    productCode: 'nabteb_pin',
   },
   {
     id: 'JAMB_UTME_PIN',
     name: 'JAMB UTME Pin',
     category: 'EXAM_PINS',
-    agentPrice: new Decimal(500.00), // Your Admin price
+    agentPrice: new Decimal(500.00),
     aggregatorPrice: new Decimal(480.00),
-    productCode: 'utme_pin', // API provider's code
+    productCode: 'utme_pin',
   },
   {
     id: 'JAMB_DE_PIN',
     name: 'JAMB Direct Entry (DE) Pin',
     category: 'EXAM_PINS',
-    agentPrice: new Decimal(500.00), // Your Admin price
+    agentPrice: new Decimal(500.00),
     aggregatorPrice: new Decimal(480.00),
-    productCode: 'direct_entry_de', // API provider's code
+    productCode: 'direct_entry_de',
   },
-  // -------------------------
+
+  // --- NEW MANUAL RESULT REQUESTS ---
+  {
+    id: 'RESULT_REQUEST_WAEC',
+    name: 'WAEC Result Request (Manual)',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(1000.00), // You can change this price
+    aggregatorPrice: new Decimal(950.00),
+    productCode: null,
+  },
+  {
+    id: 'RESULT_REQUEST_NECO',
+    name: 'NECO Result Request (Manual)',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(1000.00), // You can change this price
+    aggregatorPrice: new Decimal(950.00),
+    productCode: null,
+  },
+  {
+    id: 'RESULT_REQUEST_NABTEB',
+    name: 'NABTEB Result Request (Manual)',
+    category: 'EXAM_PINS',
+    agentPrice: new Decimal(1000.00), // You can change this price
+    aggregatorPrice: new Decimal(950.00),
+    productCode: null,
+  },
+  // ----------------------------------
 ];
 
 async function main() {
