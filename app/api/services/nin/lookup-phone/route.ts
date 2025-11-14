@@ -4,7 +4,7 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// Using the new, stable ConfirmIdent provider
+// API credentials
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const PHONE_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_phone';
 
@@ -18,6 +18,9 @@ function parseApiError(error: any): string {
   }
   if (error.response && error.response.data) {
     const data = error.response.data;
+    if (data.message && typeof data.message === 'object' && data.message['0']) {
+      return data.message['0'];
+    }
     if (data.message && typeof data.message === 'string') {
       return data.message;
     }
@@ -40,130 +43,130 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { phone } = body; // This is the 11-digit number from your frontend
+    const { phone } = body; 
 
     if (!phone) {
       return NextResponse.json({ error: 'Phone number is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
+    
+    // "World-class" pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // --- FIX 1: Use the +234 format ---
-    // This converts "070..." to "+23470..."
-    const phoneToSend = phone.startsWith('0') ? `+234${phone.substring(1)}` : phone;
-
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phoneToSend // Key is 'phone' and value is +234...
+        phone: phone,
+        ref: `XPRESSPOINT_PHN_${user.id}_${Date.now()}`
       },
       {
         headers: { 
-          'api-key': CONFIRMIDENT_API_KEY, 
+          'api-key': CONFIRMIDENT_API_KEY,
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
       }
     );
-    // ------------------------------------
-    
+
     const data = response.data;
     
     // --- 3. Handle ConfirmIdent Response ---
-    // --- FIX 2: Use the if(data.data) logic ---
-    // We only check if the data.data object exists.
-    if (data.data) {
-    // -----------------------------------------
-      
-      const responseData = data.data;
-
-      // --- 4. "World-Class" Data Mapping (FIXED) ---
-      const mappedData = {
-        photo: responseData.photo,
-        firstname: responseData.firstname, 
-        surname: responseData.surname,   
-        middlename: responseData.middlename,
-        birthdate: responseData.birthdate.replace(/-/g, '-'),
-        nin: responseData.NIN,
-        trackingId: responseData.trackingId,
-        residence_AdressLine1: responseData.residence_AdressLine1,
-        birthlga: responseData.birthlga,
-        gender: responseData.gender,
-        residence_lga: responseData.residence_lga,
-        residence_state: responseData.residence_state,
-        telephoneno: responseData.telephoneno, 
-        birthstate: responseData.birthstate,
-        maritalstatus: responseData.maritalstatus,
-        profession: responseData.profession,
-        religion: responseData.religion,
-        signature: responseData.signature,
-      };
-      // -----------------------------------------------------
-
-      // --- 5. Charge User & Save Transaction ---
-      const [_, verificationRecord] = await prisma.$transaction([
-        prisma.wallet.update({
-          where: { userId: user.id },
-          data: { balance: { decrement: price } },
-        }),
-        prisma.ninVerification.create({
-          data: {
-            userId: user.id,
-            data: mappedData as any,
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          },
-        }),
-        prisma.transaction.create({
-          data: {
-            userId: user.id,
-            serviceId: service.id,
-            type: 'SERVICE_CHARGE',
-            amount: price.negated(),
-            description: `NIN Lookup by Phone (${phone})`,
-            reference: data.transaction_id || `NIN-PHONE-${Date.now()}`,
-            status: 'COMPLETED',
-          },
-        }),
-      ]);
-
-      // --- 6. Return Success Data to Frontend ---
-      const slipPrices = await prisma.service.findMany({
-        where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
-        select: { id: true, agentPrice: true, aggregatorPrice: true }
-      });
-      
-      const getPrice = (id: string) => {
-        const s = slipPrices.find(sp => sp.id === id);
-        if (!s) return 0;
-        return user.role === 'AGGREGATOR' ? s.aggregatorPrice : s.agentPrice;
-      };
-
-      return NextResponse.json({
-        message: 'Verification Successful', 
-        verificationId: verificationRecord.id,
-        data: mappedData,
-        slipPrices: {
-          Regular: getPrice('NIN_SLIP_REGULAR'),
-          Standard: getPrice('NIN_SLIP_STANDARD'),
-          Premium: getPrice('NIN_SLIP_PREMIUM'),
-        }
-      });
-
-    } else {
-      // This block will now only catch real errors
+    if (data.success !== true || !data.data) {
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
+
+    const responseData = data.data;
+
+    // --- 4. "World-Class" Data Mapping ---
+    const mappedData = {
+      photo: responseData.photo,
+      firstname: responseData.firs_tname, // Handling their typo
+      surname: responseData.last_name,
+      middlename: responseData.middlename,
+      birthdate: responseData.birthdate.replace(/-/g, '-'),
+      nin: responseData.NIN,
+      trackingId: responseData.trackingId,
+      residence_AdressLine1: responseData.residence_AdressLine1,
+      birthlga: responseData.birthlga,
+      gender: responseData.gender,
+      residence_lga: responseData.residence_lga,
+      residence_state: responseData.residence_state,
+      telephoneno: responseData.phone_number,
+      birthstate: responseData.birthstate,
+      maritalstatus: responseData.maritalstatus,
+      profession: responseData.profession,
+      religion: responseData.religion,
+      signature: responseData.signature,
+    };
+
+    // --- 5. Charge User & Save Transaction ---
+    const [_, verificationRecord] = await prisma.$transaction([
+      prisma.wallet.update({
+        where: { userId: user.id },
+        data: { balance: { decrement: price } },
+      }),
+      prisma.ninVerification.create({
+        data: {
+          userId: user.id,
+          data: mappedData as any,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: user.id,
+          serviceId: service.id,
+          type: 'SERVICE_CHARGE',
+          amount: price.negated(),
+          description: `NIN Lookup by Phone (${phone})`,
+          reference: `NIN-PHONE-${Date.now()}`,
+          status: 'COMPLETED',
+        },
+      }),
+    ]);
+
+    // --- 6. Return Success Data to Frontend (THIS IS THE FIX) ---
+    const slipPrices = await prisma.service.findMany({
+      where: {
+        id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
+      },
+      select: {
+        id: true,
+        defaultAgentPrice: true,
+        platformPrice: true
+      }
+    });
+    
+    const getPrice = (id: string) => {
+      const s = slipPrices.find(sp => sp.id === id);
+      if (!s) return 0;
+      return user.role === 'AGGREGATOR' ? s.platformPrice : s.defaultAgentPrice;
+    };
+
+    return NextResponse.json({
+      message: 'Verification Successful',
+      verificationId: verificationRecord.id,
+      data: mappedData,
+      slipPrices: {
+        Regular: getPrice('NIN_SLIP_REGULAR'),
+        Standard: getPrice('NIN_SLIP_STANDARD'),
+        Premium: getPrice('NIN_SLIP_PREMIUM'),
+      }
+    });
 
   } catch (error: any) {
     const errorMessage = parseApiError(error);
@@ -174,4 +177,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
