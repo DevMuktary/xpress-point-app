@@ -44,8 +44,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid or expired verification ID.' }, { status: 404 });
     }
 
-    // --- 2. Check User Wallet ---
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
+    // --- 2. Check User Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
     const wallet = await prisma.wallet.findUnique({
       where: { userId: user.id },
     });
@@ -69,9 +73,7 @@ export async function POST(request: Request) {
           description: `${service.name} (${(verification.data as any).nin})`,
           reference: `NIN-SLIP-${Date.now()}`,
           status: 'COMPLETED',
-          // --- THIS IS THE "WORLD-CLASS" FIX ---
-          verificationId: verification.id, // Link the transaction to the verification
-          // ------------------------------------
+          verificationId: verification.id, // Link the transaction
         },
       }),
     ]);
