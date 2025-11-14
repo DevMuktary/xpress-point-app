@@ -376,6 +376,9 @@ const services = [
   { id: 'ELEC_IBEDC_PRE', name: 'Ibadan PrePaid', category: 'VTU_ELEC', ...p(99, 100), productCode: 'ibedc_prepaid_custom' },
   { id: 'ELEC_JEDC_POST', name: 'Jos PostPaid', category: 'VTU_ELEC', ...p(99, 100), productCode: 'jedc_postpaid_custom' },
   { id: 'ELEC_JEDC_PRE', name: 'Jos PrePaid', category: 'VTU_ELEC', ...p(99, 100), productCode: 'jedc_prepaid_custom' },
+
+  // --- System Services ---
+  { id: 'AGGREGATOR_UPGRADE', name: 'Aggregator Upgrade Fee', category: 'SYSTEM', ...p(0.00, 5000.00), productCode: null },
 ];
 
 async function main() {
