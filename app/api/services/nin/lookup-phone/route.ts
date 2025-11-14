@@ -4,7 +4,7 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// API credentials
+// Using the new, stable ConfirmIdent provider
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const PHONE_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_phone';
 
@@ -18,9 +18,6 @@ function parseApiError(error: any): string {
   }
   if (error.response && error.response.data) {
     const data = error.response.data;
-    if (data.message && typeof data.message === 'object' && data.message['0']) {
-      return data.message['0'];
-    }
     if (data.message && typeof data.message === 'string') {
       return data.message;
     }
@@ -67,106 +64,109 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
+    // Using your "world-class" +234 logic
+    const phoneToSend = phone.startsWith('0') ? `+234${phone.substring(1)}` : phone;
+
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phone,
-        ref: `XPRESSPOINT_PHN_${user.id}_${Date.now()}`
+        phone: phoneToSend 
       },
       {
         headers: { 
-          'api-key': CONFIRMIDENT_API_KEY,
+          'api-key': CONFIRMIDENT_API_KEY, 
           'Content-Type': 'application/json' 
         },
         timeout: 15000,
       }
     );
-
+    
     const data = response.data;
     
-    // --- 3. Handle ConfirmIdent Response ---
-    if (data.success !== true || !data.data) {
+    // --- 3. Handle ConfirmIdent Response (Your "world-class" logic) ---
+    if (data.data) {
+      
+      const responseData = data.data;
+
+      // --- 4. "World-Class" Data Mapping (Your "world-class" logic) ---
+      const mappedData = {
+        photo: responseData.photo,
+        firstname: responseData.firstname, 
+        surname: responseData.surname,   
+        middlename: responseData.middlename,
+        birthdate: responseData.birthdate.replace(/-/g, '-'),
+        nin: responseData.NIN,
+        trackingId: responseData.trackingId,
+        residence_AdressLine1: responseData.residence_AdressLine1,
+        birthlga: responseData.birthlga,
+        gender: responseData.gender,
+        residence_lga: responseData.residence_lga,
+        residence_state: responseData.residence_state,
+        telephoneno: responseData.telephoneno, 
+        birthstate: responseData.birthstate,
+        maritalstatus: responseData.maritalstatus,
+        profession: responseData.profession,
+        religion: responseData.religion,
+        signature: responseData.signature,
+      };
+
+      // --- 5. Charge User & Save Transaction ---
+      const [_, verificationRecord] = await prisma.$transaction([
+        prisma.wallet.update({
+          where: { userId: user.id },
+          data: { balance: { decrement: price } },
+        }),
+        prisma.ninVerification.create({
+          data: {
+            userId: user.id,
+            data: mappedData as any,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          },
+        }),
+        prisma.transaction.create({
+          data: {
+            userId: user.id,
+            serviceId: service.id,
+            type: 'SERVICE_CHARGE',
+            amount: price.negated(),
+            description: `NIN Lookup by Phone (${phone})`,
+            reference: data.transaction_id || `NIN-PHONE-${Date.now()}`,
+            status: 'COMPLETED',
+          },
+        }),
+      ]);
+
+      // --- 6. Return Success Data to Frontend (THIS IS THE "WORLD-CLASS" FIX) ---
+      const slipPrices = await prisma.service.findMany({
+        where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
+        select: { 
+          id: true, 
+          defaultAgentPrice: true, // Refurbished
+          platformPrice: true      // Refurbished
+        }
+      });
+      
+      const getPrice = (id: string) => {
+        const s = slipPrices.find(sp => sp.id === id);
+        if (!s) return 0;
+        // Refurbished
+        return user.role === 'AGGREGATOR' ? s.platformPrice : s.defaultAgentPrice;
+      };
+
+      return NextResponse.json({
+        message: 'Verification Successful', 
+        verificationId: verificationRecord.id,
+        data: mappedData,
+        slipPrices: {
+          Regular: getPrice('NIN_SLIP_REGULAR'),
+          Standard: getPrice('NIN_SLIP_STANDARD'),
+          Premium: getPrice('NIN_SLIP_PREMIUM'),
+        }
+      });
+
+    } else {
       const errorMessage = data.message || "NIN verification failed.";
       return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
     }
-
-    const responseData = data.data;
-
-    // --- 4. "World-Class" Data Mapping ---
-    const mappedData = {
-      photo: responseData.photo,
-      firstname: responseData.firs_tname, // Handling their typo
-      surname: responseData.last_name,
-      middlename: responseData.middlename,
-      birthdate: responseData.birthdate.replace(/-/g, '-'),
-      nin: responseData.NIN,
-      trackingId: responseData.trackingId,
-      residence_AdressLine1: responseData.residence_AdressLine1,
-      birthlga: responseData.birthlga,
-      gender: responseData.gender,
-      residence_lga: responseData.residence_lga,
-      residence_state: responseData.residence_state,
-      telephoneno: responseData.phone_number,
-      birthstate: responseData.birthstate,
-      maritalstatus: responseData.maritalstatus,
-      profession: responseData.profession,
-      religion: responseData.religion,
-      signature: responseData.signature,
-    };
-
-    // --- 5. Charge User & Save Transaction ---
-    const [_, verificationRecord] = await prisma.$transaction([
-      prisma.wallet.update({
-        where: { userId: user.id },
-        data: { balance: { decrement: price } },
-      }),
-      prisma.ninVerification.create({
-        data: {
-          userId: user.id,
-          data: mappedData as any,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
-      }),
-      prisma.transaction.create({
-        data: {
-          userId: user.id,
-          serviceId: service.id,
-          type: 'SERVICE_CHARGE',
-          amount: price.negated(),
-          description: `NIN Lookup by Phone (${phone})`,
-          reference: `NIN-PHONE-${Date.now()}`,
-          status: 'COMPLETED',
-        },
-      }),
-    ]);
-
-    // --- 6. Return Success Data to Frontend (THIS IS THE FIX) ---
-    const slipPrices = await prisma.service.findMany({
-      where: {
-        id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
-      },
-      select: {
-        id: true,
-        defaultAgentPrice: true,
-        platformPrice: true
-      }
-    });
-    
-    const getPrice = (id: string) => {
-      const s = slipPrices.find(sp => sp.id === id);
-      if (!s) return 0;
-      return user.role === 'AGGREGATOR' ? s.platformPrice : s.defaultAgentPrice;
-    };
-
-    return NextResponse.json({
-      message: 'Verification Successful',
-      verificationId: verificationRecord.id,
-      data: mappedData,
-      slipPrices: {
-        Regular: getPrice('NIN_SLIP_REGULAR'),
-        Standard: getPrice('NIN_SLIP_STANDARD'),
-        Premium: getPrice('NIN_SLIP_PREMIUM'),
-      }
-    });
 
   } catch (error: any) {
     const errorMessage = parseApiError(error);
