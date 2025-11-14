@@ -19,7 +19,7 @@ if (CPANEL_API_TOKEN) {
   };
 }
 
-// "World-class" function to create the subdomain
+// "World-class" function to create the subdomain name
 function generateSubdomain(businessName: string): string {
   return businessName
     .toLowerCase()
@@ -27,37 +27,60 @@ function generateSubdomain(businessName: string): string {
     .substring(0, 30);
 }
 
-// --- "World-Class" cPanel API Function ---
-async function createCpanelSubdomain(subdomain: string) {
+// --- "World-Class" cPanel API Function (Refurbished) ---
+async function createCpanelRedirect(subdomain: string) {
   if (!CPANEL_DOMAIN || !CPANEL_USER || !CPANEL_API_TOKEN || !CPANEL_HOSTNAME) {
     console.error("CRITICAL: cPanel variables are not set. Skipping subdomain creation.");
     return; 
   }
 
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // We "refurbish" the URL to be "stunningly" correct
-  const url = `https://${CPANEL_HOSTNAME}:2083/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}&dir=.`;
-  // ------------------------------------
-  
   // "World-Class" fix for Truehost/self-signed SSL certificates
   const agent = new https.Agent({  
     rejectUnauthorized: false
   });
 
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // STEP 1: Create the "stunning" subdomain (we let cPanel use the default dir)
+  const createSubdomainUrl = `${CPANEL_HOSTNAME}/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}`;
+  
+  // STEP 2: Create the "world-class" redirect
+  const fullSubdomain = `${subdomain}.${CPANEL_DOMAIN}`;
+  const redirectUrl = `https://xpresspoint.net/register/${subdomain}`;
+  const createRedirectUrl = `${CPANEL_HOSTNAME}/execute/Redirect/addredirect?domain=${fullSubdomain}&url=${redirectUrl}`;
+  // ------------------------------------
+
   try {
-    const response = await axios.get(url, { 
+    // --- Run Step 1 ---
+    console.log(`cPanel: Attempting to create subdomain: ${fullSubdomain}`);
+    const subResponse = await axios.get(createSubdomainUrl, { 
       headers: cpanelHeaders,
-      httpsAgent: agent // <-- This "world-class" fix ignores SSL errors
+      httpsAgent: agent
     });
-    
-    const data = response.data;
-    if (data.status !== 1) {
-      console.error('cPanel API error:', data.errors ? data.errors[0] : 'Unknown cPanel error');
-      throw new Error(data.errors ? data.errors[0] : 'cPanel API error');
+    const subData = subResponse.data;
+    if (subData.status !== 1) {
+      // If it "fails" because it *already exists*, that is a "world-class" success
+      if (subData.errors[0].includes('already exists')) {
+        console.log(`cPanel: Subdomain ${fullSubdomain} already exists. This is OK.`);
+      } else {
+        throw new Error(subData.errors[0] || 'cPanel Subdomain API error');
+      }
     }
-    console.log(`cPanel: Successfully created subdomain ${subdomain}.${CPANEL_DOMAIN}`);
+    console.log(`cPanel: Successfully created subdomain.`);
+
+    // --- Run Step 2 ---
+    console.log(`cPanel: Attempting to create redirect: ${fullSubdomain} -> ${redirectUrl}`);
+    const redResponse = await axios.get(createRedirectUrl, { 
+      headers: cpanelHeaders,
+      httpsAgent: agent 
+    });
+    const redData = redResponse.data;
+    if (redData.status !== 1) {
+      throw new Error(redData.errors[0] || 'cPanel Redirect API error');
+    }
+    console.log(`cPanel: Successfully created redirect.`);
+    
   } catch (error: any) {
-    console.error(`cPanel Error: Failed to create subdomain ${subdomain}:`, error.message);
+    console.error(`cPanel Error: Failed to create subdomain/redirect for ${subdomain}:`, error.message);
     throw new Error(`Database upgrade was successful, but cPanel subdomain creation failed: ${error.message}`);
   }
 }
@@ -104,7 +127,7 @@ export async function POST(request: Request) {
     }
 
     // --- 3. "Stunning" cPanel Call (BEFORE payment) ---
-    await createCpanelSubdomain(subdomain);
+    await createCpanelRedirect(subdomain);
 
     // --- 4. "World-Class" Database Transaction ---
     await prisma.$transaction([
