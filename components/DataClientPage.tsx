@@ -22,7 +22,8 @@ import { VtuRequest } from '@prisma/client';
 // --- "World-Class" Type Definitions ---
 type DataPlan = {
   id: string;
-  name: string;
+  name: string; // e.g., "1GB"
+  duration: string; // e.g., "(30 Days)"
   price: number;
 };
 type DataPlansObject = {
@@ -57,7 +58,8 @@ const NetworkButton = ({ logo, title, selected, onClick }: {
   </button>
 );
 
-const CategoryButton = ({ title, selected, onClick }: {
+// --- "Stunning" Horizontal Tab Button (Your Screenshot Design) ---
+const CategoryTab = ({ title, selected, onClick }: {
   title: string,
   selected: boolean,
   onClick: () => void
@@ -65,15 +67,20 @@ const CategoryButton = ({ title, selected, onClick }: {
   <button
     type="button"
     onClick={onClick}
-    className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap
+      ${selected 
+        ? 'bg-blue-600 text-white' 
+        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
+    {title}
   </button>
 );
 
-const PlanButton = ({ name, price, selected, onClick }: {
+// --- "Stunning" 2-Column Plan Button (Your Screenshot Design) ---
+const PlanButton = ({ name, duration, price, selected, onClick }: {
   name: string,
+  duration: string,
   price: number,
   selected: boolean,
   onClick: () => void
@@ -81,11 +88,12 @@ const PlanButton = ({ name, price, selected, onClick }: {
   <button
     type="button"
     onClick={onClick}
-    className={`rounded-lg p-4 text-left transition-all border-2
+    className={`rounded-lg p-4 text-left transition-all border-2 flex flex-col
       ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
   >
-    <p className="font-semibold text-gray-900">{name}</p>
-    <p className="text-sm text-blue-600 font-medium">Fee: ₦{price}</p>
+    <span className="font-bold text-lg text-gray-900">{name}</span>
+    <span className="text-sm text-gray-500">{duration}</span>
+    <span className="mt-2 text-sm font-semibold text-blue-600">₦{price}</span>
   </button>
 );
 
@@ -129,8 +137,11 @@ export default function DataClientPage({ dataPlans }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<any | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  
+  // --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
+  const [receipt, setReceipt] = useState<any | null>(null); 
+  // ---------------------------------------------
 
   // --- "World-Class" Form State ---
   const [network, setNetwork] = useState<Network | null>(null);
@@ -177,7 +188,7 @@ export default function DataClientPage({ dataPlans }: Props) {
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    setSuccess(null);
+    setReceipt(null); // Clear old receipt
 
     if (!selectedPlan) {
       setSubmitError("Please select a data plan.");
@@ -212,7 +223,18 @@ export default function DataClientPage({ dataPlans }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSuccess(data);
+      // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
+      setReceipt({
+        message: data.message,
+        transactionId: data.data.recharge_id,
+        phone: phoneNumber,
+        amount: data.data.amount_charged,
+        network: network,
+        serviceName: selectedPlan!.name + " " + selectedPlan!.duration,
+        status: data.data.text_status
+      });
+      // ---------------------------------------------
+      
       setPhoneNumber('');
       setSelectedPlan(null);
       setCategory(null);
@@ -226,31 +248,13 @@ export default function DataClientPage({ dataPlans }: Props) {
     }
   };
   
-  // --- "World-Class" Price (from props, not hardcoded) ---
   const totalFee = selectedPlan?.price || 0;
   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- Your "Sweet Alert" Style Message --- */}
-      {success && (
-        <div className="rounded-lg bg-green-50 p-4 border border-green-200 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-bold text-green-800">
-                Purchase Successful!
-              </h3>
-              <div className="mt-2 text-sm text-green-700">
-                <p>{success.message}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* --- "Rubbish" Sweet Alert is GONE --- */}
 
       {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
@@ -274,15 +278,15 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
           </div>
 
-          {/* --- 2. "Modern Buttons" for Category --- */}
+          {/* --- 2. "Stunning" Horizontal Tabs for Category --- */}
           {network && (
             <div className="border-t border-gray-200 pt-6">
               <label className="text-lg font-semibold text-gray-900">
                 2. Select Data Category
               </label>
-              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="mt-2 flex space-x-2 overflow-x-auto pb-2">
                 {Object.keys(dataPlans[network].categories).map(cat => (
-                  <CategoryButton
+                  <CategoryTab
                     key={cat}
                     title={cat}
                     selected={category === cat}
@@ -293,18 +297,19 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
           )}
 
-          {/* --- 3. "Modern Buttons" for Plan --- */}
+          {/* --- 3. "Stunning" 2-Column Grid for Plan --- */}
           {network && category && (
             <div className="border-t border-gray-200 pt-6">
               <label className="text-lg font-semibold text-gray-900">
                 3. Select Data Plan
               </label>
-              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="mt-2 grid grid-cols-2 gap-3">
                 {(dataPlans[network].categories as any)[category].map((plan: DataPlan) => (
                   <PlanButton
                     key={plan.id}
                     name={plan.name}
-                    price={plan.price} // <-- "World-class" price from server
+                    duration={plan.duration}
+                    price={plan.price}
                     selected={selectedPlan?.id === plan.id}
                     onClick={() => handlePlanSelect(plan)}
                   />
@@ -427,6 +432,70 @@ export default function DataClientPage({ dataPlans }: Props) {
           </div>
         </div>
       )}
+      
+      {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 3) --- */}
+      {/* Your "Stunning" Receipt Modal */}
+      {receipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center">
+                <CheckCircleIcon className="h-16 w-16 text-green-500" />
+                <h2 className="mt-4 text-xl font-bold text-gray-900">
+                  Purchase Successful
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {receipt.message}
+                </p>
+                
+                <div className="w-full mt-6 space-y-2 rounded-lg border bg-gray-50 p-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Service:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.serviceName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Amount:</span>
+                    <span className="text-sm font-semibold text-gray-900">₦{receipt.amount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Network:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.network}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Phone:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.phone}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Status:</span>
+                    <span className="text-sm font-semibold text-green-600">{receipt.status}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Trans. ID:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.transactionId}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Your "World-Class" Buttons */}
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <Link
+                href="/dashboard"
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+              >
+                Return to Dashboard
+              </Link>
+              <button
+                onClick={() => setReceipt(null)} // "Buy More"
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Buy More
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ------------------------------------------- */}
     </div>
   );
 }
