@@ -22,8 +22,8 @@ import { VtuRequest } from '@prisma/client';
 // --- "World-Class" Type Definitions ---
 type DataPlan = {
   id: string;
-  name: string; // e.g., "1GB"
-  duration: string; // e.g., "(30 Days)"
+  name: string;
+  duration: string;
   price: number;
 };
 type DataPlansObject = {
@@ -58,7 +58,7 @@ const NetworkButton = ({ logo, title, selected, onClick }: {
   </button>
 );
 
-// --- "Stunning" 2-Column Category Button ---
+// --- "Stunning" 2-Column Category Button (Refurbished) ---
 const CategoryButton = ({ title, selected, onClick }: {
   title: string,
   selected: boolean,
@@ -74,7 +74,7 @@ const CategoryButton = ({ title, selected, onClick }: {
   </button>
 );
 
-// --- "Stunning" 2-Column Plan Button (Your Screenshot Design) ---
+// --- "Stunning" 2-Column Plan Button (Refurbished) ---
 const PlanButton = ({ name, duration, price, selected, onClick }: {
   name: string,
   duration: string,
@@ -165,19 +165,21 @@ export default function DataClientPage({ dataPlans }: Props) {
   // --- "World-Class" UI Logic ---
   const handleNetworkSelect = (net: Network) => {
     setNetwork(net);
-    // "World-Class" Auto-select first category
     const firstCategory = Object.keys(dataPlans[net].categories)[0];
     setCategory(firstCategory || null);
     setSelectedPlan(null);
+    setPhoneNumber(''); // Clear phone number
   };
   
   const handleCategorySelect = (cat: string) => {
     setCategory(cat);
     setSelectedPlan(null);
+    setPhoneNumber(''); // Clear phone number
   };
   
   const handlePlanSelect = (plan: DataPlan) => {
     setSelectedPlan(plan);
+    setPhoneNumber(''); // Clear phone number
   };
 
   // --- Handle Open Confirmation Modal ---
@@ -312,7 +314,7 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
           )}
 
-          {/* --- 4. Form Fields --- */}
+          {/* --- 4. Form Fields (YOUR "WORLD-CLASS" UI FLOW) --- */}
           {selectedPlan && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">4. Enter Details</h3>
@@ -326,22 +328,20 @@ export default function DataClientPage({ dataPlans }: Props) {
                 maxLength={11}
                 placeholder="080..."
               />
-            </div>
-          )}
-          
-          {/* --- 5. Submit Button --- */}
-          {selectedPlan && (
-            <div className="border-t border-gray-200 pt-6">
-              {submitError && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
-              )}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isLoading ? 'Purchasing...' : `Purchase Data (Fee: ₦${totalFee})`}
-              </button>
+              
+              {/* --- 5. Submit Button (MOVED) --- */}
+              <div className="pt-2">
+                {submitError && (
+                  <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isLoading ? 'Purchasing...' : `Purchase Data (Fee: ₦${totalFee})`}
+                </button>
+              </div>
             </div>
           )}
         </form>
