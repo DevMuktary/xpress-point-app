@@ -5,15 +5,14 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // Get API credentials
-const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY; // We use the same key as BVN
+const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
 const SUBMIT_ENDPOINT = 'https://raudah.com.ng/api/nin/ipe-clearance';
-const REFUND_CODES = ["404", "405", "406", "407", "409"]; // Your "auto-refund" codes
+const REFUND_CODES = ["404", "405", "406", "407", "409"];
 
 if (!RAUDAH_API_KEY) {
   console.error("CRITICAL: RAUDAH_API_KEY is not set.");
 }
 
-// Helper to parse errors
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The service timed out. Please try again.';
@@ -45,16 +44,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tracking ID is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_IPE_CLEARANCE' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
+    
+    // "World-class" pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-
     if (!wallet || wallet.balance.lessThan(price)) {
-      return NextResponse.json({ error: 'Insufficient funds for this service.' }, { status: 402 });
+      return NextResponse.json({ error: `Insufficient funds for this service.` }, { status: 402 });
     }
 
     // --- 2. Check if this request already exists ---
@@ -83,13 +87,11 @@ export async function POST(request: Request) {
     const data = response.data;
     
     // --- 4. "World-Class" Auto-Refund Logic ---
-    // Check for a failure/refund code *before* charging.
     if (data.response_code && REFUND_CODES.includes(data.response_code)) {
       console.log(`IPE Auto-Refund: ${data.message}`);
       return NextResponse.json({ error: `Sorry 😞 ${data.message}` }, { status: 400 });
     }
     
-    // Check for other failures
     if (data.response_code !== "00" || data.transactionStatus !== "SUCCESSFUL") {
       throw new Error(data.message || "Submission failed. Please check the Tracking ID.");
     }
