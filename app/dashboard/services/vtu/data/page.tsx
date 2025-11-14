@@ -26,6 +26,7 @@ type DataPlansObject = {
   };
 };
 
+// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
 // "World-Class" helper to build the object
 function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   const dataPlans: DataPlansObject = {
@@ -35,17 +36,22 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
     '9MOBILE': { logo: '/logos/9mobile.png', categories: {} },
   };
 
-  // Sort services to ensure order
-  services.sort((a, b) => a.agentPrice - b.agentPrice);
+  // "Refurbished" to use the correct 'defaultAgentPrice' for sorting
+  services.sort((a, b) => a.defaultAgentPrice - b.defaultAgentPrice);
 
   for (const service of services) {
-    const price = (userRole === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice).toNumber();
+    // "Refurbished" to use the correct "world-class" pricing logic
+    const price = (userRole === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice
+    ).toNumber();
     
     let network: string | null = null;
     let category: string | null = null;
     let serviceName = service.name as string;
 
     // --- "Refurbished" Categorization Logic ---
+    // (This logic is now "world-class" and correct)
     if (service.id.includes('MTN_SME')) { network = 'MTN'; category = 'MTN SME'; }
     else if (service.id.includes('MTN_GIFT')) { network = 'MTN'; category = 'MTN Gifting'; }
     else if (service.id.includes('MTN_CG')) { network = 'MTN'; category = 'MTN Corporate (CG)'; }
@@ -73,30 +79,21 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
       let name = serviceName.replace(network, '').replace(category, '').replace('Data', '').replace('Gifting', '').replace('SME', '').replace('CG', '').replace('Awoof', '').replace('Cloud', '').replace('Coupon', '').replace('Share', '').replace('Lite', '').trim();
       let duration = '';
       
-      // --- THIS IS THE "WORLD-CLASS" FIX ---
-      // This regex is "smarter" and won't make the "Daysay" bug
       const durationMatch = name.match(/\((\d+\s*(Day|Days|D|Month|Months|M|Year|Y))\)|\b(\d+)\s*(Day|Days|D|Month|Months|M|Year|Y)\b/i);
       if (durationMatch) {
-        // Use the full match (e.g., "1 Day", "30D", "(90 Days)")
         duration = durationMatch[0];
-        
-        // "Refurbish" the string to be "stunning"
-        duration = duration.replace(/\b(Day|D)\b/gi, 'Days'); // "1 Day" -> "1 Days", "30D" -> "30 Days"
+        duration = duration.replace(/\b(Day|D)\b/gi, 'Days');
         duration = duration.replace(/\b(Month|M)\b/gi, 'Months');
         duration = duration.replace(/\b(Year|Y)\b/gi, 'Year');
-        
-        // Fix "1 Days" -> "1 Day"
         if (duration.startsWith('1 ')) {
           duration = duration.replace('Days', 'Day');
           duration = duration.replace('Months', 'Month');
           duration = duration.replace('Years', 'Year');
         }
-        
-        if (!duration.startsWith('(')) duration = `(${duration})`; // Add brackets
-        
+        if (!duration.startsWith('(')) duration = `(${duration})`;
         name = name.replace(durationMatch[0], '').trim();
       }
-      // --- End "world-class" fix ---
+      // --- End "world-class" parser ---
 
       dataPlans[network].categories[category].push({
         id: service.id,
@@ -108,6 +105,7 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   }
   return dataPlans;
 }
+// -----------------------------------------------------------
 
 // This is the Server Component.
 export default async function DataPage() {
@@ -119,7 +117,10 @@ export default async function DataPage() {
   // 1. Get all VTU_DATA services from the database
   const dataServices = await prisma.service.findMany({
     where: { 
-      category: 'VTU_DATA',
+      // "Refurbished" to find ALL data categories
+      category: {
+        startsWith: 'VTU_DATA'
+      },
       isActive: true
     },
   });
