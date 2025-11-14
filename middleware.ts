@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 // This is your "world-class" main domain
-const MAIN_DOMAIN = 'xpresspoint.net';
+const MAIN_DOMAIN = 'www.xpresspoint.net';
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
@@ -13,11 +13,13 @@ export function middleware(req: NextRequest) {
 
   // "Refurbish" the host to remove 'www.'
   const hostname = host.replace(/^www\./, '');
-
-  // "Stunning" check: If they are on the main domain, do nothing.
+  
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // "Stunning" check: If they are on the main domain OR the www domain, do nothing.
   if (hostname === MAIN_DOMAIN) {
     return NextResponse.next();
   }
+  // ------------------------------------
 
   // "World-Class" Subdomain Logic
   // This "fetches" the 'quadrox' from 'quadrox.xpresspoint.net'
