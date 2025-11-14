@@ -58,8 +58,8 @@ const NetworkButton = ({ logo, title, selected, onClick }: {
   </button>
 );
 
-// --- "Stunning" Horizontal Tab Button (Your Screenshot Design) ---
-const CategoryTab = ({ title, selected, onClick }: {
+// --- "Stunning" 2-Column Category Button ---
+const CategoryButton = ({ title, selected, onClick }: {
   title: string,
   selected: boolean,
   onClick: () => void
@@ -67,13 +67,10 @@ const CategoryTab = ({ title, selected, onClick }: {
   <button
     type="button"
     onClick={onClick}
-    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap
-      ${selected 
-        ? 'bg-blue-600 text-white' 
-        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-      }`}
+    className={`rounded-lg p-4 text-left transition-all border-2
+      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
   >
-    {title}
+    <p className="font-semibold text-gray-900">{title}</p>
   </button>
 );
 
@@ -213,7 +210,7 @@ export default function DataClientPage({ dataPlans }: Props) {
         body: JSON.stringify({ 
           serviceId: selectedPlan!.id, 
           phoneNumber,
-          quantity: 1 // Data is always quantity 1
+          quantity: 1
         }),
       });
       
@@ -273,15 +270,16 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
           </div>
 
-          {/* --- 2. "Stunning" Horizontal Tabs for Category --- */}
+          {/* --- 2. "Stunning" 2-Column Grid for Category --- */}
           {network && (
             <div className="border-t border-gray-200 pt-6">
               <label className="text-lg font-semibold text-gray-900">
                 2. Select Data Category
               </label>
-              <div className="mt-2 flex space-x-2 overflow-x-auto pb-2">
+              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
+              <div className="mt-2 grid grid-cols-2 gap-3">
                 {Object.keys(dataPlans[network].categories).map(cat => (
-                  <CategoryTab
+                  <CategoryButton
                     key={cat}
                     title={cat}
                     selected={category === cat}
