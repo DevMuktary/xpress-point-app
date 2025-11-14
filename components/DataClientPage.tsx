@@ -138,10 +138,7 @@ export default function DataClientPage({ dataPlans }: Props) {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  
-  // --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
   const [receipt, setReceipt] = useState<any | null>(null); 
-  // ---------------------------------------------
 
   // --- "World-Class" Form State ---
   const [network, setNetwork] = useState<Network | null>(null);
@@ -171,7 +168,9 @@ export default function DataClientPage({ dataPlans }: Props) {
   // --- "World-Class" UI Logic ---
   const handleNetworkSelect = (net: Network) => {
     setNetwork(net);
-    setCategory(null);
+    // "World-Class" Auto-select first category
+    const firstCategory = Object.keys(dataPlans[net].categories)[0];
+    setCategory(firstCategory || null);
     setSelectedPlan(null);
   };
   
@@ -188,7 +187,7 @@ export default function DataClientPage({ dataPlans }: Props) {
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    setReceipt(null); // Clear old receipt
+    setReceipt(null); 
 
     if (!selectedPlan) {
       setSubmitError("Please select a data plan.");
@@ -223,17 +222,15 @@ export default function DataClientPage({ dataPlans }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
       setReceipt({
         message: data.message,
         transactionId: data.data.recharge_id,
         phone: phoneNumber,
         amount: data.data.amount_charged,
         network: network,
-        serviceName: selectedPlan!.name + " " + selectedPlan!.duration,
+        serviceName: `${selectedPlan!.name} ${selectedPlan!.duration}`,
         status: data.data.text_status
       });
-      // ---------------------------------------------
       
       setPhoneNumber('');
       setSelectedPlan(null);
@@ -254,8 +251,6 @@ export default function DataClientPage({ dataPlans }: Props) {
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- "Rubbish" Sweet Alert is GONE --- */}
-
       {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
@@ -303,6 +298,7 @@ export default function DataClientPage({ dataPlans }: Props) {
               <label className="text-lg font-semibold text-gray-900">
                 3. Select Data Plan
               </label>
+              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
               <div className="mt-2 grid grid-cols-2 gap-3">
                 {(dataPlans[network].categories as any)[category].map((plan: DataPlan) => (
                   <PlanButton
@@ -433,8 +429,7 @@ export default function DataClientPage({ dataPlans }: Props) {
         </div>
       )}
       
-      {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 3) --- */}
-      {/* Your "Stunning" Receipt Modal */}
+      {/* --- Your "Stunning" Receipt Modal --- */}
       {receipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
@@ -477,13 +472,12 @@ export default function DataClientPage({ dataPlans }: Props) {
               </div>
             </div>
             
-            {/* Your "World-Class" Buttons */}
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               <Link
-                href="/dashboard"
+                href="/dashboard/services/vtu"
                 className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
               >
-                Return to Dashboard
+                Return to VTU
               </Link>
               <button
                 onClick={() => setReceipt(null)} // "Buy More"
@@ -495,7 +489,6 @@ export default function DataClientPage({ dataPlans }: Props) {
           </div>
         </div>
       )}
-      {/* ------------------------------------------- */}
     </div>
   );
 }
