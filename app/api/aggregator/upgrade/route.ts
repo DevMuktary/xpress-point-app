@@ -34,19 +34,19 @@ async function createCpanelRedirect(subdomain: string) {
     return; 
   }
 
-  // "World-Class" fix for Truehost/self-signed SSL certificates
   const agent = new https.Agent({  
     rejectUnauthorized: false
   });
 
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // STEP 1: Create the "stunning" subdomain (we let cPanel use the default dir)
-  const createSubdomainUrl = `${CPANEL_HOSTNAME}/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}`;
+  // STEP 1: Create the "stunning" subdomain
+  const createSubdomainUrl = `https://${CPANEL_HOSTNAME}:2083/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}`;
   
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
   // STEP 2: Create the "world-class" redirect
   const fullSubdomain = `${subdomain}.${CPANEL_DOMAIN}`;
   const redirectUrl = `https://xpresspoint.net/register/${subdomain}`;
-  const createRedirectUrl = `${CPANEL_HOSTNAME}/execute/Redirect/addredirect?domain=${fullSubdomain}&url=${redirectUrl}`;
+  // The "rubbish" URL is now "refurbished" with https:// and :2083
+  const createRedirectUrl = `https://${CPANEL_HOSTNAME}:2083/execute/Redirect/addredirect?domain=${fullSubdomain}&url=${redirectUrl}`;
   // ------------------------------------
 
   try {
@@ -58,7 +58,6 @@ async function createCpanelRedirect(subdomain: string) {
     });
     const subData = subResponse.data;
     if (subData.status !== 1) {
-      // If it "fails" because it *already exists*, that is a "world-class" success
       if (subData.errors[0].includes('already exists')) {
         console.log(`cPanel: Subdomain ${fullSubdomain} already exists. This is OK.`);
       } else {
