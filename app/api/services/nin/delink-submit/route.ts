@@ -17,14 +17,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'NIN is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Price & Check Wallet (THIS IS THE FIX) ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_DELINK' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
+    
+    // "World-class" pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
     }
@@ -43,21 +48,18 @@ export async function POST(request: Request) {
 
     // --- 3. Charge User & Save as PENDING ---
     await prisma.$transaction([
-      // a) Charge wallet
       prisma.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      // b) Create the new request
       prisma.delinkRequest.create({
         data: {
           userId: user.id,
           nin: nin,
-          status: 'PENDING', // <-- PENDING, as you designed
+          status: 'PENDING',
           statusMessage: 'Request submitted. Awaiting admin review.'
         },
       }),
-      // c) Log the transaction
       prisma.transaction.create({
         data: {
           userId: user.id,
