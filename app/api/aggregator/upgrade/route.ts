@@ -3,13 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
 import axios from 'axios';
+import https from 'https'; // "World-class" import to ignore SSL errors
 
 // --- "World-Class" cPanel Config ---
 const CPANEL_DOMAIN = process.env.CPANEL_DOMAIN; // xpresspoint.net
 const CPANEL_USER = process.env.CPANEL_USER;
 const CPANEL_API_TOKEN = process.env.CPANEL_API_TOKEN;
-// "Refurbished" to use your new "world-class" variable
-const CPANEL_HOSTNAME = process.env.CPANEL_HOSTNAME; // https://das112.truehost.cloud:2083
+const CPANEL_HOSTNAME = process.env.CPANEL_HOSTNAME; // das112.truehost.cloud
 // ------------------------------------
 
 let cpanelHeaders: any = {};
@@ -23,8 +23,8 @@ if (CPANEL_API_TOKEN) {
 function generateSubdomain(businessName: string): string {
   return businessName
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, '') // Remove all special chars and spaces
-    .substring(0, 30); // Max 30 chars
+    .replace(/[^a-z0-9]/g, '') 
+    .substring(0, 30);
 }
 
 // --- "World-Class" cPanel API Function ---
@@ -34,22 +34,30 @@ async function createCpanelSubdomain(subdomain: string) {
     return; 
   }
 
-  // This is the "stunning" URL for cPanel's API
-  // We use your 'dir=.' to point it to the main Next.js app root
-  const url = `${CPANEL_HOSTNAME}/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}&dir=.`;
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // We "refurbish" the URL to be "stunningly" correct
+  const url = `https://${CPANEL_HOSTNAME}:2083/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}&dir=.`;
+  // ------------------------------------
   
+  // "World-Class" fix for Truehost/self-signed SSL certificates
+  const agent = new https.Agent({  
+    rejectUnauthorized: false
+  });
+
   try {
-    const response = await axios.get(url, { headers: cpanelHeaders });
+    const response = await axios.get(url, { 
+      headers: cpanelHeaders,
+      httpsAgent: agent // <-- This "world-class" fix ignores SSL errors
+    });
+    
     const data = response.data;
     if (data.status !== 1) {
-      // Log the "rubbish" error from cPanel
       console.error('cPanel API error:', data.errors ? data.errors[0] : 'Unknown cPanel error');
       throw new Error(data.errors ? data.errors[0] : 'cPanel API error');
     }
     console.log(`cPanel: Successfully created subdomain ${subdomain}.${CPANEL_DOMAIN}`);
   } catch (error: any) {
     console.error(`cPanel Error: Failed to create subdomain ${subdomain}:`, error.message);
-    // We re-throw the error so the user knows it failed
     throw new Error(`Database upgrade was successful, but cPanel subdomain creation failed: ${error.message}`);
   }
 }
@@ -96,7 +104,6 @@ export async function POST(request: Request) {
     }
 
     // --- 3. "Stunning" cPanel Call (BEFORE payment) ---
-    // We do this *before* the transaction. If cPanel fails, we stop.
     await createCpanelSubdomain(subdomain);
 
     // --- 4. "World-Class" Database Transaction ---
@@ -133,7 +140,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         message: 'Upgrade successful!',
-        subdomain: subdomain // This is the "world-class" subdomain name
+        subdomain: subdomain
       },
       { status: 200 }
     );
