@@ -37,7 +37,7 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   };
 
   // "Refurbished" to use the correct 'defaultAgentPrice' for sorting
-  services.sort((a, b) => a.defaultAgentPrice - b.defaultAgentPrice);
+  services.sort((a, b) => a.defaultAgentPrice.comparedTo(b.defaultAgentPrice));
 
   for (const service of services) {
     // "Refurbished" to use the correct "world-class" pricing logic
