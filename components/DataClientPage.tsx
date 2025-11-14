@@ -177,7 +177,7 @@ export default function DataClientPage({ dataPlans }: Props) {
   
   const handlePlanSelect = (plan: DataPlan) => {
     setSelectedPlan(plan);
-    setPhoneNumber(''); // Clear phone number on new plan selection
+    setPhoneNumber('');
   };
 
   // --- Handle Open Confirmation Modal ---
@@ -243,6 +243,20 @@ export default function DataClientPage({ dataPlans }: Props) {
   };
   
   const totalFee = selectedPlan?.price || 0;
+
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // We create stable, typed variables for our categories and plans
+  const currentCategories = useMemo(() => {
+    if (!network) return {};
+    return dataPlans[network].categories;
+  }, [network, dataPlans]);
+
+  const currentPlans: DataPlan[] = useMemo(() => {
+    if (!network || !category) return [];
+    // The 'as any' is gone, we now safely access the key
+    return currentCategories[category] || []; 
+  }, [network, category, currentCategories]);
+  // -------------------------------------
   
   return (
     <div className="space-y-6">
@@ -252,70 +266,68 @@ export default function DataClientPage({ dataPlans }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
-          {/* Step 1, 2, 3 are now hidden when a plan is selected */}
+          {/* --- 1. "Modern Buttons" for Network Type --- */}
+          {/* This is "world-class" - it only shows if no plan is selected */}
           {!selectedPlan && (
-            <>
-              {/* --- 1. "Modern Buttons" for Network Type --- */}
-              <div>
-                <label className="text-lg font-semibold text-gray-900">
-                  1. Select Network
-                </label>
-                <div className="mt-2 grid grid-cols-4 gap-3">
-                  {(Object.keys(dataPlans) as Network[]).map(net => (
-                    <NetworkButton
-                      key={net}
-                      title={net} 
-                      logo={dataPlans[net].logo}
-                      selected={network === net}
-                      onClick={() => handleNetworkSelect(net)}
-                    />
-                  ))}
-                </div>
+            <div>
+              <label className="text-lg font-semibold text-gray-900">
+                1. Select Network
+              </label>
+              <div className="mt-2 grid grid-cols-4 gap-3">
+                {(Object.keys(dataPlans) as Network[]).map(net => (
+                  <NetworkButton
+                    key={net}
+                    title={net} 
+                    logo={dataPlans[net].logo}
+                    selected={network === net}
+                    onClick={() => handleNetworkSelect(net)}
+                  />
+                ))}
               </div>
-
-              {/* --- 2. "Stunning" 2-Column Grid for Category --- */}
-              {network && (
-                <div className="border-t border-gray-200 pt-6">
-                  <label className="text-lg font-semibold text-gray-900">
-                    2. Select Data Category
-                  </label>
-                  <div className="mt-2 grid grid-cols-2 gap-3">
-                    {Object.keys(dataPlans[network].categories).map(cat => (
-                      <CategoryButton
-                        key={cat}
-                        title={cat}
-                        selected={category === cat}
-                        onClick={() => handleCategorySelect(cat)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* --- 3. "Stunning" 2-Column Grid for Plan --- */}
-              {network && category && (
-                <div className="border-t border-gray-200 pt-6">
-                  <label className="text-lg font-semibold text-gray-900">
-                    3. Select Data Plan
-                  </label>
-                  <div className="mt-2 grid grid-cols-2 gap-3">
-                    {(dataPlans[network].categories as any)[category].map((plan: DataPlan) => (
-                      <PlanButton
-                        key={plan.id}
-                        name={plan.name}
-                        duration={plan.duration}
-                        price={plan.price}
-                        selected={selectedPlan?.id === plan.id}
-                        onClick={() => handlePlanSelect(plan)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
-          {/* ------------------------------------------- */}
+
+          {/* --- 2. "Stunning" 2-Column Grid for Category --- */}
+          {network && !selectedPlan && (
+            <div className="border-t border-gray-200 pt-6">
+              <label className="text-lg font-semibold text-gray-900">
+                2. Select Data Category
+              </label>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {/* "Refurbished" to use the new 'currentCategories' variable */}
+                {Object.keys(currentCategories).map(cat => (
+                  <CategoryButton
+                    key={cat}
+                    title={cat}
+                    selected={category === cat}
+                    onClick={() => handleCategorySelect(cat)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* --- 3. "Stunning" 2-Column Grid for Plan --- */}
+          {network && category && !selectedPlan && (
+            <div className="border-t border-gray-200 pt-6">
+              <label className="text-lg font-semibold text-gray-900">
+                3. Select Data Plan
+              </label>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {/* "Refurbished" to use the new 'currentPlans' variable */}
+                {currentPlans.map((plan) => (
+                  <PlanButton
+                    key={plan.id}
+                    name={plan.name}
+                    duration={plan.duration}
+                    price={plan.price}
+                    selected={false} // It's never "selected" in this view
+                    onClick={() => handlePlanSelect(plan)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* --- 4. Form Fields (YOUR "WORLD-CLASS" UI FLOW) --- */}
           {selectedPlan && (
@@ -344,7 +356,7 @@ export default function DataClientPage({ dataPlans }: Props) {
               </div>
               
               <h3 className="text-lg font-semibold text-gray-900 pt-4 border-t">
-                4. Enter Details
+                Enter Details
               </h3>
               <DataInput 
                 label="Phone Number*" 
