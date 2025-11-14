@@ -114,8 +114,6 @@ model Service {
   agentPrice          Decimal                @map("agent_price") @db.Decimal(10, 2)
   aggregatorPrice     Decimal                @map("aggregator_price") @db.Decimal(10, 2)
   isActive            Boolean                @default(true) @map("is_active")
-  
-  // Your fix from last time (removing @unique)
   productCode         String?                @map("product_code")
   
   Transaction         Transaction[]
@@ -324,6 +322,8 @@ model VtuRequest {
   apiResponse    Json?
   token          String?   // For electricity
   units          String?   // For electricity
+  pins           Json?     // For Exam Pins (from vend API)
+  
   createdAt      DateTime  @default(now()) @map("created_at")
 
   user           User      @relation(fields: [userId], references: [id])
