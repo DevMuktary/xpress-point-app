@@ -8,8 +8,8 @@ import { EyeIcon, EyeSlashIcon, ShieldCheckIcon } from '@heroicons/react/24/outl
 
 // --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
 import PhoneInput from 'react-phone-number-input/input';
-// We import the *type* from the main package
-import E164Number from 'react-phone-number-input'; 
+// We import the *type* from the 'libphonenumber-js' package
+import { E164Number } from 'libphonenumber-js'; 
 // ---------------------------------------------
 
 // --- "World-Class" Refurbish (Part 1) ---
@@ -161,7 +161,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
               <input
                 id="password" name="password"
                 type={showPassword ? "text" : "password"}
-                value={password} onChange={(e) => setPassword(e.target.value)}
+                value={password} onChange={(e) => setPassword(e.targe.value)}
                 required
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
               />
