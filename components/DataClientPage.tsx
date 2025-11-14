@@ -58,7 +58,6 @@ const NetworkButton = ({ logo, title, selected, onClick }: {
   </button>
 );
 
-// --- "Stunning" 2-Column Category Button (Refurbished) ---
 const CategoryButton = ({ title, selected, onClick }: {
   title: string,
   selected: boolean,
@@ -74,7 +73,6 @@ const CategoryButton = ({ title, selected, onClick }: {
   </button>
 );
 
-// --- "Stunning" 2-Column Plan Button (Refurbished) ---
 const PlanButton = ({ name, duration, price, selected, onClick }: {
   name: string,
   duration: string,
@@ -168,18 +166,18 @@ export default function DataClientPage({ dataPlans }: Props) {
     const firstCategory = Object.keys(dataPlans[net].categories)[0];
     setCategory(firstCategory || null);
     setSelectedPlan(null);
-    setPhoneNumber(''); // Clear phone number
+    setPhoneNumber('');
   };
   
   const handleCategorySelect = (cat: string) => {
     setCategory(cat);
     setSelectedPlan(null);
-    setPhoneNumber(''); // Clear phone number
+    setPhoneNumber('');
   };
   
   const handlePlanSelect = (plan: DataPlan) => {
     setSelectedPlan(plan);
-    setPhoneNumber(''); // Clear phone number
+    setPhoneNumber(''); // Clear phone number on new plan selection
   };
 
   // --- Handle Open Confirmation Modal ---
@@ -254,70 +252,100 @@ export default function DataClientPage({ dataPlans }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- 1. "Modern Buttons" for Network Type --- */}
-          <div>
-            <label className="text-lg font-semibold text-gray-900">
-              1. Select Network
-            </label>
-            <div className="mt-2 grid grid-cols-4 gap-3">
-              {(Object.keys(dataPlans) as Network[]).map(net => (
-                <NetworkButton
-                  key={net}
-                  title={net} 
-                  logo={dataPlans[net].logo}
-                  selected={network === net}
-                  onClick={() => handleNetworkSelect(net)}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* --- 2. "Stunning" 2-Column Grid for Category --- */}
-          {network && (
-            <div className="border-t border-gray-200 pt-6">
-              <label className="text-lg font-semibold text-gray-900">
-                2. Select Data Category
-              </label>
-              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                {Object.keys(dataPlans[network].categories).map(cat => (
-                  <CategoryButton
-                    key={cat}
-                    title={cat}
-                    selected={category === cat}
-                    onClick={() => handleCategorySelect(cat)}
-                  />
-                ))}
+          {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
+          {/* Step 1, 2, 3 are now hidden when a plan is selected */}
+          {!selectedPlan && (
+            <>
+              {/* --- 1. "Modern Buttons" for Network Type --- */}
+              <div>
+                <label className="text-lg font-semibold text-gray-900">
+                  1. Select Network
+                </label>
+                <div className="mt-2 grid grid-cols-4 gap-3">
+                  {(Object.keys(dataPlans) as Network[]).map(net => (
+                    <NetworkButton
+                      key={net}
+                      title={net} 
+                      logo={dataPlans[net].logo}
+                      selected={network === net}
+                      onClick={() => handleNetworkSelect(net)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* --- 3. "Stunning" 2-Column Grid for Plan --- */}
-          {network && category && (
-            <div className="border-t border-gray-200 pt-6">
-              <label className="text-lg font-semibold text-gray-900">
-                3. Select Data Plan
-              </label>
-              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                {(dataPlans[network].categories as any)[category].map((plan: DataPlan) => (
-                  <PlanButton
-                    key={plan.id}
-                    name={plan.name}
-                    duration={plan.duration}
-                    price={plan.price}
-                    selected={selectedPlan?.id === plan.id}
-                    onClick={() => handlePlanSelect(plan)}
-                  />
-                ))}
-              </div>
-            </div>
+              {/* --- 2. "Stunning" 2-Column Grid for Category --- */}
+              {network && (
+                <div className="border-t border-gray-200 pt-6">
+                  <label className="text-lg font-semibold text-gray-900">
+                    2. Select Data Category
+                  </label>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    {Object.keys(dataPlans[network].categories).map(cat => (
+                      <CategoryButton
+                        key={cat}
+                        title={cat}
+                        selected={category === cat}
+                        onClick={() => handleCategorySelect(cat)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* --- 3. "Stunning" 2-Column Grid for Plan --- */}
+              {network && category && (
+                <div className="border-t border-gray-200 pt-6">
+                  <label className="text-lg font-semibold text-gray-900">
+                    3. Select Data Plan
+                  </label>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    {(dataPlans[network].categories as any)[category].map((plan: DataPlan) => (
+                      <PlanButton
+                        key={plan.id}
+                        name={plan.name}
+                        duration={plan.duration}
+                        price={plan.price}
+                        selected={selectedPlan?.id === plan.id}
+                        onClick={() => handlePlanSelect(plan)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
+          {/* ------------------------------------------- */}
 
           {/* --- 4. Form Fields (YOUR "WORLD-CLASS" UI FLOW) --- */}
           {selectedPlan && (
-            <div className="border-t border-gray-200 pt-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">4. Enter Details</h3>
+            <div className="space-y-4">
+              {/* "Stunning" Summary of Selected Plan */}
+              <div>
+                <label className="text-lg font-semibold text-gray-900">
+                  Selected Plan
+                </label>
+                <div className="mt-2 rounded-lg p-4 text-left border-2 border-blue-600 bg-blue-50">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-lg text-blue-900">{selectedPlan.name} {selectedPlan.duration}</p>
+                      <p className="text-sm text-gray-700">{network} - {category}</p>
+                    </div>
+                    <p className="text-lg font-bold text-blue-600">₦{selectedPlan.price}</p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedPlan(null)} // This goes back
+                    className="mt-2 text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    Change Plan
+                  </button>
+                </div>
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 pt-4 border-t">
+                4. Enter Details
+              </h3>
               <DataInput 
                 label="Phone Number*" 
                 id="phone" 
