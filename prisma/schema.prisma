@@ -25,21 +25,7 @@ model User {
   nin                          String?
   hasAgreedToModificationTerms Boolean                @default(false) @map("has_agreed_to_mod_terms")
   
-  // --- "World-Class" Aggregator Refurbish ---
-  subdomain                    String?                @unique // For the Aggregator's brand
-  accountName                  String?                @map("account_name")
-  accountNumber                String?                @map("account_number")
-  bankName                     String?                @map("bank_name")
-  
-  aggregatorId                 String?                @map("aggregator_id")
-  aggregator                   User?                  @relation("AgentToAggregator", fields: [aggregatorId], references: [id])
-  agents                       User[]                 @relation("AgentToAggregator")
-  
-  aggregatorPrices             AggregatorPrice[]
-  withdrawalRequests           WithdrawalRequest[]
-  pendingAccountChanges        PendingAccountChange[]
-  // ----------------------------------------
-
+  // --- Relations ---
   wallet                       Wallet?
   virtualAccounts              VirtualAccount[]
   transactions                 Transaction[]
@@ -48,14 +34,21 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- FIX 1 (WAS MISSING)
+  delinkRequests               DelinkRequest[] // <-- FIX 1
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
   tinRequests                  TinRequest[]
-  jambRequests                 JambRequest[]   // <-- FIX 2 (WAS MISSING)
+  jambRequests                 JambRequest[]   // <-- FIX 2
   examPinRequests              ExamPinRequest[]
-  resultRequests               ResultRequest[] // <-- FIX 3 (WAS MISSING)
+  resultRequests               ResultRequest[] // <-- FIX 3
   vtuRequests                  VtuRequest[]
+  
+  // --- New Aggregator Relations ---
+  aggregatorPrices             AggregatorPrice[]      // <-- FIX 4
+  withdrawalRequests           WithdrawalRequest[]    // <-- FIX 5
+  pendingAccountChanges        PendingAccountChange[] // <-- FIX 6
+  // --------------------------------
+  
   otps                         Otp[]
 
   @@map("users")
@@ -68,10 +61,7 @@ model Wallet {
   updatedAt DateTime @updatedAt @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
   
-  // --- "World-Class" Aggregator Refurbish ---
-  // This is the "stunning" new wallet for commissions
   commissionBalance Decimal  @default(0.00) @map("commission_balance") @db.Decimal(12, 2)
-  // ----------------------------------------
   
   @@map("wallets")
 }
@@ -131,10 +121,8 @@ model Service {
   name                String
   category            String
   
-  // --- "World-Class" Aggregator Refurbish ---
-  platformPrice       Decimal                @map("platform_price") @db.Decimal(10, 2)
-  defaultAgentPrice   Decimal                @map("default_agent_price") @db.Decimal(10, 2)
-  // ----------------------------------------
+  platformPrice       Decimal                @default(0.00) @map("platform_price") @db.Decimal(10, 2)
+  defaultAgentPrice   Decimal                @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
   
   isActive            Boolean                @default(true) @map("is_active")
   productCode         String?                @map("product_code")
@@ -144,7 +132,7 @@ model Service {
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
   TinRequest          TinRequest[]
-  JambRequest         JambRequest[] // <-- FIX 4 (WAS MISSING)
+  JambRequest         JambRequest[] // <-- FIX 7
   ExamPinRequest      ExamPinRequest[]
   ResultRequest       ResultRequest[]
   VtuRequest          VtuRequest[]
@@ -282,7 +270,7 @@ model TinRequest {
   @@map("tin_requests")
 }
 
-// --- FIX 5: ADD THIS MODEL BACK ---
+// --- FIX 8: ADD THIS MODEL BACK ---
 model JambRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
@@ -353,8 +341,6 @@ model VtuRequest {
   @@map("vtu_requests")
 }
 
-// --- "WORLD-CLASS" NEW AGGREGATOR TABLES (YOUR DESIGN) ---
-
 model AggregatorPrice {
   id              String   @id @default(uuid())
   aggregatorId    String   @map("aggregator_id")
@@ -393,7 +379,6 @@ model PendingAccountChange {
   
   @@map("pending_account_changes")
 }
-// ----------------------------------------------------
 
 enum Role {
   AGENT
