@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import WaecPinClientPage from '@/components/WaecPinClientPage'; // We will create this next
+import WaecPinClientPage from '@/components/WaecPinClientPage'; // This component is already correct
 import SafeImage from '@/components/SafeImage';
 
 // This is a Server Component. It fetches data on the server.
@@ -14,11 +14,10 @@ export default async function WaecPinPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // 1. Define the Service ID
+  // --- 1. Define the Service ID ---
   const SERVICE_ID = "WAEC_PIN";
 
-  // 2. Get the "world-class" price from the database
+  // --- 2. Get the "world-class" price from the database ---
   const service = await prisma.service.findUnique({
     where: { id: SERVICE_ID },
   });
@@ -28,10 +27,11 @@ export default async function WaecPinPage() {
     throw new Error("WAEC_PIN service not found in database.");
   }
 
-  // 3. Determine the correct price based on the user's "world-class" role
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // We now use the "refurbished" price fields: platformPrice and defaultAgentPrice
   const serviceFee = user.role === 'AGGREGATOR' 
-    ? service.aggregatorPrice.toNumber() 
-    : service.agentPrice.toNumber();
+    ? service.platformPrice.toNumber() 
+    : service.defaultAgentPrice.toNumber();
   // ------------------------------------
 
   return (
