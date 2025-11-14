@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 // This is your "world-class" main domain
-const MAIN_DOMAIN = 'www.xpresspoint.net';
+const MAIN_DOMAIN = 'xpresspoint.net';
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
