@@ -7,12 +7,14 @@ import { prisma } from '@/lib/prisma';
 import NabtebPinClientPage from '@/components/NabtebPinClientPage'; // We will create this next
 import SafeImage from '@/components/SafeImage';
 
+// This is now a "world-class" Server Component
 export default async function NabtebPinPage() {
   const user = await getUserFromSession();
   if (!user) {
     redirect('/login?error=Please+login+to+continue');
   }
 
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
   const SERVICE_ID = "NABTEB_PIN";
   const service = await prisma.service.findUnique({ where: { id: SERVICE_ID } });
 
@@ -20,9 +22,11 @@ export default async function NabtebPinPage() {
     throw new Error("NABTEB_PIN service not found.");
   }
 
+  // "Refurbished" to use the correct pricing logic
   const serviceFee = user.role === 'AGGREGATOR' 
-    ? service.aggregatorPrice.toNumber() 
-    : service.agentPrice.toNumber();
+    ? service.platformPrice.toNumber() 
+    : service.defaultAgentPrice.toNumber();
+  // ------------------------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -43,6 +47,7 @@ export default async function NabtebPinPage() {
         </h1>
       </div>
       
+      {/* We pass the "world-class" price to the client */}
       <NabtebPinClientPage serviceId={SERVICE_ID} serviceFee={serviceFee} />
     </div>
   );
