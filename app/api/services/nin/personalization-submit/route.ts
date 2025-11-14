@@ -12,7 +12,6 @@ if (!ROBOSTTECH_API_KEY) {
   console.error("CRITICAL: ROBOSTTECH_API_KEY is not set.");
 }
 
-// Helper to parse errors
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The service timed out. Please try again.';
@@ -44,14 +43,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tracking ID is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_PERSONALIZATION' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
+    
+    // "World-class" pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: 'Insufficient funds for this service.' }, { status: 402 });
     }
@@ -89,16 +93,14 @@ export async function POST(request: Request) {
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      // --- THIS IS THE FIX ---
       prisma.personalizationRequest.create({
         data: {
           userId: user.id,
           trackingId: trackingId,
-          status: 'PROCESSING', // Changed from PENDING
+          status: 'PROCESSING',
           statusMessage: 'Submitted. Awaiting completion.'
         },
       }),
-      // ----------------------
       prisma.transaction.create({
         data: {
           userId: user.id,
