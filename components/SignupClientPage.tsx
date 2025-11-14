@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Loading from '@/app/loading';
 import { EyeIcon, EyeSlashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
-import PhoneInput, { E164Number } from 'react-phone-number-input/input'; // Import E164Number
+
+// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
+import PhoneInput from 'react-phone-number-input/input';
+// We import the *type* from the main package
+import { E164Number } from 'react-phone-number-input'; 
+// ---------------------------------------------
 
 // --- "World-Class" Refurbish (Part 1) ---
 // Add new "stunning" props for the Aggregator
@@ -23,7 +28,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState(''); // This will be E164Number string
+  const [phone, setPhone] = useState<E164Number | string>(''); // Use the correct type
   const [password, setPassword] = useState('');
   
   // --- UI States ---
@@ -133,7 +138,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
               Phone Number
             </label>
             <div className="mt-1">
-              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
+              {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 2) --- */}
               <PhoneInput
                 id="phone"
                 name="phone"
