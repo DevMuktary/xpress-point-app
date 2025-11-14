@@ -1,7 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import SignupClientPage from '@/components/SignupClientPage'; // We re-use our "stunning" component
+import SignupClientPage from '@/components/SignupClientPage';
 import { ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 // This is a "world-class" Server Component
