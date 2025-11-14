@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Loading from '@/app/loading';
 import { EyeIcon, EyeSlashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
-import PhoneInput from 'react-phone-number-input/input';
+import PhoneInput, { E164Number } from 'react-phone-number-input/input'; // Import E164Number
 
 // --- "World-Class" Refurbish (Part 1) ---
 // Add new "stunning" props for the Aggregator
@@ -23,7 +23,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(''); // This will be E164Number string
   const [password, setPassword] = useState('');
   
   // --- UI States ---
@@ -47,7 +47,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
           email,
           phone,
           password,
-          aggregatorId: aggregatorId || null, // <-- "World-Class" Refurbish
+          aggregatorId: aggregatorId || null,
         }),
       });
 
@@ -69,7 +69,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
     <>
       {isLoading && <Loading />}
       
-      {/* "Rubbish" error display (we will "refurbish" this later) */}
       {error && (
         <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
           {error}
@@ -134,15 +133,17 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
               Phone Number
             </label>
             <div className="mt-1">
+              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
               <PhoneInput
                 id="phone"
                 name="phone"
                 country="NG"
                 value={phone}
-                onChange={setPhone}
+                onChange={(value: E164Number | undefined) => setPhone(value || '')}
                 required
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
               />
+              {/* ------------------------------------- */}
             </div>
           </div>
 
