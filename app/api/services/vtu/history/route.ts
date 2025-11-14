@@ -25,6 +25,16 @@ export async function GET(request: Request) {
           category: category // Filter by the category
         }
       },
+      // --- THIS IS THE "WORLD-CLASS" FIX ---
+      // We "include" the service to get the "plan they buy"
+      include: {
+        service: {
+          select: {
+            name: true
+          }
+        }
+      },
+      // ------------------------------------
       orderBy: { createdAt: 'desc' },
       take: 20 // Get the last 20
     });
