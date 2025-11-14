@@ -11,7 +11,8 @@ import { Decimal } from '@prisma/client/runtime/library';
 // "World-Class" type for our structured plan
 type DataPlan = {
   id: string;
-  name: string;
+  name: string; // This will be the "Amount" (e.g., "1GB")
+  duration: string; // This will be the "Duration" (e.g., "(30 Days)")
   price: number;
 };
 
@@ -40,29 +41,46 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   for (const service of services) {
     const price = (userRole === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice).toNumber();
     
-    // "Refurbished" plan to get category from name
     let network: string | null = null;
     let category: string | null = null;
+    let serviceName = service.name as string;
 
+    // --- "Refurbished" Categorization Logic ---
     if (service.id.includes('MTN_SME')) { network = 'MTN'; category = 'MTN SME'; }
     else if (service.id.includes('MTN_GIFT')) { network = 'MTN'; category = 'MTN Gifting'; }
     else if (service.id.includes('MTN_CG')) { network = 'MTN'; category = 'MTN Corporate (CG)'; }
+    else if (service.id.includes('MTN_AWOOF')) { network = 'MTN'; category = 'MTN Awoof'; }
     else if (service.id.includes('GLO_GIFT')) { network = 'GLO'; category = 'Glo Gifting'; }
     else if (service.id.includes('GLO_CG')) { network = 'GLO'; category = 'Glo Corporate (CG)'; }
+    else if (service.id.includes('GLO_AWOOF')) { network = 'GLO'; category = 'Glo Awoof'; }
     else if (service.id.includes('AIRTEL_GIFT')) { network = 'AIRTEL'; category = 'Airtel Gifting'; }
     else if (service.id.includes('AIRTEL_CG')) { network = 'AIRTEL'; category = 'Airtel Corporate (CG)'; }
     else if (service.id.includes('AIRTEL_SME')) { network = 'AIRTEL'; category = 'Airtel SME'; }
     else if (service.id.includes('9M_SME')) { network = '9MOBILE'; category = '9mobile SME'; }
     else if (service.id.includes('DATA_9M_')) { network = '9MOBILE'; category = '9mobile Gifting'; }
-    // (We can add all 10+ categories here)
+    // (We will add all 100+ services to the seed.ts to make this robust)
 
     if (network && category) {
       if (!dataPlans[network].categories[category]) {
         dataPlans[network].categories[category] = [];
       }
+      
+      // --- "World-Class" Name Parsing (for your "stunning" button) ---
+      let name = serviceName.replace(network, '').replace(category, '').replace('Data', '').replace('Gifting', '').trim();
+      let duration = '';
+      
+      // Extract duration like (30 Days)
+      const durationMatch = name.match(/\(([^)]+)\)/);
+      if (durationMatch) {
+        duration = durationMatch[0];
+        name = name.replace(duration, '').trim();
+      }
+      // -------------------------------------------------------------
+
       dataPlans[network].categories[category].push({
         id: service.id,
-        name: service.name.replace(`${network} `, '').replace(`${category} `, '').replace('Data', '').replace('Gifting', ''), // Clean up name
+        name: name, // e.g., "1GB"
+        duration: duration, // e.g., "(30 Days)"
         price: price,
       });
     }
@@ -77,7 +95,6 @@ export default async function DataPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
   // 1. Get all VTU_DATA services from the database
   const dataServices = await prisma.service.findMany({
     where: { 
@@ -88,7 +105,6 @@ export default async function DataPage() {
 
   // 2. "Refurbish" the flat list into a "stunning" nested object
   const dataPlans = buildDataPlans(dataServices, user.role);
-  // ------------------------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
