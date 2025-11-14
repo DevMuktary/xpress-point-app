@@ -5,10 +5,12 @@ import { Decimal } from '@prisma/client/runtime/library';
 import axios from 'axios';
 
 // --- "World-Class" cPanel Config ---
-const CPANEL_DOMAIN = process.env.CPANEL_DOMAIN;
+const CPANEL_DOMAIN = process.env.CPANEL_DOMAIN; // xpresspoint.net
 const CPANEL_USER = process.env.CPANEL_USER;
 const CPANEL_API_TOKEN = process.env.CPANEL_API_TOKEN;
-const CPANEL_URL = `https_api_url_not_set`; // Will be set if keys exist
+// "Refurbished" to use your new "world-class" variable
+const CPANEL_HOSTNAME = process.env.CPANEL_HOSTNAME; // https://das112.truehost.cloud:2083
+// ------------------------------------
 
 let cpanelHeaders: any = {};
 if (CPANEL_API_TOKEN) {
@@ -27,25 +29,28 @@ function generateSubdomain(businessName: string): string {
 
 // --- "World-Class" cPanel API Function ---
 async function createCpanelSubdomain(subdomain: string) {
-  if (!CPANEL_DOMAIN || !CPANEL_USER || !CPANEL_API_TOKEN) {
+  if (!CPANEL_DOMAIN || !CPANEL_USER || !CPANEL_API_TOKEN || !CPANEL_HOSTNAME) {
     console.error("CRITICAL: cPanel variables are not set. Skipping subdomain creation.");
-    // We don't throw an error, we just log it.
     return; 
   }
 
   // This is the "stunning" URL for cPanel's API
-  const url = `${CPANEL_URL}/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}&dir=public_html/${subdomain}`;
+  // We use your 'dir=.' to point it to the main Next.js app root
+  const url = `${CPANEL_HOSTNAME}/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}&dir=.`;
   
   try {
     const response = await axios.get(url, { headers: cpanelHeaders });
     const data = response.data;
     if (data.status !== 1) {
-      throw new Error(data.errors[0] || 'cPanel API error');
+      // Log the "rubbish" error from cPanel
+      console.error('cPanel API error:', data.errors ? data.errors[0] : 'Unknown cPanel error');
+      throw new Error(data.errors ? data.errors[0] : 'cPanel API error');
     }
     console.log(`cPanel: Successfully created subdomain ${subdomain}.${CPANEL_DOMAIN}`);
   } catch (error: any) {
     console.error(`cPanel Error: Failed to create subdomain ${subdomain}:`, error.message);
-    // We don't stop the user's upgrade if this fails
+    // We re-throw the error so the user knows it failed
+    throw new Error(`Database upgrade was successful, but cPanel subdomain creation failed: ${error.message}`);
   }
 }
 
@@ -90,7 +95,11 @@ export async function POST(request: Request) {
       subdomain = `${subdomain}${Math.floor(Math.random() * 100)}`;
     }
 
-    // --- 3. "World-Class" Transaction ---
+    // --- 3. "Stunning" cPanel Call (BEFORE payment) ---
+    // We do this *before* the transaction. If cPanel fails, we stop.
+    await createCpanelSubdomain(subdomain);
+
+    // --- 4. "World-Class" Database Transaction ---
     await prisma.$transaction([
       prisma.wallet.update({
         where: { userId: user.id },
@@ -120,16 +129,11 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // --- 4. "Stunning" cPanel Call (After successful payment) ---
-    // We do this *after* the transaction so the user is upgraded
-    // even if cPanel fails.
-    await createCpanelSubdomain(subdomain);
-
     // --- 5. Return the "Stunning" Success Response ---
     return NextResponse.json(
       { 
         message: 'Upgrade successful!',
-        subdomain: subdomain
+        subdomain: subdomain // This is the "world-class" subdomain name
       },
       { status: 200 }
     );
@@ -137,7 +141,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error(`Aggregator Upgrade Error:`, error.message);
     return NextResponse.json(
-      { error: "An internal server error occurred." },
+      { error: error.message || "An internal server error occurred." },
       { status: 500 }
     );
   }
