@@ -25,7 +25,21 @@ model User {
   nin                          String?
   hasAgreedToModificationTerms Boolean                @default(false) @map("has_agreed_to_mod_terms")
   
-  // --- Relations ---
+  // --- "WORLD-CLASS" AGGREGATOR FIELDS (RESTORED) ---
+  subdomain                    String?                @unique
+  accountName                  String?                @map("account_name")
+  accountNumber                String?                @map("account_number")
+  bankName                     String?                @map("bank_name")
+  
+  aggregatorId                 String?                @map("aggregator_id")
+  aggregator                   User?                  @relation("AgentToAggregator", fields: [aggregatorId], references: [id])
+  agents                       User[]                 @relation("AgentToAggregator")
+  
+  aggregatorPrices             AggregatorPrice[]
+  withdrawalRequests           WithdrawalRequest[]
+  pendingAccountChanges        PendingAccountChange[]
+  // ------------------------------------------------
+  
   wallet                       Wallet?
   virtualAccounts              VirtualAccount[]
   transactions                 Transaction[]
@@ -34,21 +48,14 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- FIX 1
+  delinkRequests               DelinkRequest[] // <-- FIX 1 (WAS MISSING)
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
   tinRequests                  TinRequest[]
-  jambRequests                 JambRequest[]   // <-- FIX 2
+  jambRequests                 JambRequest[]   // <-- FIX 2 (WAS MISSING)
   examPinRequests              ExamPinRequest[]
-  resultRequests               ResultRequest[] // <-- FIX 3
+  resultRequests               ResultRequest[] // <-- FIX 3 (WAS MISSING)
   vtuRequests                  VtuRequest[]
-  
-  // --- New Aggregator Relations ---
-  aggregatorPrices             AggregatorPrice[]      // <-- FIX 4
-  withdrawalRequests           WithdrawalRequest[]    // <-- FIX 5
-  pendingAccountChanges        PendingAccountChange[] // <-- FIX 6
-  // --------------------------------
-  
   otps                         Otp[]
 
   @@map("users")
@@ -132,7 +139,7 @@ model Service {
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
   TinRequest          TinRequest[]
-  JambRequest         JambRequest[] // <-- FIX 7
+  JambRequest         JambRequest[] // <-- FIX 4 (WAS MISSING)
   ExamPinRequest      ExamPinRequest[]
   ResultRequest       ResultRequest[]
   VtuRequest          VtuRequest[]
@@ -270,7 +277,7 @@ model TinRequest {
   @@map("tin_requests")
 }
 
-// --- FIX 8: ADD THIS MODEL BACK ---
+// --- FIX 5: ADD THIS MODEL BACK ---
 model JambRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
