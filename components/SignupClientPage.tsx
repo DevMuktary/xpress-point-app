@@ -161,7 +161,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
               <input
                 id="password" name="password"
                 type={showPassword ? "text" : "password"}
-                value={password} onChange={(e) => setPassword(e.targe.value)}
+                value={password} onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
               />
