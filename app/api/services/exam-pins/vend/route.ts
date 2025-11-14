@@ -11,8 +11,6 @@ if (!API_KEY) {
   console.error("CRITICAL: CHEAPDATASALES_API_KEY is not set.");
 }
 
-// --- THIS IS THE FIX (Part 1) ---
-// We add the missing "world-class" error parser
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The service timed out. Please try again.';
@@ -31,7 +29,6 @@ function parseApiError(error: any): string {
   }
   return 'An internal server error occurred.';
 }
-// ---------------------------------
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -43,6 +40,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
+  // --- We must get these from the transaction ---
+  let service: any = null;
+  let totalPrice: Decimal = new Decimal(0);
+  let userReference: string = `XPS-FAILED-${Date.now()}`;
+
   try {
     const body = await request.json();
     const { serviceId, phoneNumber, quantity } = body; 
@@ -52,13 +54,18 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Get Price & Check Wallet ---
-    const service = await prisma.service.findUnique({ where: { id: serviceId } });
+    service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive || !service.productCode) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    const pricePerPin = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
-    const totalPrice = pricePerPin.mul(quantity);
+    // --- THIS IS THE "WORLD-CLASS" FIX ---
+    // We now use the "refurbished" price fields
+    const pricePerPin = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    totalPrice = pricePerPin.mul(quantity);
+    // ------------------------------------
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(totalPrice)) {
@@ -66,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Charge User *before* API call ---
-    const userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
+    userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
     
     await prisma.$transaction([
       prisma.wallet.update({
@@ -169,13 +176,23 @@ export async function POST(request: Request) {
     }
 
   } catch (error: any) {
-    // --- THIS IS THE FIX (Part 2) ---
-    // We now call the function we added at the top
     const errorMessage = parseApiError(error);
     console.error(`Exam Pin (Vend) Error:`, errorMessage);
     
-    // TODO: We must "refurbish" this to refund the user if the app crashes *after* charging
-    // but *before* the API call. This is a "world-class" edge case.
+    // --- "WORLD-CLASS" CRASH-RECOVERY REFUND ---
+    if (totalPrice.greaterThan(0)) {
+      console.log("CRITICAL ERROR: Refunding user due to server crash.");
+      await prisma.$transaction([
+        prisma.wallet.update({
+          where: { userId: user!.id },
+          data: { balance: { increment: totalPrice } },
+        }),
+        prisma.transaction.update({
+          where: { reference: userReference },
+          data: { status: 'FAILED' },
+        }),
+      ]);
+    }
     
     return NextResponse.json(
       { error: errorMessage },
