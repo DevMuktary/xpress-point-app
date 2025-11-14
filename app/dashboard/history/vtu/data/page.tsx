@@ -13,12 +13,15 @@ export default async function DataHistoryPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
   // 1. Get the user's "world-class" requests
   const requests = await prisma.vtuRequest.findMany({
     where: { 
       userId: user.id,
       service: {
-        category: 'VTU_DATA' // <-- "Refurbished" for Data
+        category: {
+          startsWith: 'VTU_DATA' // <-- "Refurbished" from 'VTU_DATA'
+        }
       }
     },
     orderBy: { createdAt: 'desc' },
@@ -28,6 +31,7 @@ export default async function DataHistoryPage() {
       }
     }
   });
+  // ------------------------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
