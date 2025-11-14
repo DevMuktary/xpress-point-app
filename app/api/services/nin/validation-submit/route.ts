@@ -5,15 +5,14 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // Get API credentials
-const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY; // We use the same key as BVN
+const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
 const SUBMIT_ENDPOINT = 'https://raudah.com.ng/api/nin/instantvalidation';
-const REFUND_CODES = ["404", "405", "406", "407", "409"]; // Your "auto-refund" codes
+const REFUND_CODES = ["404", "405", "406", "407", "409"];
 
 if (!RAUDAH_API_KEY) {
   console.error("CRITICAL: RAUDAH_API_KEY is not set.");
 }
 
-// Helper to parse errors
 function parseApiError(error: any): string {
   if (error.code === 'ECONNABORTED') {
     return 'The service timed out. Please try again.';
@@ -39,22 +38,27 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { nin, scode } = body; // scode = "47", "48", "49", or "50"
+    const { nin, scode } = body; 
 
     if (!nin || !scode) {
       return NextResponse.json({ error: 'NIN and Reason Code (scode) are required.' }, { status: 400 });
     }
     
-    const serviceId = `NIN_VALIDATION_${scode}`; // e.g., "NIN_VALIDATION_47"
+    const serviceId = `NIN_VALIDATION_${scode}`;
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    
+    // "World-class" pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
 
+    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
     }
@@ -101,7 +105,6 @@ export async function POST(request: Request) {
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      // We use upsert to create a new one, or retry a FAILED one
       prisma.validationRequest.upsert({
         where: {
           userId_nin_scode: {
