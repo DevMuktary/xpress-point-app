@@ -25,7 +25,21 @@ model User {
   nin                          String?
   hasAgreedToModificationTerms Boolean                @default(false) @map("has_agreed_to_mod_terms")
   
-  // --- Relations ---
+  // --- "World-Class" Aggregator Refurbish ---
+  subdomain                    String?                @unique // For the Aggregator's brand
+  accountName                  String?                @map("account_name")
+  accountNumber                String?                @map("account_number")
+  bankName                     String?                @map("bank_name")
+  
+  aggregatorId                 String?                @map("aggregator_id")
+  aggregator                   User?                  @relation("AgentToAggregator", fields: [aggregatorId], references: [id])
+  agents                       User[]                 @relation("AgentToAggregator")
+  
+  aggregatorPrices             AggregatorPrice[]
+  withdrawalRequests           WithdrawalRequest[]
+  pendingAccountChanges        PendingAccountChange[]
+  // ----------------------------------------
+
   wallet                       Wallet?
   virtualAccounts              VirtualAccount[]
   transactions                 Transaction[]
@@ -53,6 +67,12 @@ model Wallet {
   balance   Decimal  @default(0.00) @db.Decimal(12, 2)
   updatedAt DateTime @updatedAt @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
+  
+  // --- "World-Class" Aggregator Refurbish ---
+  // This is the "stunning" new wallet for commissions
+  commissionBalance Decimal  @default(0.00) @map("commission_balance") @db.Decimal(12, 2)
+  // ----------------------------------------
+  
   @@map("wallets")
 }
 
@@ -93,7 +113,6 @@ model NinVerification {
   expiresAt       DateTime @map("expires_at")
   user            User     @relation(fields: [userId], references: [id])
   transactions    Transaction[]
-
   @@map("nin_verifications")
 }
 
@@ -111,8 +130,12 @@ model Service {
   id                  String                 @id
   name                String
   category            String
-  agentPrice          Decimal                @map("agent_price") @db.Decimal(10, 2)
-  aggregatorPrice     Decimal                @map("aggregator_price") @db.Decimal(10, 2)
+  
+  // --- "World-Class" Aggregator Refurbish ---
+  platformPrice       Decimal                @map("platform_price") @db.Decimal(10, 2)
+  defaultAgentPrice   Decimal                @map("default_agent_price") @db.Decimal(10, 2)
+  // ----------------------------------------
+  
   isActive            Boolean                @default(true) @map("is_active")
   productCode         String?                @map("product_code")
   
@@ -125,6 +148,7 @@ model Service {
   ExamPinRequest      ExamPinRequest[]
   ResultRequest       ResultRequest[]
   VtuRequest          VtuRequest[]
+  AggregatorPrice     AggregatorPrice[]
   
   @@map("services")
 }
@@ -318,19 +342,58 @@ model VtuRequest {
   meterNumber    String?   @map("meter_number")
   amount         Decimal   @db.Decimal(12, 2)
   quantity       Int?      @default(1)
-  status         String    // "COMPLETED" or "FAILED"
+  status         String
   apiResponse    Json?
-  token          String?   // For electricity
-  units          String?   // For electricity
-  pins           Json?     // For Exam Pins (from vend API)
-  
+  token          String?
+  units          String?
+  pins           Json?
   createdAt      DateTime  @default(now()) @map("created_at")
-
   user           User      @relation(fields: [userId], references: [id])
   service        Service   @relation(fields: [serviceId], references: [id])
-  
   @@map("vtu_requests")
 }
+
+// --- "WORLD-CLASS" NEW AGGREGATOR TABLES (YOUR DESIGN) ---
+
+model AggregatorPrice {
+  id              String   @id @default(uuid())
+  aggregatorId    String   @map("aggregator_id")
+  serviceId       String   @map("service_id")
+  commission      Decimal  @db.Decimal(10, 2)
+  
+  aggregator      User     @relation(fields: [aggregatorId], references: [id])
+  service         Service  @relation(fields: [serviceId], references: [id])
+  
+  @@unique([aggregatorId, serviceId])
+  @@map("aggregator_prices")
+}
+
+model WithdrawalRequest {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  amount          Decimal       @db.Decimal(12, 2)
+  status          RequestStatus @default(PENDING)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  completedAt     DateTime?     @map("completed_at")
+  
+  user            User          @relation(fields: [userId], references: [id])
+  
+  @@map("withdrawal_requests")
+}
+
+model PendingAccountChange {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  newAccountName  String   @map("new_account_name")
+  newAccountNumber String  @map("new_account_number")
+  newBankName     String   @map("new_bank_name")
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  user            User     @relation(fields: [userId], references: [id])
+  
+  @@map("pending_account_changes")
+}
+// ----------------------------------------------------
 
 enum Role {
   AGENT
