@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { sendOtpSms } from '@/lib/sms';
+import jwt from 'jsonwebtoken';
+// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
+// We import from your "stunning" whatsapp.ts file, not the "rubbish" sms.ts
+import { sendOtpMessage } from '@/lib/whatsapp'; 
+// ---------------------------------------------
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +18,7 @@ export async function POST(request: Request) {
       email, 
       phone, 
       password,
-      aggregatorId // <-- "World-Class" Refurbish
+      aggregatorId 
     } = body;
 
     if (!firstName || !lastName || !email || !phone || !password) {
@@ -44,7 +50,6 @@ export async function POST(request: Request) {
       );
     }
     
-    // --- "World-Class" Aggregator Check ---
     if (aggregatorId) {
       const aggregatorExists = await prisma.user.findFirst({
         where: { id: aggregatorId, role: 'AGGREGATOR' }
@@ -55,7 +60,6 @@ export async function POST(request: Request) {
         );
       }
     }
-    // ------------------------------------
 
     // 2. Hash password
     const passwordHash = await bcrypt.hash(password, 10);
@@ -68,8 +72,8 @@ export async function POST(request: Request) {
         email: email.toLowerCase(),
         phoneNumber: phone,
         passwordHash,
-        role: 'AGENT', // All new signups are AGENTs
-        aggregatorId: aggregatorId || null, // <-- "World-Class" Refurbish
+        role: 'AGENT',
+        aggregatorId: aggregatorId || null,
       }
     });
     
@@ -85,7 +89,10 @@ export async function POST(request: Request) {
       },
     });
 
-    await sendOtpSms(phone, otpCode);
+    // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
+    // We call your "stunning" WhatsApp function
+    await sendOtpMessage(phone, otpCode);
+    // ---------------------------------------------
     
     return NextResponse.json(
       { message: 'Registration successful. OTP sent.' },
@@ -94,7 +101,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Registration Error:', error);
-    if (error.code === 'P2002') { // Prisma unique constraint error
+    if (error.code === 'P2002') { 
       return NextResponse.json(
         { error: 'An account with this email or phone number already exists.' },
         { status: 409 }
