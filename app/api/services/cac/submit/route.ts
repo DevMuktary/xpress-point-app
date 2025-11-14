@@ -23,39 +23,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Service ID and Form Data are required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Price & Check Wallet (THIS IS THE FIX) ---
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
+    
+    // "World-class" pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
     }
 
     // --- 2. Charge User & Save as PENDING ---
     await prisma.$transaction([
-      // a) Charge wallet
       prisma.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      // b) Create the new request
       prisma.cacRequest.create({
         data: {
           userId: user.id,
           serviceId: serviceId,
-          status: 'PENDING', // <-- PENDING, as you designed
+          status: 'PENDING',
           statusMessage: 'Request submitted. Awaiting admin review.',
-          formData: formData as any, // Save all the form data
+          formData: formData as any,
           passportUrl: passportUrl || null,
           signatureUrl: signatureUrl || null,
           ninSlipUrl: ninSlipUrl || null,
         },
       }),
-      // c) Log the transaction
       prisma.transaction.create({
         data: {
           userId: user.id,
