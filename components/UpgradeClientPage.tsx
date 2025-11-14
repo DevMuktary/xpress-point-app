@@ -317,7 +317,6 @@ export default function UpgradeClientPage({ fee }: Props) {
                   <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-3 border border-gray-200">
                     <LinkIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
                     <span className="flex-1 text-sm font-medium text-blue-600 break-all">
-                      {/* "Refurbished" to show the cPanel link */}
                       https://{subdomain}.xpresspoint.net
                     </span>
                     <CopyButton textToCopy={`https://${subdomain}.xpresspoint.net`} />
