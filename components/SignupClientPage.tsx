@@ -9,7 +9,7 @@ import { EyeIcon, EyeSlashIcon, ShieldCheckIcon } from '@heroicons/react/24/outl
 // --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
 import PhoneInput from 'react-phone-number-input/input';
 // We import the *type* from the main package
-import { E164Number } from 'react-phone-number-input'; 
+import E164Number from 'react-phone-number-input'; 
 // ---------------------------------------------
 
 // --- "World-Class" Refurbish (Part 1) ---
