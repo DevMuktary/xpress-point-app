@@ -25,17 +25,16 @@ export function middleware(req: NextRequest) {
   
   // "Stunningly" rewrite the URL. The user *sees* 'quadrox.xpresspoint.net'
   // but the server *shows* them the content from '/register/quadrox'
-  url.pathname = `/register/${subdomain}${url.pathname}`;
+  url.pathname = `/register/${subdomain}`;
   return NextResponse.rewrite(url);
 }
 
 // --- THIS IS THE "WORLD-CLASS" FIX ---
-// "Refurbished" the matcher to be "stunningly" correct.
-// It now *only* runs on the "root" path ('/').
-// Any other path (like /login) will be a 404, which is correct.
+// We "refurbish" the matcher to be "stunningly" simple.
+// It will ONLY run on the root path ('/').
+// It will *ignore* all other paths (like /_next/static/, /api/, etc.)
+// This "stunningly" fixes the 404 loop.
 export const config = {
-  matcher: [
-    '/'
-  ],
+  matcher: ['/'],
 };
 // ------------------------------------
