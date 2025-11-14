@@ -37,23 +37,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
+  // --- We must get these from the transaction ---
+  let service: any = null;
+  let totalPrice: Decimal = new Decimal(0);
+  let userReference: string = `XPS-FAILED-${Date.now()}`;
+
   try {
     const body = await request.json();
-    const { serviceId, phoneNumber, amount, quantity = 1 } = body;
+    const { serviceId, phoneNumber, amount, quantity = 1 } = body; 
 
     if (!serviceId) {
       return NextResponse.json({ error: 'Service ID is required.' }, { status: 400 });
     }
 
     // --- 1. Get Price & Check Wallet ---
-    const service = await prisma.service.findUnique({ where: { id: serviceId } });
+    service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive || !service.productCode) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    let totalPrice: Decimal;
     let apiPayload: any;
-    const userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
+    userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
     
     // --- 2. "World-Class" Dynamic Logic ---
     if (service.category === 'VTU_AIRTIME') {
@@ -67,7 +71,7 @@ export async function POST(request: Request) {
         amount: amount,
         action: 'vend',
         user_reference: userReference,
-        bypass_network: 'yes' // Ignore network verification
+        bypass_network: 'yes'
       };
     } else if (service.category === 'VTU_DATA') {
       if (!phoneNumber) {
@@ -122,9 +126,22 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 5. Handle "World-Class" Response ---
-    if (data.status === true && data.text_status === 'COMPLETED') {
+    // --- 5. "WORLD-CLASS" REFURBISHED Response ---
+    // We now accept "COMPLETED" OR "PENDING" as a success!
+    if (data.status === true && (data.text_status === 'COMPLETED' || data.text_status === 'PENDING')) {
       // --- SUCCESS! ---
+      
+      // Parse the PINs (will be null for Airtime, which is fine)
+      let pins = null;
+      if (data.data?.true_response) {
+        try {
+          pins = JSON.parse(data.data.true_response);
+        } catch {
+          pins = data.data.true_response; // Save as string if not JSON
+        }
+      }
+      
+      // Update transaction and save pins
       await prisma.$transaction([
         prisma.transaction.update({
           where: { reference: userReference },
@@ -142,14 +159,15 @@ export async function POST(request: Request) {
             apiResponse: data as any,
             token: data.data?.token || null,
             units: data.data?.units?.toString() || null,
+            pins: pins ? (pins as any) : undefined,
           }
         })
       ]);
 
       return NextResponse.json({
-        message: data.server_message,
-        pins: data.data?.true_response ? JSON.parse(data.data.true_response) : [],
-        data: data.data // For electricity
+        message: data.server_message, // "Transaction Submitted Successfully"
+        pins: pins || [],
+        data: data.data
       });
 
     } else {
@@ -157,14 +175,17 @@ export async function POST(request: Request) {
       const errorMessage = data.server_message || data.data?.true_response || "Purchase failed.";
       
       await prisma.$transaction([
+        // a) Refund the wallet
         prisma.wallet.update({
           where: { userId: user.id },
           data: { balance: { increment: totalPrice } },
         }),
+        // b) Mark transaction as FAILED
         prisma.transaction.update({
           where: { reference: userReference },
           data: { status: 'FAILED' },
         }),
+        // c) Log the failed request
         prisma.vtuRequest.create({
           data: {
             userId: user.id,
@@ -185,8 +206,23 @@ export async function POST(request: Request) {
   } catch (error: any) {
     const errorMessage = parseApiError(error);
     console.error(`VTU (Vend) Error:`, errorMessage);
-    // TODO: We must "refurbish" this to refund the user if the app crashes *after* charging
-    // but *before* the API call. This is a "world-class" edge case.
+    
+    // --- "WORLD-CLASS" CRASH-RECOVERY REFUND ---
+    // If the code crashes *after* charging but *before* the API call
+    // (e.g., timeout, network error), we must refund the user.
+    if (totalPrice.greaterThan(0)) {
+      console.log("CRITICAL ERROR: Refunding user due to server crash.");
+      await prisma.$transaction([
+        prisma.wallet.update({
+          where: { userId: user!.id },
+          data: { balance: { increment: totalPrice } },
+        }),
+        prisma.transaction.update({
+          where: { reference: userReference },
+          data: { status: 'FAILED' },
+        }),
+      ]);
+    }
     
     return NextResponse.json(
       { error: errorMessage },
