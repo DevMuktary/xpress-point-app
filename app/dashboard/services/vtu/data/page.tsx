@@ -26,7 +26,6 @@ type DataPlansObject = {
   };
 };
 
-// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
 // "World-Class" helper to build the object
 function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   const dataPlans: DataPlansObject = {
@@ -36,11 +35,9 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
     '9MOBILE': { logo: '/logos/9mobile.png', categories: {} },
   };
 
-  // "Refurbished" to use the correct 'defaultAgentPrice' for sorting
   services.sort((a, b) => a.defaultAgentPrice.comparedTo(b.defaultAgentPrice));
 
   for (const service of services) {
-    // "Refurbished" to use the correct "world-class" pricing logic
     const price = (userRole === 'AGGREGATOR' 
       ? service.platformPrice 
       : service.defaultAgentPrice
@@ -51,7 +48,7 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
     let serviceName = service.name as string;
 
     // --- "Refurbished" Categorization Logic ---
-    // (This logic is now "world-class" and correct)
+    // This now correctly finds all 10+ categories
     if (service.id.includes('MTN_SME')) { network = 'MTN'; category = 'MTN SME'; }
     else if (service.id.includes('MTN_GIFT')) { network = 'MTN'; category = 'MTN Gifting'; }
     else if (service.id.includes('MTN_CG')) { network = 'MTN'; category = 'MTN Corporate (CG)'; }
@@ -105,7 +102,6 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   }
   return dataPlans;
 }
-// -----------------------------------------------------------
 
 // This is the Server Component.
 export default async function DataPage() {
@@ -114,6 +110,7 @@ export default async function DataPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
+  // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
   // 1. Get all VTU_DATA services from the database
   const dataServices = await prisma.service.findMany({
     where: { 
@@ -124,6 +121,7 @@ export default async function DataPage() {
       isActive: true
     },
   });
+  // -------------------------------------------
 
   // 2. "Refurbish" the flat list into a "stunning" nested object
   const dataPlans = buildDataPlans(dataServices, user.role);
