@@ -3,17 +3,19 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
 import axios from 'axios';
+import https from 'https'; // "World-class" import to ignore SSL errors
 
-// --- "World-Class" Cloudflare Config ---
-const CF_ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
-const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN; // Must be "Bearer ..."
-const APP_DOMAIN = "xpresspoint.net"; // Your "world-class" main domain
+// --- "World-Class" cPanel Config ---
+const CPANEL_DOMAIN = process.env.CPANEL_DOMAIN; // xpresspoint.net
+const CPANEL_USER = process.env.CPANEL_USER;
+const CPANEL_API_TOKEN = process.env.CPANEL_API_TOKEN;
+const CPANEL_HOSTNAME = process.env.CPANEL_HOSTNAME; // das112.truehost.cloud
+// ------------------------------------
 
-let cfHeaders: any = {};
-if (CF_API_TOKEN) {
-  cfHeaders = {
-    'Authorization': CF_API_TOKEN,
-    'Content-Type': 'application/json'
+let cpanelHeaders: any = {};
+if (CPANEL_API_TOKEN) {
+  cpanelHeaders = {
+    'Authorization': `cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}`
   };
 }
 
@@ -25,43 +27,61 @@ function generateSubdomain(businessName: string): string {
     .substring(0, 30);
 }
 
-// --- "World-Class" Cloudflare API Function (Refurbished) ---
-async function createCloudflareRecord(subdomain: string) {
-  if (!CF_ZONE_ID || !CF_API_TOKEN) {
-    console.error("CRITICAL: Cloudflare variables are not set. Skipping subdomain creation.");
+// --- "World-Class" cPanel API Function (Refurbished) ---
+async function createCpanelRedirect(subdomain: string) {
+  if (!CPANEL_DOMAIN || !CPANEL_USER || !CPANEL_API_TOKEN || !CPANEL_HOSTNAME) {
+    console.error("CRITICAL: cPanel variables are not set. Skipping subdomain creation.");
     return; 
   }
 
-  const url = `https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records`;
+  // "World-Class" fix for Truehost/self-signed SSL certificates
+  const agent = new https.Agent({  
+    rejectUnauthorized: false
+  });
 
-  const payload = {
-    type: 'CNAME',
-    name: subdomain,         // e.g., "quadrox"
-    content: APP_DOMAIN,     // e.g., "xpresspoint.net"
-    ttl: 1,                  // 1 = Automatic
-    proxied: true            // "Stunning" orange cloud
-  };
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // STEP 1: Create the "stunning" subdomain (we let cPanel use the default dir)
+  const createSubdomainUrl = `https://${CPANEL_HOSTNAME}:2083/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}`;
+  
+  // STEP 2: Create the "world-class" redirect
+  const fullSubdomain = `${subdomain}.${CPANEL_DOMAIN}`;
+  const redirectUrl = `https://xpresspoint.net/register/${subdomain}`;
+  // The "rubbish" URL is now "refurbished" with https:// and :2083
+  const createRedirectUrl = `https://${CPANEL_HOSTNAME}:2083/execute/Redirect/addredirect?domain=${fullSubdomain}&url=${redirectUrl}`;
+  // ------------------------------------
 
   try {
-    console.log(`Cloudflare: Attempting to create CNAME record: ${subdomain}.${APP_DOMAIN}`);
-    const response = await axios.post(url, payload, { headers: cfHeaders });
-    
-    const data = response.data;
-    if (data.success !== true) {
-      const error = data.errors[0]?.message || 'Unknown Cloudflare API error';
-      // If it "fails" because it *already exists*, that is a "world-class" success
-      if (error.includes('already exists')) {
-        console.log(`Cloudflare: CNAME record ${subdomain}.${APP_DOMAIN} already exists. This is OK.`);
+    // --- Run Step 1 ---
+    console.log(`cPanel: Attempting to create subdomain: ${fullSubdomain}`);
+    const subResponse = await axios.get(createSubdomainUrl, { 
+      headers: cpanelHeaders,
+      httpsAgent: agent
+    });
+    const subData = subResponse.data;
+    if (subData.status !== 1) {
+      if (subData.errors[0].includes('already exists')) {
+        console.log(`cPanel: Subdomain ${fullSubdomain} already exists. This is OK.`);
       } else {
-        throw new Error(error);
+        throw new Error(subData.errors[0] || 'cPanel Subdomain API error');
       }
     }
-    console.log(`Cloudflare: Successfully created CNAME record.`);
+    console.log(`cPanel: Successfully created subdomain.`);
+
+    // --- Run Step 2 ---
+    console.log(`cPanel: Attempting to create redirect: ${fullSubdomain} -> ${redirectUrl}`);
+    const redResponse = await axios.get(createRedirectUrl, { 
+      headers: cpanelHeaders,
+      httpsAgent: agent 
+    });
+    const redData = redResponse.data;
+    if (redData.status !== 1) {
+      throw new Error(redData.errors[0] || 'cPanel Redirect API error');
+    }
+    console.log(`cPanel: Successfully created redirect.`);
     
   } catch (error: any) {
-    const errorMessage = error.response?.data?.errors?.[0]?.message || error.message;
-    console.error(`Cloudflare Error: Failed to create CNAME record for ${subdomain}:`, errorMessage);
-    throw new Error(`Database upgrade was successful, but Cloudflare DNS creation failed: ${errorMessage}`);
+    console.error(`cPanel Error: Failed to create subdomain/redirect for ${subdomain}:`, error.message);
+    throw new Error(`Database upgrade was successful, but cPanel subdomain creation failed: ${error.message}`);
   }
 }
 
@@ -106,8 +126,8 @@ export async function POST(request: Request) {
       subdomain = `${subdomain}${Math.floor(Math.random() * 100)}`;
     }
 
-    // --- 3. "Stunning" Cloudflare Call (BEFORE payment) ---
-    await createCloudflareRecord(subdomain);
+    // --- 3. "Stunning" cPanel Call (BEFORE payment) ---
+    await createCpanelRedirect(subdomain);
 
     // --- 4. "World-Class" Database Transaction ---
     await prisma.$transaction([
@@ -143,7 +163,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         message: 'Upgrade successful!',
-        subdomain: subdomain // This is the "world-class" subdomain name
+        subdomain: subdomain
       },
       { status: 200 }
     );
