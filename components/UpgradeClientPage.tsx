@@ -10,8 +10,8 @@ import {
   LinkIcon,
   ClipboardIcon,
   ClipboardDocumentCheckIcon,
-  ArrowPathIcon, // <-- Added for "Verify" button
-  UserIcon // <-- Added for DataInput
+  ArrowPathIcon,
+  UserIcon // Added
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -82,11 +82,9 @@ export default function UpgradeClientPage({ fee }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // --- "Stunning" Modal State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [step, setStep] = useState(1); // 1: Confirm, 2: Bank, 3: Brand, 4: Success
+  const [step, setStep] = useState(1);
   
-  // --- "World-Class" Data State ---
   const [banks, setBanks] = useState<Bank[]>([]);
   const [bankCode, setBankCode] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -94,9 +92,8 @@ export default function UpgradeClientPage({ fee }: Props) {
   const [businessName, setBusinessName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   
-  const [isVerifying, setIsVerifying] = useState(false); // For "Verify" button
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  // "World-Class" API Call to "fetch" banks on load
   useEffect(() => {
     const fetchBanks = async () => {
       try {
@@ -111,7 +108,6 @@ export default function UpgradeClientPage({ fee }: Props) {
     fetchBanks();
   }, []);
 
-  // --- "World-Class" API Call (Verify Account) ---
   const handleVerifyAccount = async () => {
     setIsVerifying(true);
     setError(null);
@@ -121,9 +117,7 @@ export default function UpgradeClientPage({ fee }: Props) {
       const res = await fetch(`/api/services/verify-account?account_number=${accountNumber}&bank_code=${bankCode}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Account verification failed.');
-      
-      setAccountName(data.accountName); // "Stunning" success
-      
+      setAccountName(data.accountName);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -131,12 +125,10 @@ export default function UpgradeClientPage({ fee }: Props) {
     }
   };
 
-  // --- "World-Class" API Call (Final Upgrade) ---
   const handleFinalSubmit = async () => {
     setIsLoading(true);
     setError(null);
 
-    // This is the bank the user selected
     const selectedBank = banks.find(b => b.code === bankCode);
     if (!selectedBank) {
       setError("Please select a valid bank.");
@@ -144,8 +136,6 @@ export default function UpgradeClientPage({ fee }: Props) {
       return;
     }
     
-    // --- THIS IS THE "WORLD-CLASS" FIX ---
-    // Changed `(err: any {` to `(err: any) {`
     try {
       const response = await fetch('/api/aggregator/upgrade', {
         method: 'POST',
@@ -163,26 +153,22 @@ export default function UpgradeClientPage({ fee }: Props) {
         throw new Error(data.error || 'Upgrade failed.');
       }
       
-      setSubdomain(data.subdomain); // "Stunning" success
-      setStep(4); // Move to the "Success" modal
+      setSubdomain(data.subdomain);
+      setStep(4);
 
     } catch (err: any) { 
       setError(err.message);
-      setStep(2); // Go back to bank step if it fails
+      setStep(2); // Go back to bank step
     } finally {
       setIsLoading(false);
     }
-    // ------------------------------------
   };
 
-  // --- "Stunning" Reset Function ---
   const resetFlow = () => {
     setIsModalOpen(false);
-    // If they just succeeded, we must refresh the page
     if (step === 4) {
       window.location.reload();
     }
-    // Reset all states
     setStep(1);
     setError(null);
     setBankCode('');
@@ -196,7 +182,6 @@ export default function UpgradeClientPage({ fee }: Props) {
     <div className="space-y-6">
       {(isLoading) && <Loading />}
 
-      {/* --- 1. The "Stunning" Benefits Card --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-bold text-gray-900">
           Unlock Aggregator Tools
@@ -234,13 +219,11 @@ export default function UpgradeClientPage({ fee }: Props) {
         </div>
       </div>
 
-      {/* --- 2. Your "World-Class" Multi-Step Modal --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
             {isLoading && <Loading />}
             
-            {/* --- "Stunning" Header --- */}
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 {step === 1 && 'Confirm Upgrade'}
@@ -253,13 +236,11 @@ export default function UpgradeClientPage({ fee }: Props) {
               </button>
             </div>
             
-            {/* --- "World-Class" Modal Body (Conditional) --- */}
             <div className="p-6">
               {error && (
                 <p className="mb-4 text-sm font-medium text-red-600 text-center">{error}</p>
               )}
               
-              {/* --- Modal 1: Confirm Charge --- */}
               {step === 1 && (
                 <div className="space-y-4">
                   <p className="text-center text-gray-600">
@@ -272,7 +253,6 @@ export default function UpgradeClientPage({ fee }: Props) {
                 </div>
               )}
               
-              {/* --- Modal 2: Bank Details (Your "Stunning" Design) --- */}
               {step === 2 && (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600">Enter your payout bank details. This is where your commissions will be sent.</p>
@@ -311,7 +291,6 @@ export default function UpgradeClientPage({ fee }: Props) {
                     </div>
                   </div>
                   
-                  {/* "Stunning" Account Name (Verified) */}
                   {accountName && (
                     <div className="rounded-lg bg-green-50 p-3 border border-green-200">
                       <p className="text-sm font-bold text-green-800">{accountName}</p>
@@ -320,7 +299,6 @@ export default function UpgradeClientPage({ fee }: Props) {
                 </div>
               )}
               
-              {/* --- Modal 3: Business Name --- */}
               {step === 3 && (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600">Enter your Business Name. This will be used to create your "world-class" referral link.</p>
@@ -328,7 +306,6 @@ export default function UpgradeClientPage({ fee }: Props) {
                 </div>
               )}
               
-              {/* --- Modal 4: Success! --- */}
               {step === 4 && (
                 <div className="space-y-4 text-center">
                   <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto" />
@@ -347,7 +324,6 @@ export default function UpgradeClientPage({ fee }: Props) {
               )}
             </div>
             
-            {/* --- "World-Class" Modal Footer (Conditional) --- */}
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               {step === 1 && (
                 <button
