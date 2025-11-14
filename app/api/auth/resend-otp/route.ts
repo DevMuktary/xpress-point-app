@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendWhatsAppMessage } from '@/lib/whatsapp'; // Import our WhatsApp function
+// [FIXED] Renamed the import to 'sendOtpMessage'
+import { sendOtpMessage } from '@/lib/whatsapp'; // Import our WhatsApp function
 
 /**
  * Generates a 6-digit numeric OTP.
@@ -52,7 +53,8 @@ export async function POST(request: Request) {
 
     // 4. Send the new OTP via WhatsApp
     // (Ensure your 'otp_verification' template in Meta is approved)
-    await sendWhatsAppMessage(user.phoneNumber, 'otp_verification', otpCode);
+    // [FIXED] Renamed the function call to 'sendOtpMessage'
+    await sendOtpMessage(user.phoneNumber, 'otp_verification', otpCode);
     
     return NextResponse.json(
       { message: 'A new OTP has been sent.' },
