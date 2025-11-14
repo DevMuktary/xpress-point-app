@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import JambPinClientPage from '@/components/JambPinClientPage'; // We will create this next
+import JambPinClientPage from '@/components/JambPinClientPage';
 import SafeImage from '@/components/SafeImage';
 
 export default async function JambPinPage() {
@@ -23,8 +23,16 @@ export default async function JambPinPage() {
     throw new Error("JAMB services not found.");
   }
 
-  const utmeFee = user.role === 'AGGREGATOR' ? utmeService.aggregatorPrice.toNumber() : utmeService.agentPrice.toNumber();
-  const deFee = user.role === 'AGGREGATOR' ? deService.aggregatorPrice.toNumber() : deService.agentPrice.toNumber();
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // We now use the "refurbished" price fields: platformPrice and defaultAgentPrice
+  const utmeFee = user.role === 'AGGREGATOR' 
+    ? utmeService.platformPrice.toNumber() 
+    : utmeService.defaultAgentPrice.toNumber();
+    
+  const deFee = user.role === 'AGGREGATOR' 
+    ? deService.platformPrice.toNumber() 
+    : deService.defaultAgentPrice.toNumber();
+  // ------------------------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -45,6 +53,7 @@ export default async function JambPinPage() {
         </h1>
       </div>
       
+      {/* We pass the correct, "world-class" prices to the client */}
       <JambPinClientPage utmeFee={utmeFee} deFee={deFee} />
     </div>
   );
