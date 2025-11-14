@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-// [FIXED] Renamed the import to 'sendOtpMessage'
 import { sendOtpMessage } from '@/lib/whatsapp'; // Import our WhatsApp function
 
 /**
@@ -52,9 +51,8 @@ export async function POST(request: Request) {
     });
 
     // 4. Send the new OTP via WhatsApp
-    // (Ensure your 'otp_verification' template in Meta is approved)
-    // [FIXED] Renamed the function call to 'sendOtpMessage'
-    await sendOtpMessage(user.phoneNumber, 'otp_verification', otpCode);
+    // [FIXED] Removed the extra 'otp_verification' argument
+    await sendOtpMessage(user.phoneNumber, otpCode);
     
     return NextResponse.json(
       { message: 'A new OTP has been sent.' },
