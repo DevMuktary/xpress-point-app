@@ -39,7 +39,7 @@ const NetworkButton = ({ logo, title, selected, onClick }: {
   </button>
 );
 
-// --- "World-Class" Reusable Input Component (THIS IS THE FIX) ---
+// --- "World-Class" Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
   id: string,
@@ -49,7 +49,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   type?: string,
   isRequired?: boolean,
   placeholder?: string,
-  maxLength?: number // <-- "Refurbished" to accept maxLength
+  maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -65,13 +65,11 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
         placeholder={placeholder}
-        maxLength={maxLength} // <-- It is now correctly passed
+        maxLength={maxLength}
       />
     </div>
   </div>
 );
-// -----------------------------------------------------------
-
 
 // --- "World-Class" Service ID Map ---
 const serviceIdMap: { [key: string]: string } = {
@@ -92,9 +90,13 @@ export default function AirtimePage() {
   const [isLoading, setIsLoading] = useState(false); // For main submit
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<any | null>(null); // Your "Sweet Alert"
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
+  // --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
+  // We now have a state for the "stunning" receipt data
+  const [receipt, setReceipt] = useState<any | null>(null); 
+  // ---------------------------------------------
+  
   // --- Form Data State ---
   const [phoneNumber, setPhoneNumber] = useState('');
   const [amount, setAmount] = useState('');
@@ -122,7 +124,7 @@ export default function AirtimePage() {
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    setSuccess(null);
+    setReceipt(null); // Clear old receipt
 
     if (!network) {
       setSubmitError("Please select a network.");
@@ -161,7 +163,19 @@ export default function AirtimePage() {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSuccess(data); // Your "Sweet Alert"
+      // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
+      // We set the "stunning" receipt data instead of the "rubbish" success message
+      setReceipt({
+        message: data.message,
+        transactionId: data.data.recharge_id,
+        phone: phoneNumber,
+        amount: data.data.amount_charged,
+        network: network,
+        status: data.data.text_status
+      });
+      // ---------------------------------------------
+      
+      // Reset the form
       setPhoneNumber('');
       setAmount('');
       fetchHistory(); // Refresh the history list
@@ -172,8 +186,6 @@ export default function AirtimePage() {
       setIsLoading(false);
     }
   };
-  
-  const totalFee = useMemo(() => Number(amount), [amount]);
   
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -190,24 +202,7 @@ export default function AirtimePage() {
         </h1>
       </div>
       
-      {/* --- Your "Sweet Alert" Style Message --- */}
-      {success && (
-        <div className="rounded-lg bg-green-50 p-4 border border-green-200 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-bold text-green-800">
-                Purchase Successful!
-              </h3>
-              <div className="mt-2 text-sm text-green-700">
-                <p>{success.message}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* --- "Rubbish" Sweet Alert is GONE --- */}
 
       {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
@@ -280,7 +275,7 @@ export default function AirtimePage() {
                 disabled={isLoading}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isLoading ? 'Purchasing...' : `Purchase Airtime (Fee: ₦${totalFee})`}
+                {isLoading ? 'Purchasing...' : `Purchase Airtime (Fee: ₦${Number(amount) || 0})`}
               </button>
             </div>
           )}
@@ -346,7 +341,7 @@ export default function AirtimePage() {
                 Are you sure you want to send <strong className="text-gray-900">₦{amount}</strong> of {network} airtime to <strong className="text-gray-900">{phoneNumber}</strong>?
               </p>
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{totalFee}
+                Total Fee: ₦{Number(amount)}
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
@@ -366,6 +361,66 @@ export default function AirtimePage() {
           </div>
         </div>
       )}
+
+      {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 3) --- */}
+      {/* Your "Stunning" Receipt Modal */}
+      {receipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center">
+                <CheckCircleIcon className="h-16 w-16 text-green-500" />
+                <h2 className="mt-4 text-xl font-bold text-gray-900">
+                  Purchase Successful
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {receipt.message}
+                </p>
+                
+                <div className="w-full mt-6 space-y-2 rounded-lg border bg-gray-50 p-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Amount:</span>
+                    <span className="text-sm font-semibold text-gray-900">₦{receipt.amount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Network:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.network}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Phone:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.phone}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Status:</span>
+                    <span className="text-sm font-semibold text-green-600">{receipt.status}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Trans. ID:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.transactionId}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Your "World-Class" Buttons */}
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <Link
+                href="/dashboard/services/vtu"
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+              >
+                Return to VTU
+              </Link>
+              <button
+                onClick={() => setReceipt(null)} // "Buy More"
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Buy More
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ------------------------------------------- */}
     </div>
   );
 }
