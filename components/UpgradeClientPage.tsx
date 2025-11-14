@@ -9,7 +9,9 @@ import {
   BuildingOfficeIcon,
   LinkIcon,
   ClipboardIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  ArrowPathIcon, // <-- Added for "Verify" button
+  UserIcon // <-- Added for DataInput
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -35,6 +37,7 @@ const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
   return (
     <button
       onClick={handleCopy}
+      type="button"
       className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all
         ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
     >
@@ -43,6 +46,36 @@ const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
     </button>
   );
 };
+
+// --- "World-Class" Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+  label: string,
+  id: string,
+  value: string,
+  onChange: (value: string) => void,
+  Icon: React.ElementType,
+  type?: string,
+  isRequired?: boolean,
+  placeholder?: string
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="relative mt-1">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        required={isRequired}
+        placeholder={placeholder}
+      />
+    </div>
+  </div>
+);
 
 // --- The Main "World-Class" Component ---
 export default function UpgradeClientPage({ fee }: Props) {
@@ -111,6 +144,8 @@ export default function UpgradeClientPage({ fee }: Props) {
       return;
     }
     
+    // --- THIS IS THE "WORLD-CLASS" FIX ---
+    // Changed `(err: any {` to `(err: any) {`
     try {
       const response = await fetch('/api/aggregator/upgrade', {
         method: 'POST',
@@ -131,12 +166,13 @@ export default function UpgradeClientPage({ fee }: Props) {
       setSubdomain(data.subdomain); // "Stunning" success
       setStep(4); // Move to the "Success" modal
 
-    } catch (err: any {
+    } catch (err: any) { 
       setError(err.message);
       setStep(2); // Go back to bank step if it fails
     } finally {
       setIsLoading(false);
     }
+    // ------------------------------------
   };
 
   // --- "Stunning" Reset Function ---
