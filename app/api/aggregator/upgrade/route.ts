@@ -28,7 +28,7 @@ function generateSubdomain(businessName: string): string {
 }
 
 // --- "World-Class" cPanel API Function (Refurbished) ---
-async function createCpanelRedirect(subdomain: string) {
+async function createCpanelSubdomain(subdomain: string) {
   if (!CPANEL_DOMAIN || !CPANEL_USER || !CPANEL_API_TOKEN || !CPANEL_HOSTNAME) {
     console.error("CRITICAL: cPanel variables are not set. Skipping subdomain creation.");
     return; 
@@ -37,16 +37,17 @@ async function createCpanelRedirect(subdomain: string) {
   const agent = new https.Agent({  
     rejectUnauthorized: false
   });
-
-  // STEP 1: Create the "stunning" subdomain
-  const createSubdomainUrl = `https://${CPANEL_HOSTNAME}:2083/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}`;
+  
+  const fullSubdomain = `${subdomain}.${CPANEL_DOMAIN}`;
   
   // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // STEP 2: Create the "world-class" redirect
-  const fullSubdomain = `${subdomain}.${CPANEL_DOMAIN}`;
-  const redirectUrl = `https://xpresspoint.net/register/${subdomain}`;
-  // The "rubbish" URL is now "refurbished" with https:// and :2083
-  const createRedirectUrl = `https://${CPANEL_HOSTNAME}:2083/execute/Redirect/addredirect?domain=${fullSubdomain}&url=${redirectUrl}`;
+  // STEP 1: Create the "stunning" subdomain (to register it with cPanel)
+  // We point it to a "rubbish" temporary folder.
+  const createSubdomainUrl = `https://${CPANEL_HOSTNAME}:2083/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}&dir=public_html/${subdomain}`;
+  
+  // STEP 2: Create the "world-class" CNAME DNS record
+  // This points 'quadrox.xpresspoint.net' to 'xpresspoint.net'
+  const createDnsUrl = `https://${CPANEL_HOSTNAME}:2083/execute/ZoneEdit/add_zone_record?domain=${CPANEL_DOMAIN}&name=${subdomain}&type=CNAME&cname=${CPANEL_DOMAIN}`;
   // ------------------------------------
 
   try {
@@ -67,16 +68,21 @@ async function createCpanelRedirect(subdomain: string) {
     console.log(`cPanel: Successfully created subdomain.`);
 
     // --- Run Step 2 ---
-    console.log(`cPanel: Attempting to create redirect: ${fullSubdomain} -> ${redirectUrl}`);
-    const redResponse = await axios.get(createRedirectUrl, { 
+    console.log(`cPanel: Attempting to create CNAME record for: ${fullSubdomain}`);
+    const dnsResponse = await axios.get(createDnsUrl, { 
       headers: cpanelHeaders,
       httpsAgent: agent 
     });
-    const redData = redResponse.data;
-    if (redData.status !== 1) {
-      throw new Error(redData.errors[0] || 'cPanel Redirect API error');
+    const dnsData = dnsResponse.data;
+    if (dnsData.status !== 1) {
+      // If it "fails" because it *already exists*, that is a "world-class" success
+      if (dnsData.errors[0].includes('exists')) {
+         console.log(`cPanel: CNAME record ${fullSubdomain} already exists. This is OK.`);
+      } else {
+        throw new Error(dnsData.errors[0] || 'cPanel DNS API error');
+      }
     }
-    console.log(`cPanel: Successfully created redirect.`);
+    console.log(`cPanel: Successfully created CNAME record.`);
     
   } catch (error: any) {
     console.error(`cPanel Error: Failed to create subdomain/redirect for ${subdomain}:`, error.message);
@@ -126,7 +132,7 @@ export async function POST(request: Request) {
     }
 
     // --- 3. "Stunning" cPanel Call (BEFORE payment) ---
-    await createCpanelRedirect(subdomain);
+    await createCpanelSubdomain(subdomain);
 
     // --- 4. "World-Class" Database Transaction ---
     await prisma.$transaction([
