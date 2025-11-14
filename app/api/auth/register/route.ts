@@ -1,104 +1,105 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { sendWhatsAppMessage } from '@/lib/whatsapp'; // <-- Import our new function
-
-/**
- * Generates a 6-digit numeric OTP.
- */
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { sendOtpSms } from '@/lib/sms';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const {
-      firstName,
-      lastName,
-      businessName,
-      address,
-      email,
-      phoneNumber,
+    const { 
+      firstName, 
+      lastName, 
+      email, 
+      phone, 
       password,
+      aggregatorId // <-- "World-Class" Refurbish
     } = body;
 
-    // --- Validation ---
-    if (!firstName || !lastName || !email || !phoneNumber || !password) {
+    if (!firstName || !lastName || !email || !phone || !password) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
+        { error: 'All fields are required' }, { status: 400 }
+      );
+    }
+    
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters' }, { status: 400 }
       );
     }
 
-    // --- Check for existing user ---
-    const existingUserByEmail = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // 1. Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email.toLowerCase() },
+          { phoneNumber: phone }
+        ]
+      }
     });
-    if (existingUserByEmail) {
+
+    if (existingUser) {
       return NextResponse.json(
-        { error: 'Email already in use' },
-        { status: 409 }
+        { error: 'An account with this email or phone number already exists.' },
+        { status: 409 } // 409 Conflict
       );
     }
-
-    const existingUserByPhone = await prisma.user.findUnique({
-      where: { phoneNumber },
-    });
-    if (existingUserByPhone) {
-      return NextResponse.json(
-        { error: 'Phone number already in use' },
-        { status: 409 }
-      );
+    
+    // --- "World-Class" Aggregator Check ---
+    if (aggregatorId) {
+      const aggregatorExists = await prisma.user.findFirst({
+        where: { id: aggregatorId, role: 'AGGREGATOR' }
+      });
+      if (!aggregatorExists) {
+        return NextResponse.json(
+          { error: 'Invalid referral link. Aggregator not found.' }, { status: 400 }
+        );
+      }
     }
+    // ------------------------------------
 
-    // --- Hash Password ---
+    // 2. Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // --- Create User in Database ---
+    // 3. Create user
     const user = await prisma.user.create({
       data: {
         firstName,
         lastName,
-        businessName,
-        address,
         email: email.toLowerCase(),
-        phoneNumber,
+        phoneNumber: phone,
         passwordHash,
-      },
-      select: {
-        id: true,
-        phoneNumber: true,
-      },
+        role: 'AGENT', // All new signups are AGENTs
+        aggregatorId: aggregatorId || null, // <-- "World-Class" Refurbish
+      }
     });
+    
+    // 4. Create and send OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // --- NEW: Generate and Send WhatsApp OTP ---
-    const otpCode = generateOTP();
-    const tenMinutesFromNow = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
-
-    // 1. Save the OTP to our new 'otps' table
     await prisma.otp.create({
       data: {
         code: otpCode,
         userId: user.id,
-        expiresAt: tenMinutesFromNow,
+        expiresAt: expiresAt,
       },
     });
 
-    // 2. Send the OTP via WhatsApp
-    // IMPORTANT: You must create a template in your Meta account named 'otp_verification'
-    // This template should look like: "Your Xpress Point verification code is {{1}}."
-    await sendWhatsAppMessage(user.phoneNumber, 'otp_verification', otpCode);
+    await sendOtpSms(phone, otpCode);
     
-    // ------------------------------------------
-
     return NextResponse.json(
-      { message: 'User registered successfully. OTP sent.', userId: user.id },
+      { message: 'Registration successful. OTP sent.' },
       { status: 201 }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration Error:', error);
+    if (error.code === 'P2002') { // Prisma unique constraint error
+      return NextResponse.json(
+        { error: 'An account with this email or phone number already exists.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { error: 'An internal server error occurred' },
       { status: 500 }
