@@ -11,8 +11,8 @@ import { Decimal } from '@prisma/client/runtime/library';
 // "World-Class" type for our structured plan
 type DataPlan = {
   id: string;
-  name: string; // e.g., "1GB"
-  duration: string; // e.g., "(30 Days)"
+  name: string; // This will be the "Amount" (e.g., "1GB")
+  duration: string; // This will be the "Duration" (e.g., "(30 Days)")
   price: number;
 };
 
@@ -73,18 +73,35 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
       let name = serviceName.replace(network, '').replace(category, '').replace('Data', '').replace('Gifting', '').replace('SME', '').replace('CG', '').replace('Awoof', '').replace('Cloud', '').replace('Coupon', '').replace('Share', '').replace('Lite', '').trim();
       let duration = '';
       
-      const durationMatch = name.match(/\(([^)]+)\)|\b(\d+)\s*(Day|Days|D)\b|\b(\d+)\s*(Month|Months|M)\b|\b(\d+)\s*(Year|Y)\b/i);
+      // --- THIS IS THE "WORLD-CLASS" FIX ---
+      // This regex is "smarter" and won't make the "Daysay" bug
+      const durationMatch = name.match(/\((\d+\s*(Day|Days|D|Month|Months|M|Year|Y))\)|\b(\d+)\s*(Day|Days|D|Month|Months|M|Year|Y)\b/i);
       if (durationMatch) {
-        duration = durationMatch[0].replace('D', ' Days').replace('M', ' Months').replace('Y', ' Year');
-        if (!duration.startsWith('(')) duration = `(${duration})`;
+        // Use the full match (e.g., "1 Day", "30D", "(90 Days)")
+        duration = durationMatch[0];
+        
+        // "Refurbish" the string to be "stunning"
+        duration = duration.replace(/\b(Day|D)\b/gi, 'Days'); // "1 Day" -> "1 Days", "30D" -> "30 Days"
+        duration = duration.replace(/\b(Month|M)\b/gi, 'Months');
+        duration = duration.replace(/\b(Year|Y)\b/gi, 'Year');
+        
+        // Fix "1 Days" -> "1 Day"
+        if (duration.startsWith('1 ')) {
+          duration = duration.replace('Days', 'Day');
+          duration = duration.replace('Months', 'Month');
+          duration = duration.replace('Years', 'Year');
+        }
+        
+        if (!duration.startsWith('(')) duration = `(${duration})`; // Add brackets
+        
         name = name.replace(durationMatch[0], '').trim();
       }
-      // --- End "world-class" parser ---
+      // --- End "world-class" fix ---
 
       dataPlans[network].categories[category].push({
         id: service.id,
         name: name, // e.g., "1GB"
-        duration: duration, // e.g., "(30 Days)"
+        duration: duration, // e.g., "(30 Days)" or "(1 Day)"
         price: price,
       });
     }
