@@ -8,11 +8,13 @@ import {
   DocumentMagnifyingGlassIcon,
   XMarkIcon,
   ClipboardIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  IdentificationIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { ExamPinRequest } from '@prisma/client';
 
+// --- "Sleek Copy Button" Component ---
 const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
@@ -33,6 +35,7 @@ const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
   );
 };
 
+// --- "World-Class" Pin Display Component ---
 const PinCard = ({ pinData }: { pinData: any }) => (
   <div className="p-3 rounded-lg border bg-white space-y-2">
     <div>
@@ -52,6 +55,7 @@ const PinCard = ({ pinData }: { pinData: any }) => (
   </div>
 );
 
+// --- "World-Class" Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string, maxLength?: number
 }) => (
@@ -70,6 +74,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
+// --- Define the props to receive from the Server Page ---
 type Props = {
   serviceId: string;
   serviceFee: number;
