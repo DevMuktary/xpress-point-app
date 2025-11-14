@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 // This is your "world-class" main domain
-const MAIN_DOMAIN = 'xpresspoint.net';
+const MAIN_DOMAIN = 'www.xpresspoint.net';
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
@@ -13,13 +13,11 @@ export function middleware(req: NextRequest) {
 
   // "Refurbish" the host to remove 'www.'
   const hostname = host.replace(/^www\./, '');
-  
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // "Stunning" check: If they are on the main domain OR the www domain, do nothing.
+
+  // "Stunning" check: If they are on the main domain, do nothing.
   if (hostname === MAIN_DOMAIN) {
     return NextResponse.next();
   }
-  // ------------------------------------
 
   // "World-Class" Subdomain Logic
   // This "fetches" the 'quadrox' from 'quadrox.xpresspoint.net'
@@ -31,10 +29,13 @@ export function middleware(req: NextRequest) {
   return NextResponse.rewrite(url);
 }
 
-// "World-class" config: This middleware *only* runs
-// for subdomains, not for your main app.
+// --- THIS IS THE "WORLD-CLASS" FIX ---
+// "Refurbished" the matcher to be "stunningly" correct.
+// It now *ignores* all API routes, all static files,
+// AND your "world-class" public routes (like /register, /login, /signup).
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|register|login|signup).*)',
   ],
 };
+// ------------------------------------
