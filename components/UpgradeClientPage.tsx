@@ -11,7 +11,7 @@ import {
   ClipboardIcon,
   ClipboardDocumentCheckIcon,
   ArrowPathIcon,
-  UserIcon // Added
+  UserIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -306,22 +306,25 @@ export default function UpgradeClientPage({ fee }: Props) {
                 </div>
               )}
               
+              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
               {step === 4 && (
                 <div className="space-y-4 text-center">
                   <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto" />
                   <h3 className="text-lg font-bold text-gray-900">Upgrade Complete!</h3>
                   <p className="text-sm text-gray-600">
-                    Your account is now a "world-class" Aggregator. Here is your new, "stunning" referral link:
+                    Your account is now a "world-class" Aggregator. Your "stunning" new referral link is:
                   </p>
                   <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-3 border border-gray-200">
                     <LinkIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
                     <span className="flex-1 text-sm font-medium text-blue-600 break-all">
-                      https://xpresspoint.net/register/{subdomain}
+                      {/* "Refurbished" to show the cPanel link */}
+                      https://{subdomain}.xpresspoint.net
                     </span>
-                    <CopyButton textToCopy={`https://xpresspoint.net/register/${subdomain}`} />
+                    <CopyButton textToCopy={`https://${subdomain}.xpresspoint.net`} />
                   </div>
                 </div>
               )}
+              {/* ------------------------------------ */}
             </div>
             
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
