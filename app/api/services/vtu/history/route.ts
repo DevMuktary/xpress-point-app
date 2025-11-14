@@ -18,25 +18,36 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Category is required.' }, { status: 400 });
     }
 
+    // --- THIS IS THE "WORLD-CLASS" FIX ---
+    // We now use "startsWith" to get ALL data categories
+    const whereCondition: any = {
+      userId: user.id,
+    };
+
+    if (category === 'VTU_DATA') {
+      whereCondition.service = {
+        category: {
+          startsWith: 'VTU_DATA',
+        },
+      };
+    } else {
+      whereCondition.service = {
+        category: category,
+      };
+    }
+    // ------------------------------------
+
     const requests = await prisma.vtuRequest.findMany({
-      where: { 
-        userId: user.id,
-        service: {
-          category: category // Filter by the category
-        }
-      },
-      // --- THIS IS THE "WORLD-CLASS" FIX ---
-      // We "include" the service to get the "plan they buy"
+      where: whereCondition,
       include: {
         service: {
           select: {
-            name: true
-          }
-        }
+            name: true,
+          },
+        },
       },
-      // ------------------------------------
       orderBy: { createdAt: 'desc' },
-      take: 20 // Get the last 20
+      take: 20,
     });
 
     return NextResponse.json({ requests });
