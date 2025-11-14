@@ -17,14 +17,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Service ID and Form Data are required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 1. Get Price & Check Wallet (THIS IS THE FIX) ---
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
 
+    // "World-class" pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
+    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
     }
@@ -53,7 +58,7 @@ export async function POST(request: Request) {
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
-          description: `${service.name} (${formData.regNumber || formData.regNo})`,
+          description: `${service.name} (${formData.regNumber || formData.identifier})`,
           reference: `JAMB-${Date.now()}`,
           status: 'COMPLETED',
         },
