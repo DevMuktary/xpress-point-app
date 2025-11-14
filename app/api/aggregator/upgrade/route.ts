@@ -2,6 +2,20 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
+import axios from 'axios';
+
+// --- "World-Class" cPanel Config ---
+const CPANEL_DOMAIN = process.env.CPANEL_DOMAIN;
+const CPANEL_USER = process.env.CPANEL_USER;
+const CPANEL_API_TOKEN = process.env.CPANEL_API_TOKEN;
+const CPANEL_URL = `https_api_url_not_set`; // Will be set if keys exist
+
+let cpanelHeaders: any = {};
+if (CPANEL_API_TOKEN) {
+  cpanelHeaders = {
+    'Authorization': `cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}`
+  };
+}
 
 // "World-class" function to create the subdomain
 function generateSubdomain(businessName: string): string {
@@ -11,13 +25,36 @@ function generateSubdomain(businessName: string): string {
     .substring(0, 30); // Max 30 chars
 }
 
+// --- "World-Class" cPanel API Function ---
+async function createCpanelSubdomain(subdomain: string) {
+  if (!CPANEL_DOMAIN || !CPANEL_USER || !CPANEL_API_TOKEN) {
+    console.error("CRITICAL: cPanel variables are not set. Skipping subdomain creation.");
+    // We don't throw an error, we just log it.
+    return; 
+  }
+
+  // This is the "stunning" URL for cPanel's API
+  const url = `${CPANEL_URL}/execute/SubDomain/addsubdomain?domain=${subdomain}&rootdomain=${CPANEL_DOMAIN}&dir=public_html/${subdomain}`;
+  
+  try {
+    const response = await axios.get(url, { headers: cpanelHeaders });
+    const data = response.data;
+    if (data.status !== 1) {
+      throw new Error(data.errors[0] || 'cPanel API error');
+    }
+    console.log(`cPanel: Successfully created subdomain ${subdomain}.${CPANEL_DOMAIN}`);
+  } catch (error: any) {
+    console.error(`cPanel Error: Failed to create subdomain ${subdomain}:`, error.message);
+    // We don't stop the user's upgrade if this fails
+  }
+}
+
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 
-  // "Stunning" check: If user is ALREADY an Aggregator, error
   if (user.role === 'AGGREGATOR') {
     return NextResponse.json({ error: 'You are already an Aggregator.' }, { status: 400 });
   }
@@ -36,7 +73,6 @@ export async function POST(request: Request) {
       throw new Error("AGGREGATOR_UPGRADE service not found.");
     }
     
-    // "World-class" logic: This fee is *not* based on role. It's the default.
     const price = service.defaultAgentPrice;
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -50,20 +86,16 @@ export async function POST(request: Request) {
       where: { subdomain: subdomain }
     });
     
-    // If "raudahtech" exists, make it "raudahtech2"
     if (existingSubdomain) {
       subdomain = `${subdomain}${Math.floor(Math.random() * 100)}`;
     }
 
     // --- 3. "World-Class" Transaction ---
     await prisma.$transaction([
-      // a) Charge the *main* wallet
       prisma.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      
-      // b) "Refurbish" the User to an AGGREGATOR
       prisma.user.update({
         where: { id: user.id },
         data: {
@@ -75,8 +107,6 @@ export async function POST(request: Request) {
           subdomain: subdomain
         }
       }),
-      
-      // c) Log the transaction
       prisma.transaction.create({
         data: {
           userId: user.id,
@@ -90,7 +120,12 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // --- 4. Return the "Stunning" Success Response ---
+    // --- 4. "Stunning" cPanel Call (After successful payment) ---
+    // We do this *after* the transaction so the user is upgraded
+    // even if cPanel fails.
+    await createCpanelSubdomain(subdomain);
+
+    // --- 5. Return the "Stunning" Success Response ---
     return NextResponse.json(
       { 
         message: 'Upgrade successful!',
