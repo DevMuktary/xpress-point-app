@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
-import { generateNinSlipPdf } from '@/lib/slipGenerator'; // We re-use our "perfected" PDF generator
+import { generateNinSlipPdf } from '@/lib/slipGenerator'; // We re-use our "world-class" generator
 import { Decimal } from '@prisma/client/runtime/library';
 
-// Helper to map slipType to database service ID
 const serviceIdMap: { [key: string]: string } = {
   Regular: 'NIN_SLIP_REGULAR',
   Standard: 'NIN_SLIP_STANDARD',
@@ -19,7 +18,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    // We get the *request ID* (not verificationId)
+    // This API gets the *request ID* (from the Personalization history)
     const { requestId, slipType } = body; 
 
     if (!requestId || !slipType) {
@@ -31,23 +30,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid slipType.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & The Saved Request Data ---
+    // --- 1. Get Price & Personalization Data ---
     const [service, personalizationRequest] = await Promise.all([
       prisma.service.findUnique({ where: { id: serviceId } }),
-      prisma.personalizationRequest.findFirst({
-        where: { id: requestId, userId: user.id, status: 'COMPLETED' },
+      prisma.personalizationRequest.findUnique({
+        where: { id: requestId, userId: user.id },
       }),
     ]);
 
     if (!service || !service.isActive) {
-      return NextResponse.json({ error: 'This service is unavailable.' }, { status: 503 });
+      return NextResponse.json({ error: 'This slip service is unavailable.' }, { status: 503 });
     }
-    if (!personalizationRequest || !personalizationRequest.data) {
+    if (!personalizationRequest || personalizationRequest.status !== 'COMPLETED' || !personalizationRequest.data) {
       return NextResponse.json({ error: 'Invalid or incomplete personalization request.' }, { status: 404 });
     }
 
-    // --- 2. Check User Wallet ---
-    const price = user.role === 'AGGREGATOR' ? service.aggregatorPrice : service.agentPrice;
+    // --- 2. Check User Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    // --------------------------------------------------
+    
     const wallet = await prisma.wallet.findUnique({
       where: { userId: user.id },
     });
@@ -69,17 +72,18 @@ export async function POST(request: Request) {
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
           description: `${service.name} (from Personalization ${personalizationRequest.trackingId})`,
-          reference: `NIN-SLIP-${Date.now()}`,
+          reference: `NIN-SLIP-PERS-${Date.now()}`,
           status: 'COMPLETED',
+          // We don't link this to a 'verificationId' as it's from a 'personalizationRequest'
         },
       }),
     ]);
 
     // --- 4. Generate the PDF ---
-    // We use our "perfected" generator with the saved data
+    // We use the 'data' we saved in the PersonalizationRequest
     const pdfBuffer = await generateNinSlipPdf(
       slipType,
-      personalizationRequest.data as any 
+      personalizationRequest.data as any
     );
 
     // --- 5. Send the PDF file back ---
@@ -92,9 +96,16 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error("Personalization Slip Error:", error.message);
+    console.error("Personalization Slip Gen Error:", error); 
+    
+    let errorMessage = "An internal server error occurred.";
+    if (error.message) { errorMessage = error.message; }
+    if (error.code === 'ENOENT') {
+      errorMessage = "Service configuration error: Missing required template files. Please contact support.";
+    }
+
     return NextResponse.json(
-      { error: error.message || 'An internal server error occurred.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
