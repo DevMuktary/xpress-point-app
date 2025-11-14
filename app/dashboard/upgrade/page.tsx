@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import UpgradeClientPage from '@/components/UpgradeClientPage'; // We will create this next
+import UpgradeClientPage from '@/components/UpgradeClientPage';
 import SafeImage from '@/components/SafeImage';
 
 // This is a "world-class" Server Component
@@ -24,6 +24,7 @@ export default async function UpgradePage() {
   const service = await prisma.service.findUnique({ where: { id: SERVICE_ID } });
 
   if (!service) {
+    // This should not happen if the seed is correct
     throw new Error("AGGREGATOR_UPGRADE service not found in database.");
   }
 
