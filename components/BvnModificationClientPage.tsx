@@ -13,7 +13,8 @@ import {
   EnvelopeIcon,
   LockClosedIcon,
   ExclamationTriangleIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  ArrowUpTrayIcon // For File Upload
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -56,7 +57,7 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- Reusable Input Component ---
+// --- Reusable Input Component (THIS IS THE FIX for maxLength) ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
   id: string,
@@ -66,7 +67,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   type?: string,
   isRequired?: boolean,
   placeholder?: string,
-  maxLength?: number
+  maxLength?: number // <-- "Fixed" to accept maxLength
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -82,13 +83,48 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
         placeholder={placeholder}
-        maxLength={maxLength}
+        maxLength={maxLength} // <-- It is now correctly passed
       />
     </div>
   </div>
 );
+// -----------------------------------------------------------
 
-// --- The Consent Modal Component ---
+// --- Reusable File Upload Component ---
+const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: {
+  label: string,
+  id: string,
+  file: File | null,
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  fileUrl: string | null,
+  isUploading: boolean,
+  error: string | null
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="mt-1 flex items-center gap-4">
+      <input
+        id={id}
+        type="file"
+        onChange={onChange}
+        className="flex-1 w-full text-sm text-gray-500
+                   file:mr-4 file:py-2 file:px-4
+                   file:rounded-lg file:border-0
+                   file:text-sm file:font-semibold
+                   file:bg-blue-50 file:text-blue-700
+                   hover:file:bg-blue-100"
+        accept="image/png, image/jpeg, application/pdf"
+        required
+      />
+      {isUploading && <ArrowPathIcon className="h-5 w-5 animate-spin text-blue-600" />}
+      {fileUrl && <CheckCircleIcon className="h-6 w-6 text-green-600" />}
+    </div>
+    {file && <p className="text-xs text-gray-500 mt-1">{file.name}</p>}
+    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+  </div>
+);
+
+// --- Consent Modal Component ---
 const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -102,10 +138,10 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
         </button>
       </div>
       <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
-        <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>. Ask the customer if he has ever made a modification before.</p>
-        <p>2. If he did NIN Modification, make sure the modification is reflecting on <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS Don't Do Double Modification.</p>
-        <p>3. You Can Only Change Your Details <span className="font-bold">Once</span>. e.g if you modified your Name, you can't do it Again, you are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
-        <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we processed your work and we later found out:</p>
+        <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>. Ask the customer if they have *ever* made a modification before.</p>
+        <p>2. If they did NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS does not do double modifications.</p>
+        <p>3. You can only change your details <span className="font-bold">Once</span>. e.g if you modified your Name, you can't do it again. You are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
+        <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we process your work and we later found out:</p>
         <ul className="list-disc list-inside pl-4">
           <li>It's a Bank Enrollment (Except Listed Banks).</li>
           <li>Your Old NIN Details are incorrect.</li>
@@ -143,7 +179,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(true); 
 
   // --- Form Data State ---
@@ -159,7 +194,15 @@ export default function BvnModificationClientPage({ prices }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // --- Dynamic Fee Calculation ---
+  // --- NEW "Marriage" State ---
+  const [isMarriage, setIsMarriage] = useState<boolean | null>(null);
+  const [newspaperFile, setNewspaperFile] = useState<File | null>(null);
+  const [newspaperUrl, setNewspaperUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  // --------------------------
+
+  // --- Dynamic Fee Calculation (Your Design) ---
   const { totalFee, dobFee, dobError } = useMemo(() => {
     if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null };
 
@@ -181,7 +224,8 @@ export default function BvnModificationClientPage({ prices }: Props) {
           } else if (['Agency BVN', 'B.O.A', 'NIBSS Microfinance', 'Enterprise Bank', 'Heritage Bank'].includes(bankType)) {
             dobFee = 4000;
           } else {
-            dobFee = 2000;
+            // "OTHER" was removed, but we keep this as a default
+            dobFee = 2000; 
           }
         }
       } catch { }
@@ -189,6 +233,37 @@ export default function BvnModificationClientPage({ prices }: Props) {
     
     return { totalFee: baseFee + dobFee, dobFee, dobError };
   }, [serviceId, bankType, oldDob, newDob, prices]);
+
+  // --- File Upload Handler ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setNewspaperFile(file);
+    setIsUploading(true);
+    setUploadError(null);
+    setNewspaperUrl(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('attestation', file); // Use the API's expected key
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'File upload failed.');
+      }
+      setNewspaperUrl(data.url); // Save the permanent URL
+    } catch (err: any) {
+      setUploadError(err.message);
+      setNewspaperFile(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
@@ -200,6 +275,11 @@ export default function BvnModificationClientPage({ prices }: Props) {
       setSubmitError(dobError);
       return;
     }
+    // Check for marriage file upload
+    if (serviceId?.includes('NAME') && isMarriage === true && !newspaperUrl) {
+      setSubmitError("Please wait for the Newspaper Publication to finish uploading.");
+      return;
+    }
     
     setIsConfirmModalOpen(true);
   };
@@ -209,7 +289,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
     
-    let formData: any = { bvn, nin, email, password };
+    let formData: any = { bvn, nin, email, password, isMarriage };
     
     if (serviceId === 'BVN_MOD_NAME') {
       formData = { ...formData, newFirstName, newMiddleName, newLastName };
@@ -233,6 +313,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
           serviceId: serviceId, 
           bankType: bankType,
           formData, 
+          newspaperUrl: newspaperUrl || null // Send the new field
         }),
       });
       
@@ -247,6 +328,8 @@ export default function BvnModificationClientPage({ prices }: Props) {
       setBvn(''); setNin(''); setEmail(''); setPassword('');
       setNewFirstName(''); setNewLastName(''); setNewMiddleName('');
       setOldDob(''); setNewDob(''); setFullName(''); setNewPhone('');
+      setIsMarriage(null); setNewspaperFile(null); setNewspaperUrl(null);
+
     } catch (err: any) {
       setSubmitError(err.message);
     } finally {
@@ -385,6 +468,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
                 <DataInput label="BVN Number*" id="bvn" value={bvn} onChange={setBvn} Icon={IdentificationIcon} />
                 <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
                 
+                {/* --- Name Fields --- */}
                 {serviceId.includes('NAME') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">New Name Details</legend>
@@ -392,16 +476,32 @@ export default function BvnModificationClientPage({ prices }: Props) {
                       <DataInput label="New First Name*" id="new-fname" value={newFirstName} onChange={setNewFirstName} Icon={UserIcon} />
                       <DataInput label="New Last Name*" id="new-lname" value={newLastName} onChange={setNewLastName} Icon={UserIcon} />
                       <DataInput label="New Middle Name (Optional)" id="new-mname" value={newMiddleName} onChange={setNewMiddleName} Icon={UserIcon} isRequired={false} />
+                    
+                      {/* --- THIS IS THE NEW MARRIAGE FIX --- */}
+                      <div className="pt-4 border-t border-gray-200">
+                        <label className="block text-sm font-medium text-gray-700">Is this for a female change of name for marriage?</label>
+                        <div className="mt-2 grid grid-cols-2 gap-3">
+                          <ModTypeButton title="Yes" description="For marriage" selected={isMarriage === true} onClick={() => setIsMarriage(true)} />
+                          <ModTypeButton title="No" description="Other reason" selected={isMarriage === false} onClick={() => setIsMarriage(false)} />
+                        </div>
+                      </div>
+
+                      {isMarriage === true && (
+                        <div className="space-y-4 pt-4 border-t border-gray-200">
+                          <FileUpload 
+                            label="Upload Newspaper Publication*" id="newspaper-upload" 
+                            file={newspaperFile} fileUrl={newspaperUrl} 
+                            isUploading={isUploading} error={uploadError}
+                            onChange={handleFileUpload} 
+                          />
+                          <p className="text-xs text-blue-600 font-medium">
+                            Need one? <Link href="/dashboard/services/newspaper" className="underline hover:text-blue-800">Get one from us</Link>
+                          </p>
+                        </div>
+                      )}
+                      {/* ---------------------------------- */}
                     </div>
                   </fieldset>
-                )}
-                {serviceId === 'BVN_MOD_NAME' && (
-                 <p className="text-sm text-gray-600">
-                   For Female Change of Surname, Newspaper is Compulsory. 
-                   <Link href="/dashboard/services/newspaper" className="font-medium text-blue-600 hover:underline">
-                     Need one? Get one from us.
-                   </Link>
-                 </p>
                 )}
                 
                 {serviceId.includes('DOB') && (
@@ -444,24 +544,23 @@ export default function BvnModificationClientPage({ prices }: Props) {
                   </div>
                 </fieldset>
               </div>
-            </div>
-          )}
+            )}
           
-          {/* --- Submit Button --- */}
-          {serviceId && (
-            <div className="border-t border-gray-200 pt-6">
-              {submitError && !dobError && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
-              )}
-              <button
-                type="submit"
-                disabled={isLoading || !!dobError}
-                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${totalFee})`}
-              </button>
-            </div>
-          )}
+            {/* --- Submit Button --- */}
+            {serviceId && (
+              <div className="border-t border-gray-200 pt-6">
+                {submitError && !dobError && (
+                  <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoading || !!dobError || isUploading || (serviceId.includes('NAME') && isMarriage === null)}
+                  className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${totalFee})`}
+                </button>
+              </div>
+            )}
           
         </form>
       </div>
