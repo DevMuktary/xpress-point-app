@@ -12,7 +12,11 @@ import {
   HomeIcon, 
   EnvelopeIcon 
 } from '@heroicons/react/24/outline';
-import PhoneInput, { E164Number } from 'react-phone-number-input/input';
+// --- THIS IS THE FIX (Part 1) ---
+import PhoneInput from 'react-phone-number-input/input';
+// We import the *type* from the main package
+import { E164Number } from 'react-phone-number-input'; 
+// ---------------------------------
 
 // Add new props for the Aggregator
 type Props = {
@@ -29,10 +33,10 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState<E164Number | string>('');
+  const [phone, setPhone] = useState<E164Number | string>(''); // Use the correct type
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // New field
-  const [agreeToTerms, setAgreeToTerms] = useState(false); // New field
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   
   // --- UI States ---
   const [isLoading, setIsLoading] = useState(false);
@@ -65,8 +69,8 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
         body: JSON.stringify({
           firstName,
           lastName,
-          businessName, // New field
-          address,      // New field
+          businessName,
+          address,
           email,
           phone,
           password,
@@ -106,13 +110,13 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
         <div className="space-y-4">
           {/* --- Name Fields --- */}
           <div className="grid grid-cols-2 gap-4">
-            <DataInput label="First Name*" id="first-name" value={firstName} onChange={setFirstName} Icon={UserIcon} />
-            <DataInput label="Last Name*" id="last-name" value={lastName} onChange={setLastName} Icon={UserIcon} />
+            <DataInput label="First Name*" id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} Icon={UserIcon} />
+            <DataInput label="Last Name*" id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} Icon={UserIcon} />
           </div>
 
           {/* --- Business Fields (Optional) --- */}
-          <DataInput label="Business Name (Optional)" id="business-name" value={businessName} onChange={setBusinessName} Icon={BriefcaseIcon} isRequired={false} />
-          <DataInput label="Business Address (Optional)" id="address" value={address} onChange={setAddress} Icon={HomeIcon} isRequired={false} />
+          <DataInput label="Business Name (Optional)" id="business-name" value={businessName} onChange={(e) => setBusinessName(e.target.value)} Icon={BriefcaseIcon} isRequired={false} />
+          <DataInput label="Business Address (Optional)" id="address" value={address} onChange={(e) => setAddress(e.target.value)} Icon={HomeIcon} isRequired={false} />
 
           {/* --- Contact Fields --- */}
           <DataInput label="Email Address*" id="email" value={email} onChange={(e) => setEmail(e.target.value.toLowerCase())} Icon={EnvelopeIcon} type="email" />
