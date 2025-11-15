@@ -139,8 +139,6 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
                     BVN History
                   </Link> page.
                 </p>
-                
-                {/* --- THIS IS THE FIX --- */}
                 <p className="mt-2">
                   To check your enrollment reports visit: 
                   <a 
@@ -152,8 +150,6 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
                     https://agency.xpresspoint.net
                   </a>
                 </p>
-                {/* ----------------------- */}
-                
               </div>
             </div>
           </div>
@@ -181,7 +177,9 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
             <DataInput label="Phone Number*" id="phone" value={phone} onChange={setPhone} Icon={PhoneIcon} type="tel" />
             <DataInput label="Alternative Phone Number*" id="altPhone" value={altPhone} onChange={setAltPhone} Icon={PhoneIcon} type="tel" />
             <DataInput label="Residential Address*" id="address" value={address} onChange={setAddress} Icon={HomeIcon} />
-            <DataInput label="State of Residence*" id="state" value={state} onChange={setEvent} Icon={MapPinIcon} />
+            {/* --- THIS IS THE FIX --- */}
+            <DataInput label="State of Residence*" id="state" value={state} onChange={setState} Icon={MapPinIcon} />
+            {/* ----------------------- */}
             <DataInput label="LGA*" id="lga" value={lga} onChange={setLga} Icon={MapPinIcon} />
             <DataInput label="Geo-Political Zone*" id="zone" value={zone} onChange={setZone} Icon={MapPinIcon} />
           </div>
