@@ -13,7 +13,7 @@ import {
   EnvelopeIcon,
   LockClosedIcon,
   ExclamationTriangleIcon,
-  PencilSquareIcon // For the "Change" button
+  PencilSquareIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -88,8 +88,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
-// --- THIS IS THE FIX (Part 1) ---
-// --- The Missing Consent Modal Component ---
+// --- The Consent Modal Component ---
 const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -103,10 +102,10 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
         </button>
       </div>
       <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
-        <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>. Ask the customer if they have *ever* made a modification before.</p>
-        <p>2. If they did NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS does not do double modifications.</p>
-        <p>3. You can only change your details <span className="font-bold">Once</span>. e.g if you modified your Name, you can't do it again. You are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
-        <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we process your work and we later find out:</p>
+        <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>. Ask the customer if he has ever made a modification before.</p>
+        <p>2. If he did NIN Modification, make sure the modification is reflecting on <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS Don't Do Double Modification.</p>
+        <p>3. You Can Only Change Your Details <span className="font-bold">Once</span>. e.g if you modified your Name, you can't do it Again, you are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
+        <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we processed your work and we later found out:</p>
         <ul className="list-disc list-inside pl-4">
           <li>It's a Bank Enrollment (Except Listed Banks).</li>
           <li>Your Old NIN Details are incorrect.</li>
@@ -132,7 +131,6 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
     </div>
   </div>
 );
-// ------------------------------------
 
 // --- The Main Component ---
 export default function BvnModificationClientPage({ prices }: Props) {
@@ -161,7 +159,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // --- Dynamic Fee Calculation (Your Design) ---
+  // --- Dynamic Fee Calculation ---
   const { totalFee, dobFee, dobError } = useMemo(() => {
     if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null };
 
