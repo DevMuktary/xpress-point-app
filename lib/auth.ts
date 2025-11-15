@@ -10,7 +10,7 @@ interface UserPayload {
   role: Role;
 }
 
-// This is the "world-class" function to get the user from their cookie
+// This is the function to get the user from their cookie
 export async function getUserFromSession() {
   const token = cookies().get('auth_token')?.value;
 
@@ -24,8 +24,8 @@ export async function getUserFromSession() {
     // Get the user from the database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      // --- THIS IS THE FIX ---
-      // We must select the new field we added to the schema.
+      // --- THIS IS THE "WORLD-CLASS" FIX ---
+      // We must select all the new fields we added to the schema.
       select: {
         id: true,
         email: true,
@@ -36,9 +36,14 @@ export async function getUserFromSession() {
         isEmailVerified: true,
         isIdentityVerified: true,
         bvn: true,
-        hasAgreedToModificationTerms: true, // <-- THE MISSING LINE
+        hasAgreedToModificationTerms: true,
+        subdomain: true,          // <-- THE MISSING LINE
+        businessName: true,       // <-- THE MISSING LINE
+        accountName: true,        // <-- Added for future tools
+        accountNumber: true,      // <-- Added for future tools
+        bankName: true,           // <-- Added for future tools
       }
-      // -----------------------
+      // ------------------------------------
     });
 
     return user;
