@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
-// We import from your "stunning" whatsapp.ts file, not the "rubbish" sms.ts
 import { sendOtpMessage } from '@/lib/whatsapp'; 
-// ---------------------------------------------
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -18,12 +14,14 @@ export async function POST(request: Request) {
       email, 
       phone, 
       password,
-      aggregatorId 
+      aggregatorId,
+      businessName, // <-- New field
+      address       // <-- New field
     } = body;
 
     if (!firstName || !lastName || !email || !phone || !password) {
       return NextResponse.json(
-        { error: 'All fields are required' }, { status: 400 }
+        { error: 'All required fields are not filled' }, { status: 400 }
       );
     }
     
@@ -74,6 +72,8 @@ export async function POST(request: Request) {
         passwordHash,
         role: 'AGENT',
         aggregatorId: aggregatorId || null,
+        businessName: businessName || null, // <-- Save new field
+        address: address || null,         // <-- Save new field
       }
     });
     
@@ -89,10 +89,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
-    // We call your "stunning" WhatsApp function
     await sendOtpMessage(phone, otpCode);
-    // ---------------------------------------------
     
     return NextResponse.json(
       { message: 'Registration successful. OTP sent.' },
