@@ -351,22 +351,19 @@ model VtuRequest {
   @@map("vtu_requests")
 }
 
-// --- NEW TABLE FOR BVN (Manual & Auto) ---
 model BvnRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
   serviceId         String        @map("service_id")
   status            RequestStatus @default(PENDING)
   statusMessage     String?       @map("status_message")
-  formData          Json          // For all requirements
+  formData          Json
   
-  // --- User Uploads ---
-  failedEnrollmentUrl String?     @map("failed_enrollment_url") // For C.R.M
-  vninSlipUrl         String?     @map("vnin_slip_url")         // For VNIN to NIBSS
-  
-  // --- Admin Uploads ---
-  uploadedSlipUrl     String?     @map("uploaded_slip_url")   // For Verification & Modification
-  retrievalResult     String?     @map("retrieval_result")  // For C.R.M text result
+  failedEnrollmentUrl String?     @map("failed_enrollment_url")
+  vninSlipUrl         String?     @map("vnin_slip_url")
+  uploadedSlipUrl     String?     @map("uploaded_slip_url")
+  retrievalResult     String?     @map("retrieval_result")
+  newspaperUrl        String?     @map("newspaper_url") // Your new field
   
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
@@ -376,7 +373,6 @@ model BvnRequest {
   
   @@map("bvn_requests")
 }
-// ------------------------------------
 
 model AggregatorPrice {
   id              String   @id @default(uuid())
