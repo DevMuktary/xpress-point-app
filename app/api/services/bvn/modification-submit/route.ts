@@ -10,7 +10,7 @@ const SPECIAL_BANKS = ['Agency BVN', 'B.O.A', 'NIBSS Microfinance', 'Enterprise 
 const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
 // ------------------------------------
 
-// "World-class" helper to calculate the fee securely
+// Helper function to calculate the fee securely
 async function calculateFee(userRole: string, serviceId: string, bankType: string, oldDob: string, newDob: string): Promise<Decimal> {
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service) throw new Error('Service not found.');
@@ -19,7 +19,7 @@ async function calculateFee(userRole: string, serviceId: string, bankType: strin
     ? service.platformPrice 
     : service.defaultAgentPrice;
 
-  // --- "World-Class" Dynamic Fee Logic (Secure) ---
+  // --- Dynamic Fee Logic (Secure) ---
   if (serviceId.includes('DOB') && oldDob && newDob) {
     try {
       const oldDate = new Date(oldDob);
@@ -73,7 +73,15 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Charge User & Save as PENDING ---
-    const service = await prisma.service.findUnique({ where: { id: serviceId } }); // Get service name
+    const service = await prisma.service.findUnique({ where: { id: serviceId } });
+    
+    // --- THIS IS THE FIX ---
+    // We create the final data object *first*
+    const finalFormData = {
+      ...formData,
+      bankType // Add the bankType to the JSON
+    };
+    // -----------------------
     
     await prisma.$transaction([
       // a) Charge wallet
@@ -88,9 +96,10 @@ export async function POST(request: Request) {
           serviceId: serviceId,
           status: 'PENDING',
           statusMessage: 'Request submitted. Awaiting admin review.',
-          formData: formData as any,
-          // We add the bankType to the formData JSON for the Admin
-          ...{ formData: { ...formData, bankType } }
+          formData: finalFormData as any, // Save the *final* object
+          // These fields are for other BVN services
+          failedEnrollmentUrl: null, 
+          vninSlipUrl: null
         },
       }),
       // c) Log the transaction
@@ -99,7 +108,7 @@ export async function POST(request: Request) {
           userId: user.id,
           serviceId: serviceId,
           type: 'SERVICE_CHARGE',
-          amount: price.negated(), // Charge the FINAL dynamic price
+          amount: price.negated(),
           description: `${service?.name || 'BVN Mod'} (${formData.bvn})`,
           reference: `BVN-MOD-${Date.now()}`,
           status: 'COMPLETED',
