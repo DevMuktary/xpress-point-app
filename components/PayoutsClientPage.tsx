@@ -26,7 +26,12 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
   // --- State Management ---
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  // --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
+  // The state variable is now "stunningly" named 'submitError'
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  // ---------------------------------------------
+  
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
@@ -40,7 +45,7 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setSubmitError(null); // <-- "Refurbished"
     setSuccess(null);
     if (canWithdraw) {
       setIsConfirmModalOpen(true);
@@ -68,7 +73,7 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
       setRequests([data.newRequest, ...requests]); // Add new request to history
 
     } catch (err: any) {
-      setError(err.message);
+      setSubmitError(err.message); // <-- "Refurbished"
     } finally {
       setIsLoading(false);
     }
@@ -117,9 +122,11 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
         </p>
         
         <div className="border-t border-gray-100 mt-6 pt-6">
+          {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 2) --- */}
           {submitError && (
             <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
           )}
+          {/* --------------------------------------------- */}
           {success && (
             <p className="mb-4 text-sm font-medium text-green-600 text-center">{success}</p>
           )}
@@ -191,6 +198,11 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
               </button>
             </div>
             <div className="p-6">
+              {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 3) --- */}
+              {submitError && (
+                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+              )}
+              {/* --------------------------------------------- */}
               <p className="text-center text-gray-600">
                 Are you sure you want to request a payout of your *entire* commission balance?
               </p>
