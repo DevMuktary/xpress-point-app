@@ -21,7 +21,8 @@ type Props = {
   fee: number;
 };
 
-// --- Data for States, LGAs, and Zones ---
+// --- THIS IS THE FIX ---
+// Data for States, LGAs, and Zones
 const nigeriaData: { [key: string]: { zone: string; lgas: string[] } } = {
   "Abia": { "zone": "South East", "lgas": ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
   "Adamawa": { "zone": "North East", "lgas": ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
@@ -53,7 +54,7 @@ const nigeriaData: { [key: string]: { zone: string; lgas: string[] } } = {
   "Ogun": { "zone": "South West", "lgas": ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Ogun Waterside", "Remo North", "Shagamu"] },
   "Ondo": { "zone": "South West", "lgas": ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
   "Osun": { "zone": "South West", "lgas": ["Aiyedaade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
-  "Oyo": { "zone": "South West", "lgas": ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West",Saki East", "Saki West", "Surulere"] },
+  "Oyo": { "zone": "South West", "lgas": ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West", "Saki East", "Saki West", "Surulere"] },
   "Plateau": { "zone": "North Central", "lgas": ["Bokkos", "Barkin Ladi", "Bassa", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
   "Rivers": { "zone": "South South", "lgas": ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emuoha", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
   "Sokoto": { "zone": "North West", "lgas": ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
@@ -61,6 +62,7 @@ const nigeriaData: { [key: string]: { zone: string; lgas: string[] } } = {
   "Yobe": { "zone": "North East", "lgas": ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
   "Zamfara": { "zone": "North West", "lgas": ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
 };
+// -----------------------
 
 const allStates = Object.keys(nigeriaData);
 const allZones = ["North West", "North East", "North Central", "South West", "South East", "South South"];
@@ -89,6 +91,26 @@ const DataSelect = ({ label, id, value, onChange, Icon, children, isRequired = t
   </div>
 );
 
+// --- Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="relative mt-1">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input
+        id={id} type={type} value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        required={isRequired} placeholder={placeholder}
+      />
+    </div>
+  </div>
+);
+
 // --- The Main Component ---
 export default function BvnEnrollmentClientPage({ fee }: Props) {
   
@@ -113,28 +135,23 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
   const [phone, setPhone] = useState('');
   const [altPhone, setAltPhone] = useState('');
   const [address, setAddress] = useState('');
-  
-  // --- THIS IS THE FIX ---
-  // New state for smart dropdowns
   const [state, setState] = useState('');
   const [lga, setLga] = useState('');
   const [zone, setZone] = useState('');
   const [availableLgas, setAvailableLgas] = useState<string[]>([]);
   
-  // Smart logic to update LGA and Zone when State changes
   const handleStateChange = (newState: string) => {
     setState(newState);
     if (newState && nigeriaData[newState]) {
-      setZone(nigeriaData[newState].zone); // Auto-fill zone
-      setAvailableLgas(nigeriaData[newState].lgas); // Set available LGAs
-      setLga(''); // Reset LGA
+      setZone(nigeriaData[newState].zone);
+      setAvailableLgas(nigeriaData[newState].lgas);
+      setLga('');
     } else {
       setZone('');
       setAvailableLgas([]);
       setLga('');
     }
   };
-  // -----------------------
 
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
@@ -149,7 +166,6 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
     
-    // Consolidate all form data
     const formData = {
       agentLocation, agentBvn, bankName, accountName,
       firstName, lastName, dob, email, altEmail,
@@ -220,7 +236,6 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
             <DataInput label="Alternative Phone Number*" id="altPhone" value={altPhone} onChange={setAltPhone} Icon={PhoneIcon} type="tel" />
             <DataInput label="Residential Address*" id="address" value={address} onChange={setAddress} Icon={HomeIcon} />
             
-            {/* --- THIS IS THE FIX --- */}
             <DataSelect label="State of Residence*" id="state" value={state} onChange={handleStateChange} Icon={MapPinIcon}>
               <option value="">-- Select State --</option>
               {allStates.map(s => <option key={s} value={s}>{s}</option>)}
@@ -232,7 +247,6 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
             </DataSelect>
             
             <DataInput label="Geo-Political Zone*" id="zone" value={zone} onChange={setZone} Icon={MapPinIcon} isRequired={false} placeholder="Auto-filled from state" />
-            {/* ----------------------- */}
           </div>
           
           {/* --- Submit Button --- */}
