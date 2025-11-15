@@ -87,7 +87,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
-  // Your "show every time" modal
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(true); 
 
   // --- Form Data State ---
@@ -111,7 +110,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
     let dobFee = 0;
     let dobError: string | null = null;
     
-    // Check if a DOB mod is involved
     if ((serviceId.includes('DOB')) && oldDob && newDob) {
       try {
         const oldDate = new Date(oldDob);
@@ -120,14 +118,13 @@ export default function BvnModificationClientPage({ prices }: Props) {
         const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
         
         if (diffYears > 5) {
-          // Bank-specific logic (Your Design)
           if (['FCMB', 'First Bank', 'Keystone Bank'].includes(bankType)) {
             dobError = "DOB modification over 5 years is NOT supported for this bank.";
-            dobFee = 0; // Set to 0 as it's invalid
+            dobFee = 0;
           } else if (['Agency BVN', 'B.O.A', 'NIBSS Microfinance', 'Enterprise Bank', 'Heritage Bank'].includes(bankType)) {
-            dobFee = 4000; // Your ₦4000 fee
+            dobFee = 4000;
           } else {
-            dobFee = 2000; // Your ₦2000 fee for "OTHER" banks
+            dobFee = 2000;
           }
         }
       } catch {
@@ -159,7 +156,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
     
     let formData: any = { bvn, nin, email, password };
     
-    // Build the form data based on ModType
     if (serviceId === 'BVN_MOD_NAME') {
       formData = { ...formData, newFirstName, newMiddleName, newLastName };
     } else if (serviceId === 'BVN_MOD_DOB') {
@@ -175,12 +171,12 @@ export default function BvnModificationClientPage({ prices }: Props) {
     }
 
     try {
-      const response = await fetch('/api/services/bvn/modification-submit', { // <-- New API
+      const response = await fetch('/api/services/bvn/modification-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           serviceId: serviceId, 
-          bankType: bankType, // Send bankType for fee calculation
+          bankType: bankType,
           formData, 
         }),
       });
@@ -207,7 +203,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- Your "Sweet Alert" Style Message --- */}
+      {/* --- Success Message --- */}
       {success && (
         <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6">
           <div className="flex">
@@ -241,14 +237,18 @@ export default function BvnModificationClientPage({ prices }: Props) {
               1. Select Enrollment Institution
             </label>
             <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+              {/* --- THIS IS THE FIX (Part 1) --- */}
+              {/* Replaced 'CategoryButton' with 'ModTypeButton' */}
               {banksList.map(bank => (
-                <CategoryButton
+                <ModTypeButton
                   key={bank}
                   title={bank}
+                  description="Enrollment Bank"
                   selected={bankType === bank}
                   onClick={() => setBankType(bank)}
                 />
               ))}
+              {/* ---------------------------------- */}
             </div>
           </div>
 
@@ -291,7 +291,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
                   </div>
                 </fieldset>
               )}
-              {/* Link for Newspaper */}
               {serviceId === 'BVN_MOD_NAME' && (
                  <p className="text-sm text-gray-600">
                    For Female Change of Surname, Newspaper is Compulsory. 
@@ -365,7 +364,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
         </form>
       </div>
 
-      {/* --- Your "Show Every Time" Terms Modal --- */}
+      {/* --- Terms Modal --- */}
       {isTermsModalOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -379,14 +378,14 @@ export default function BvnModificationClientPage({ prices }: Props) {
               </button>
             </div>
             <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
-              <p>1. Make sure it is an **Agency Enrollment** or one of the **Listed Banks**. Ask the customer if they have *ever* made a modification before.</p>
-              <p>2. If they did a NIN Modification, make sure the modification is reflecting on their **VNIN Slip** (NIMC Server). NIBSS does not do double modifications.</p>
-              <p>3. You can only change details **once**. If you modified your Name, you can't do it again. You are eligible to modify DOB, Phone Number, etc. The same applies if it's DOB.</p>
-              <p>4. **NO REFUND** if we process your work and later find out:</p>
+              <p>1. Make sure it is an **Agency Enrollment** or one of the **Listed Banks**. Ask the customer if he has ever made a modification before.</p>
+              <p>2. If he did NIN Modification, make sure the modification is reflecting on **VNIN Slip** (NIMC Server). NIBSS Don't Do Double Modification.</p>
+              <p>3. You Can Only Change Your Details **Once**. e.g if you modified your Name, you can't do it Again, you are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
+              <p>4. **NO REFUND** if we processed your work and we later found out:</p>
               <ul className="list-disc list-inside pl-4">
-                <li>It's a Bank Enrollment (Except for the Listed Banks).</li>
-                <li>You provided Old NIN Details.</li>
-                <li>You have already done a similar modification.</li>
+                <li>It's a Bank Enrollment (Except Listed Banks).</li>
+                <li>Your Old NIN Details are incorrect.</li>
+                <li>Or you have already done a similar modification.</li>
               </ul>
               <p>5. **Listed Banks:** Agency BVN, B.O.A (Bank of Agriculture), NIBSS Microfinance, Enterprise Bank, Heritage Bank, FCMB, First Bank, Keystone Bank.</p>
               <p className="font-bold text-red-700">6. Do NOT submit a "Complete Change of Name" (First, Middle, and Last) as the service is currently down.</p>
@@ -409,7 +408,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
         </div>
       )}
 
-      {/* --- Your "Confirmation" Modal --- */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
