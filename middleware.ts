@@ -22,17 +22,27 @@ export function middleware(req: NextRequest) {
   // This extracts the 'luminax' from 'luminax.xpresspoint.net'
   const subdomain = hostname.split('.')[0];
   
-  // This invisibly rewrites the URL. The user *sees* 'luminax.xpresspoint.net'
-  // but the server *shows* them the content from '/register/luminax'
-  url.pathname = `/register/${subdomain}${url.pathname}`;
-  return NextResponse.rewrite(url);
+  // --- THIS IS THE FIX ---
+  // If the user is on a subdomain AND trying to visit the root...
+  if (url.pathname === '/') {
+    // ...invisibly show them the registration page.
+    url.pathname = `/register/${subdomain}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // If the user is on a subdomain AND trying to visit *any other page*...
+  // (like /dashboard, /login, /verify-otp)
+  // ...redirect them to the *main* domain.
+  const mainDomainUrl = new URL(url.pathname, `https://${MAIN_DOMAIN}`);
+  mainDomainUrl.search = url.search;
+  return NextResponse.redirect(mainDomainUrl);
+  // -----------------------
 }
 
-// --- THIS IS THE FIX ---
-// We have added 'verify-otp' to the list of paths to *ignore*.
+// "World-class" config: This middleware *only* runs
+// for subdomains, not for your main app.
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|register|login|signup|verify-otp).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
-// -----------------------
