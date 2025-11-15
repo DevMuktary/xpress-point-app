@@ -14,9 +14,12 @@ export async function POST(request: Request) {
     const { 
       serviceId, 
       formData,
-      // File URLs
+      // --- THIS IS THE FIX (Part 1) ---
+      // We now accept all possible file uploads
       failedEnrollmentUrl,
-      vninSlipUrl
+      vninSlipUrl,
+      newspaperUrl
+      // ---------------------------------
     } = body; 
 
     if (!serviceId || !formData) {
@@ -53,8 +56,11 @@ export async function POST(request: Request) {
           status: 'PENDING',
           statusMessage: 'Request submitted. Awaiting admin review.',
           formData: formData as any,
+          // --- THIS IS THE FIX (Part 2) ---
           failedEnrollmentUrl: failedEnrollmentUrl || null,
-          vninSlipUrl: vninSlipUrl || null
+          vninSlipUrl: vninSlipUrl || null,
+          newspaperUrl: newspaperUrl || null // Save the new field
+          // ---------------------------------
         },
       }),
       // c) Log the transaction
