@@ -10,49 +10,52 @@ import {
   MagnifyingGlassIcon,
   DocumentMagnifyingGlassIcon,
   BanknotesIcon,
-  XMarkIcon
+  XMarkIcon,
+  PencilSquareIcon // Import the "Edit" icon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
+import Link from 'next/link'; // Import Link
 
 // Define the props to receive the initial data from the server
+type Details = {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+};
 type Props = {
   currentBalance: number;
   initialRequests: WithdrawalRequest[];
+  currentDetails: Details; // We must pass this from the server page
+  pendingChange: any | null; // We must pass this from the server page
 };
 
-// --- The Main "World-Class" Component ---
-export default function PayoutsClientPage({ currentBalance, initialRequests }: Props) {
+// --- The Main Component ---
+export default function PayoutsClientPage({ currentBalance, initialRequests, currentDetails, pendingChange }: Props) {
   
   // --- State Management ---
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
-  // The state variable is now "stunningly" named 'submitError'
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // ---------------------------------------------
-  
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
-  // "World-Class" state for the current balance
   const [balance, setBalance] = useState(currentBalance);
 
-  // --- "World-Class" Payout Logic (Your Design) ---
+  // --- Payout Logic ---
   const canWithdraw = balance >= 1000;
-  const withdrawalAmount = balance; // They withdraw their *entire* balance
+  const withdrawalAmount = balance;
 
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitError(null); // <-- "Refurbished"
+    setSubmitError(null);
     setSuccess(null);
     if (canWithdraw) {
       setIsConfirmModalOpen(true);
     }
   };
   
-  // --- This is the *final* submit, called by the modal's "YES" button ---
+  // --- This is the *final* submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -69,11 +72,11 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
       }
       
       setSuccess(data.message);
-      setBalance(0); // "Stunningly" reset balance on screen
-      setRequests([data.newRequest, ...requests]); // Add new request to history
+      setBalance(0);
+      setRequests([data.newRequest, ...requests]);
 
     } catch (err: any) {
-      setSubmitError(err.message); // <-- "Refurbished"
+      setSubmitError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +91,7 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
     });
   };
   
-  // Helper to get "world-class" status info
+  // Helper to get status info
   const getStatusInfo = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED':
@@ -108,7 +111,7 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
     <div className="space-y-6">
       {(isLoading) && <Loading />}
 
-      {/* --- 1. "Stunning" Balance Card --- */}
+      {/* --- 1. Balance Card --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-gray-500">Available Commission</span>
@@ -122,11 +125,9 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
         </p>
         
         <div className="border-t border-gray-100 mt-6 pt-6">
-          {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 2) --- */}
           {submitError && (
             <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
           )}
-          {/* --------------------------------------------- */}
           {success && (
             <p className="mb-4 text-sm font-medium text-green-600 text-center">{success}</p>
           )}
@@ -141,7 +142,60 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
         </div>
       </div>
 
-      {/* --- 2. The "My Payouts" History --- */}
+      {/* --- 2. Current Account Card (THIS IS THE FIX) --- */}
+      <div className="rounded-2xl bg-white p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">
+            Current Payout Account
+          </h3>
+          {/* This is the new "Change Account" button */}
+          <Link
+            href="/dashboard/aggregator/account"
+            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            <PencilSquareIcon className="h-4 w-4" />
+            Change
+          </Link>
+        </div>
+        
+        {/* Show pending change if it exists */}
+        {pendingChange ? (
+            <div className="rounded-lg bg-yellow-50 p-4 border border-yellow-200">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <ClockIcon className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-bold text-yellow-800">
+                    Change Request Pending
+                  </h3>
+                  <p className="mt-1 text-sm text-yellow-700">
+                    Your request to change your account to <span className="font-medium">{pendingChange.newAccountName} ({pendingChange.newAccountNumber})</span> is awaiting admin approval.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Show current details if no change is pending
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500">Bank Name</label>
+                <p className="text-base font-semibold text-gray-800">{currentDetails.bankName}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500">Account Number</label>
+                <p className="text-base font-semibold text-gray-800">{currentDetails.accountNumber}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500">Account Name</label>
+                <p className="text-base font-semibold text-gray-800">{currentDetails.accountName}</p>
+              </div>
+            </div>
+          )}
+      </div>
+      {/* ------------------------------------------------ */}
+
+      {/* --- 3. The "My Payouts" History --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg mt-6">
         <h3 className="text-lg font-semibold text-gray-900">My Payout History</h3>
         
@@ -185,7 +239,7 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
         </div>
       </div>
 
-      {/* --- Your "World-Class" Confirmation Modal --- */}
+      {/* --- Your "Confirmation" Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
@@ -198,11 +252,6 @@ export default function PayoutsClientPage({ currentBalance, initialRequests }: P
               </button>
             </div>
             <div className="p-6">
-              {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 3) --- */}
-              {submitError && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
-              )}
-              {/* --------------------------------------------- */}
               <p className="text-center text-gray-600">
                 Are you sure you want to request a payout of your *entire* commission balance?
               </p>
