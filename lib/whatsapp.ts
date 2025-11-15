@@ -1,10 +1,8 @@
 import axios from 'axios';
 
-// --- THIS IS THE FIX ---
-// Using the correct environment variable names you provided
+// Using the correct environment variable names
 const WHATSAPP_API_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const WHATSAPP_FROM_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-// -----------------------
 
 const WHATSAPP_API_URL = `https://graph.facebook.com/v19.0/${WHATSAPP_FROM_PHONE_ID}/messages`;
 
@@ -16,21 +14,21 @@ if (!WHATSAPP_API_TOKEN || !WHATSAPP_FROM_PHONE_ID) {
 export async function sendOtpMessage(to: string, otpCode: string) {
   if (!WHATSAPP_API_TOKEN || !WHATSAPP_FROM_PHONE_ID) {
     console.error("Cannot send WhatsApp OTP: API variables are missing.");
-    // We fail silently so we don't crash the registration
     return;
   }
   
   // Format the number to remove the '+'
   const formattedTo = to.replace('+', '');
 
+  // --- THIS IS THE FIX ---
   const payload = {
     messaging_product: "whatsapp",
     to: formattedTo,
     type: "template",
     template: {
-      name: "xpresspoint_otp",
+      name: "otp_verification", // Corrected template name
       language: {
-        code: "en"
+        code: "en_GB" // Corrected language code
       },
       components: [
         {
@@ -45,6 +43,7 @@ export async function sendOtpMessage(to: string, otpCode: string) {
       ]
     }
   };
+  // -----------------------
 
   try {
     await axios.post(WHATSAPP_API_URL, payload, {
@@ -55,6 +54,6 @@ export async function sendOtpMessage(to: string, otpCode: string) {
     });
     console.log(`WhatsApp OTP sent to: ${formattedTo}`);
   } catch (error: any) {
-    console.error("WhatsApp Error:", error.response?.data || error.message);
+    console.error("WhatsApp Error:", error.response?.data?.error || error.message);
   }
 }
