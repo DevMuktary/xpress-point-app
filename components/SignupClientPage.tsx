@@ -14,8 +14,8 @@ import {
 } from '@heroicons/react/24/outline';
 // --- THIS IS THE FIX (Part 1) ---
 import PhoneInput from 'react-phone-number-input/input';
-// We import the *type* from the main package
-import type { E164Number } from 'libphonenumber-js/core'; 
+// We import the *type* from the 'libphonenumber-js' package
+import { E164Number } from 'libphonenumber-js'; 
 // ---------------------------------
 
 // Add new props for the Aggregator
@@ -33,7 +33,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState<E164Number | string>(''); // This line will now work
+  const [phone, setPhone] = useState<E164Number | string>(''); // Use the correct type
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -131,7 +131,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
                 name="phone"
                 country="NG"
                 value={phone}
-                onChange={(value: E164Number | undefined) => setPhone(value || '')} // This line will also work now
+                onChange={(value: E164Number | undefined) => setPhone(value || '')}
                 required
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
               />
@@ -146,7 +146,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
             onChange={setPassword}
             show={showPassword}
             onToggle={() => setShowPassword(!showPassword)}
-          />
+          S/>
           <PasswordInput
             label="Confirm Password*"
             id="confirm-password"
@@ -230,7 +230,8 @@ const PasswordInput = ({ label, id, value, onChange, show, onToggle }: {
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">
       {label}
-    </className="mt-1 relative">
+    </label>
+    <div className="mt-1 relative">
       <input
         id={id} name={id}
         type={show ? "text" : "password"}
@@ -252,5 +253,3 @@ const PasswordInput = ({ label, id, value, onChange, show, onToggle }: {
     </div>
   </div>
 );
-
-
