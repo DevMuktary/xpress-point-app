@@ -15,7 +15,7 @@ import {
 // --- THIS IS THE FIX (Part 1) ---
 import PhoneInput from 'react-phone-number-input/input';
 // We import the *type* from the main package
-import type { E164Number } from 'react-phone-number-input'; 
+import type { E164Number } from 'libphonenumber-js/core'; 
 // ---------------------------------
 
 // Add new props for the Aggregator
@@ -230,8 +230,7 @@ const PasswordInput = ({ label, id, value, onChange, show, onToggle }: {
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">
       {label}
-    </label>
-    <div className="mt-1 relative">
+    </className="mt-1 relative">
       <input
         id={id} name={id}
         type={show ? "text" : "password"}
