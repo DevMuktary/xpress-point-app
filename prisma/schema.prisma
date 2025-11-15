@@ -25,7 +25,7 @@ model User {
   nin                          String?
   hasAgreedToModificationTerms Boolean                @default(false) @map("has_agreed_to_mod_terms")
   
-  // --- "WORLD-CLASS" AGGREGATOR FIELDS (RESTORED) ---
+  // --- AGGREGATOR FIELDS (FIX 1: RE-ADDED) ---
   subdomain                    String?                @unique
   accountName                  String?                @map("account_name")
   accountNumber                String?                @map("account_number")
@@ -38,8 +38,9 @@ model User {
   aggregatorPrices             AggregatorPrice[]
   withdrawalRequests           WithdrawalRequest[]
   pendingAccountChanges        PendingAccountChange[]
-  // ------------------------------------------------
+  // ---------------------------------------------
   
+  // --- Relations ---
   wallet                       Wallet?
   virtualAccounts              VirtualAccount[]
   transactions                 Transaction[]
@@ -48,14 +49,15 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- FIX 1 (WAS MISSING)
+  delinkRequests               DelinkRequest[] // <-- FIX 2 (RE-ADDED)
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
   tinRequests                  TinRequest[]
-  jambRequests                 JambRequest[]   // <-- FIX 2 (WAS MISSING)
+  jambRequests                 JambRequest[]   // <-- FIX 3 (RE-ADDED)
   examPinRequests              ExamPinRequest[]
-  resultRequests               ResultRequest[] // <-- FIX 3 (WAS MISSING)
+  resultRequests               ResultRequest[]
   vtuRequests                  VtuRequest[]
+  bvnRequests                  BvnRequest[]
   otps                         Otp[]
 
   @@map("users")
@@ -139,10 +141,11 @@ model Service {
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
   TinRequest          TinRequest[]
-  JambRequest         JambRequest[] // <-- FIX 4 (WAS MISSING)
+  JambRequest         JambRequest[] // <-- FIX 4 (RE-ADDED)
   ExamPinRequest      ExamPinRequest[]
   ResultRequest       ResultRequest[]
   VtuRequest          VtuRequest[]
+  BvnRequest          BvnRequest[]
   AggregatorPrice     AggregatorPrice[]
   
   @@map("services")
@@ -277,7 +280,7 @@ model TinRequest {
   @@map("tin_requests")
 }
 
-// --- FIX 5: ADD THIS MODEL BACK ---
+// --- FIX 5: RE-ADDING JAMB MODEL ---
 model JambRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
@@ -347,6 +350,33 @@ model VtuRequest {
   service        Service   @relation(fields: [serviceId], references: [id])
   @@map("vtu_requests")
 }
+
+// --- NEW TABLE FOR BVN (Manual & Auto) ---
+model BvnRequest {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  serviceId         String        @map("service_id")
+  status            RequestStatus @default(PENDING)
+  statusMessage     String?       @map("status_message")
+  formData          Json          // For all requirements
+  
+  // --- User Uploads ---
+  failedEnrollmentUrl String?     @map("failed_enrollment_url") // For C.R.M
+  vninSlipUrl         String?     @map("vnin_slip_url")         // For VNIN to NIBSS
+  
+  // --- Admin Uploads ---
+  uploadedSlipUrl     String?     @map("uploaded_slip_url")   // For Verification & Modification
+  retrievalResult     String?     @map("retrieval_result")  // For C.R.M text result
+  
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user              User          @relation(fields: [userId], references: [id])
+  service           Service       @relation(fields: [serviceId], references: [id])
+  
+  @@map("bvn_requests")
+}
+// ------------------------------------
 
 model AggregatorPrice {
   id              String   @id @default(uuid())
