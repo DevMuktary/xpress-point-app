@@ -4,18 +4,26 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, BanknotesIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import PayoutsClientPage from '@/components/PayoutsClientPage'; // We will create this next
+import PayoutsClientPage from '@/components/PayoutsClientPage';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// This is a "world-class" Server Component
+// This is a Server Component.
 export default async function PayoutsPage() {
   const user = await getUserFromSession();
   if (!user || user.role !== 'AGGREGATOR') {
     redirect('/dashboard');
   }
 
-  // 1. "Fetch" the "stunning" wallet and history
-  const [wallet, requests] = await Promise.all([
+  // --- THIS IS THE FIX (Part 1) ---
+  // 1. Get the aggregator's current, active bank details from the User object
+  const currentDetails = {
+    bankName: user.bankName || 'Not Set',
+    accountNumber: user.accountNumber || 'Not Set',
+    accountName: user.accountName || 'Not Set',
+  };
+
+  // 2. Fetch the wallet balance and withdrawal history
+  const [wallet, requests, pendingChange] = await Promise.all([
     prisma.wallet.findUnique({
       where: { userId: user.id },
       select: { commissionBalance: true }
@@ -23,8 +31,13 @@ export default async function PayoutsPage() {
     prisma.withdrawalRequest.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' }
+    }),
+    // 3. Check if a change is already pending admin approval
+    prisma.pendingAccountChange.findUnique({
+      where: { userId: user.id },
     })
   ]);
+  // ------------------------------------
 
   const commissionBalance = wallet?.commissionBalance || new Decimal(0);
 
@@ -41,11 +54,15 @@ export default async function PayoutsPage() {
         </h1>
       </div>
       
-      {/* 2. Pass the "world-class" data to the client */}
+      {/* --- THIS IS THE FIX (Part 2) --- */}
+      {/* 4. Pass all the correct data to the client */}
       <PayoutsClientPage 
         currentBalance={commissionBalance.toNumber()} 
         initialRequests={requests}
+        currentDetails={currentDetails}
+        pendingChange={pendingChange}
       />
+      {/* ------------------------------------ */}
     </div>
   );
 }
