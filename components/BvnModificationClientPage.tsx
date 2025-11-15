@@ -479,9 +479,9 @@ export default function BvnModificationClientPage({ prices }: Props) {
                     
                       {/* --- THIS IS THE NEW MARRIAGE FIX --- */}
                       <div className="pt-4 border-t border-gray-200">
-                        <label className="block text-sm font-medium text-gray-700">Is this for a female change of name for marriage?</label>
+                        <label className="block text-sm font-medium text-gray-700">Is this for female change of SurName?</label>
                         <div className="mt-2 grid grid-cols-2 gap-3">
-                          <ModTypeButton title="Yes" description="For marriage" selected={isMarriage === true} onClick={() => setIsMarriage(true)} />
+                          <ModTypeButton title="Yes" description="For SurName" selected={isMarriage === true} onClick={() => setIsMarriage(true)} />
                           <ModTypeButton title="No" description="Other reason" selected={isMarriage === false} onClick={() => setIsMarriage(false)} />
                         </div>
                       </div>
