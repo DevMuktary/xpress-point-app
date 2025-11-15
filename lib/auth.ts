@@ -24,7 +24,7 @@ export async function getUserFromSession() {
     // Get the user from the database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      // --- THIS IS THE "WORLD-CLASS" FIX ---
+      // --- THIS IS THE FIX ---
       // We must select all the new fields we added to the schema.
       select: {
         id: true,
@@ -37,13 +37,14 @@ export async function getUserFromSession() {
         isIdentityVerified: true,
         bvn: true,
         hasAgreedToModificationTerms: true,
-        subdomain: true,          // <-- THE MISSING LINE
-        businessName: true,       // <-- THE MISSING LINE
-        accountName: true,        // <-- Added for future tools
-        accountNumber: true,      // <-- Added for future tools
-        bankName: true,           // <-- Added for future tools
+        subdomain: true,
+        businessName: true,
+        accountName: true,
+        accountNumber: true,
+        bankName: true,
+        aggregatorId: true, // <-- THE MISSING LINE
       }
-      // ------------------------------------
+      // -----------------------
     });
 
     return user;
