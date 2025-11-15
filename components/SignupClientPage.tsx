@@ -12,10 +12,10 @@ import {
   HomeIcon, 
   EnvelopeIcon 
 } from '@heroicons/react/24/outline';
-// --- THIS IS THE FIX ---
+// --- THIS IS THE FIX (Part 1) ---
 import PhoneInput from 'react-phone-number-input/input';
 // We import the *type* from the main package
-import E164Number from 'react-phone-number-input'; 
+import type { E164Number } from 'react-phone-number-input'; 
 // ---------------------------------
 
 // Add new props for the Aggregator
@@ -33,7 +33,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState<E164Number | string>(''); // Use the correct type
+  const [phone, setPhone] = useState<E164Number | string>(''); // This line will now work
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -131,7 +131,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
                 name="phone"
                 country="NG"
                 value={phone}
-                onChange={(value: E164Number | undefined) => setPhone(value || '')}
+                onChange={(value: E164Number | undefined) => setPhone(value || '')} // This line will also work now
                 required
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
               />
@@ -253,4 +253,5 @@ const PasswordInput = ({ label, id, value, onChange, show, onToggle }: {
     </div>
   </div>
 );
+
 
