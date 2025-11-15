@@ -1,34 +1,36 @@
 "use client"; // This is an interactive component
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LinkIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  ClipboardIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
-import CopyButton from '@/components/CopyButton'; // <-- "World-Class" Import
+import CopyButton from '@/components/CopyButton'; // Import the CopyButton
 
-// Define the props to receive the initial data from the server
+// Type Definitions
 type Props = {
   subdomain: string;
   businessName: string;
 };
 
-// --- The Main "World-Class" Component ---
+// --- The Main Component ---
 export default function AggregatorBrandClientPage({ subdomain, businessName }: Props) {
   
-  // "Stunningly" create the two links
+  // Create the two links
   const subdomainLink = `https://${subdomain}.xpresspoint.net`;
   const registerLink = `https://xpresspoint.net/register/${subdomain}`;
 
   return (
     <div className="space-y-6">
-      {/* --- 1. The "Stunning" Subdomain Card --- */}
+      {/* --- 1. Your Subdomain Card --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-bold text-gray-900">
-          Your "World-Class" Subdomain
+          Your Subdomain
         </h3>
         <p className="text-sm text-gray-600 mt-2">
-          This is your "stunning" and "instant" subdomain. When agents visit this link, they will be taken to your referral sign-up page.
+          This is your main subdomain. When agents visit this link, they will be taken to your referral sign-up page.
         </p>
         
         <div className="mt-4">
@@ -45,13 +47,13 @@ export default function AggregatorBrandClientPage({ subdomain, businessName }: P
         </div>
       </div>
 
-      {/* --- 2. The "Stable" Fallback Link Card --- */}
+      {/* --- 2. Your Backup Link Card --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <h3 className="text-lg font-bold text-gray-900">
-          Your "Stable" Referral Link
+          Your Backup Referral Link
         </h3>
         <p className="text-sm text-gray-600 mt-2">
-          If the subdomain is ever "rubbish" or "unstable" (e.g., DNS issues), this link is a "world-class" backup that *always* works.
+          If the subdomain is ever unavailable or having  issues, this link is a reliable backup that always works.
         </p>
         
         <div className="mt-4">
