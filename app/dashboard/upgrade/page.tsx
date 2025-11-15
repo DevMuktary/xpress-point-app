@@ -24,12 +24,15 @@ export default async function UpgradePage() {
   const service = await prisma.service.findUnique({ where: { id: SERVICE_ID } });
 
   if (!service) {
-    // This should not happen if the seed is correct
     throw new Error("AGGREGATOR_UPGRADE service not found in database.");
   }
 
   // This is the 5,000 fee
   const upgradeFee = service.defaultAgentPrice.toNumber();
+  
+  // --- THIS IS THE "WORLD-CLASS" FIX ---
+  // We "fetch" the agent's aggregatorId (if one exists)
+  const aggregatorId = user.aggregatorId || null;
   // ------------------------------------
 
   return (
@@ -45,8 +48,8 @@ export default async function UpgradePage() {
         </h1>
       </div>
       
-      {/* We pass the "stunning" 5,000 fee to the client */}
-      <UpgradeClientPage fee={upgradeFee} />
+      {/* We pass the "stunning" 5,000 fee AND the new aggregatorId to the client */}
+      <UpgradeClientPage fee={upgradeFee} aggregatorId={aggregatorId} />
     </div>
   );
 }
