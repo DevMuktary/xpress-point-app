@@ -13,7 +13,7 @@ const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
 const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
 const PAYVESSEL_ENDPOINT = 'https://api.payvessel.com/pms/api/external/request/customerReservedAccount/';
 
-// --- Helper Functions from our slip generator ---
+// --- Helper Functions ---
 function parseBvnData(data: any): {
   firstName: string | null;
   lastName: string | null;
@@ -60,8 +60,11 @@ export async function POST(request: Request) {
     // --- 3. Call Raudah BVN API ---
     let data: any; 
     try {
+      // --- THIS IS THE FIX ---
+      // The API expects the key to be 'bvn', not 'value'
       const raudahResponse = await axios.post(
-        RAUDAH_ENDPOINT, { value: bvn }, {
+        RAUDAH_ENDPOINT, { bvn: bvn }, { 
+      // -----------------------
           headers: {
             'Content-Type': 'application/json',
             'Authorization': RAUDAH_API_KEY,
@@ -107,10 +110,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // --- 6. YOUR NEW "WORLD-CLASS" LOGIC ---
-    // If NIN is null, use the BVN as the NIN.
+    // --- 6. Your "finalNin" Logic ---
     const finalNin = nin || bvn;
-    // ----------------------------------------
     
     // --- 7. Update User in Database ---
     await prisma.user.update({
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
         firstName: firstName,
         lastName: lastName,
         bvn: bvn,
-        nin: finalNin, // Save the final NIN (either real or fallback)
+        nin: finalNin,
         isIdentityVerified: true,
       },
     });
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
       account_type: "STATIC",
       businessid: PAYVESSEL_BUSINESS_ID,
       bvn: bvn,
-      nin: finalNin, // Use the final NIN
+      nin: finalNin,
     };
 
     const payvesselResponse = await axios.post(
