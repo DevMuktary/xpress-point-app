@@ -49,8 +49,12 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
   // --- State Management ---
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+
+  // --- THIS IS THE FIX (Part 1) ---
+  // Replaced the 'success' string with a 'receipt' object
+  const [receipt, setReceipt] = useState<any | null>(null);
+  // ---------------------------------
 
   // --- Form Data State (All fields) ---
   const [agentLocation, setAgentLocation] = useState('');
@@ -73,7 +77,7 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    setSuccess(null);
+    setReceipt(null); // Clear old receipt
     setIsConfirmModalOpen(true);
   };
   
@@ -104,7 +108,15 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSuccess(data.message);
+      // --- THIS IS THE FIX (Part 2) ---
+      // Set the receipt data to open the new modal
+      setReceipt({
+        message: data.message,
+        serviceName: "BVN Android Enrollment",
+        status: "PENDING",
+      });
+      // ---------------------------------
+      
       // Reset the form
       setAgentLocation(''); setAgentBvn(''); setBankName(''); setAccountName('');
       setFirstName(''); setLastName(''); setDob(''); setEmail(''); setAltEmail('');
@@ -116,46 +128,15 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
       setIsLoading(false);
     }
   };
+
+  const closeReceiptModal = () => {
+    setReceipt(null);
+  };
   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- Success Message --- */}
-      {success && (
-        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-blue-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-bold text-blue-800">
-                Request Submitted Successfully!
-              </h3>
-              <div className="mt-2 text-sm text-blue-700">
-                <p>
-                  Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
-                  <Link href="/dashboard/history/bvn" className="font-semibold underline hover:text-blue-600">
-                    BVN History
-                  </Link> page.
-                </p>
-                <p className="mt-2">
-                  To check your enrollment reports visit: 
-                  <a 
-                    href="https://agency.xpresspoint.net" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="font-semibold underline"
-                  >
-                    https://agency.xpresspoint.net
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
@@ -177,9 +158,7 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
             <DataInput label="Phone Number*" id="phone" value={phone} onChange={setPhone} Icon={PhoneIcon} type="tel" />
             <DataInput label="Alternative Phone Number*" id="altPhone" value={altPhone} onChange={setAltPhone} Icon={PhoneIcon} type="tel" />
             <DataInput label="Residential Address*" id="address" value={address} onChange={setAddress} Icon={HomeIcon} />
-            {/* --- THIS IS THE FIX --- */}
             <DataInput label="State of Residence*" id="state" value={state} onChange={setState} Icon={MapPinIcon} />
-            {/* ----------------------- */}
             <DataInput label="LGA*" id="lga" value={lga} onChange={setLga} Icon={MapPinIcon} />
             <DataInput label="Geo-Political Zone*" id="zone" value={zone} onChange={setZone} Icon={MapPinIcon} />
           </div>
@@ -237,6 +216,57 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
           </div>
         </div>
       )}
+
+      {/* --- THIS IS THE FIX (Part 3) --- */}
+      {/* The New "Success Modal" */}
+      {receipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center">
+                <CheckCircleIcon className="h-16 w-16 text-green-500" />
+                <h2 className="mt-4 text-xl font-bold text-gray-900">
+                  Request Submitted
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {receipt.message}
+                </p>
+                
+                <div className="w-full mt-6 space-y-2 rounded-lg border bg-gray-50 p-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Service:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.serviceName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Status:</span>
+                    <span className="text-sm font-semibold text-yellow-600">{receipt.status}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Amount:</span>
+                    <span className="text-sm font-semibold text-gray-900">₦{fee}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <Link
+                href="/dashboard/history/bvn"
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+              >
+                Check History
+              </Link>
+              <button
+                onClick={closeReceiptModal}
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Submit Another
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ------------------------------- */}
     </div>
   );
 }
