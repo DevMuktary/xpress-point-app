@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
-import ServiceItemCard from '@/components/ServiceItemCard'; // We re-use our "world-class" card
+import ServiceItemCard from '@/components/ServiceItemCard'; // We re-use the card component
 import { 
   UsersIcon,
   CurrencyDollarIcon,
@@ -18,34 +18,34 @@ export default async function AggregatorHubPage() {
   if (!user) {
     redirect('/login?error=Please+login+to+continue');
   }
-  // "Stunning" security: If a normal AGENT tries to see this, send them away.
+  // Security: If a normal AGENT tries to see this, send them away.
   if (user.role !== 'AGGREGATOR') {
     redirect('/dashboard');
   }
 
-  // --- This is the "Stunning" 4-Card Hub (Your Design) ---
+  // This is the list of Aggregator Tools
   const aggregatorTools = [
     {
       title: 'My Agents',
-      description: 'View a "world-class" list of all agents registered under you.',
+      description: 'View a list of all agents registered under you.',
       href: '/dashboard/aggregator/agents', // We will build this next
       logo: UsersIcon,
     },
     {
       title: 'My Earnings',
-      description: 'See the "stunning" commission history you have earned from your agents.',
+      description: 'See the commission history you have earned from your agents.',
       href: '/dashboard/aggregator/earnings', // We will build this next
       logo: CurrencyDollarIcon,
     },
     {
       title: 'My Payouts',
-      description: 'Withdraw your "world-class" commission balance to your bank account.',
-      href: '/dashboard/aggregator/payouts', // We will build this NOW
+      description: 'Withdraw your commission balance to your bank account.',
+      href: '/dashboard/aggregator/payouts', // This page is already built
       logo: BanknotesIcon,
     },
     {
       title: 'My Brand',
-      description: 'Get your "stunning" and "instant" subdomain link to share.',
+      description: 'Get your unique subdomain link to share with new agents.',
       href: '/dashboard/aggregator/brand', // We will build this next
       logo: LinkIcon,
     },
@@ -64,10 +64,10 @@ export default async function AggregatorHubPage() {
         </h1>
       </div>
 
-      {/* --- "Refurbished" Card List (1-column, stable on phone) --- */}
+      {/* --- Card List (1-column on mobile) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {aggregatorTools.map((service) => (
-          // This is a "refurbished" ServiceItemCard, using the Icon
+          // This is a re-usable ServiceItemCard, using the Icon
           <Link
             key={service.title}
             href={service.href}
@@ -75,6 +75,7 @@ export default async function AggregatorHubPage() {
                        transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
           >
             <div>
+              {/* This renders the icon component */}
               <service.logo className="h-10 w-10 text-blue-600" />
               <h3 className="mt-4 text-lg font-bold text-gray-900">{service.title}</h3>
               <p className="mt-1 text-sm text-gray-600 line-clamp-2">{service.description}</p>
