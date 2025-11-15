@@ -55,9 +55,17 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
-  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
+// --- Reusable Input Component (THIS IS THE FIX) ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
+  label: string,
+  id: string,
+  value: string,
+  onChange: (value: string) => void,
+  Icon: React.ElementType,
+  type?: string,
+  isRequired?: boolean,
+  placeholder?: string,
+  maxLength?: number // <-- "Fixed" to accept maxLength
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -66,14 +74,19 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id} type={type} value={value}
+        id={id}
+        type={type}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired} placeholder={placeholder}
+        required={isRequired}
+        placeholder={placeholder}
+        maxLength={maxLength} // <-- It is now correctly passed
       />
     </div>
   </div>
 );
+// -----------------------------------------------------------
 
 // --- The Main Component ---
 export default function BvnModificationClientPage({ prices }: Props) {
@@ -237,8 +250,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
               1. Select Enrollment Institution
             </label>
             <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-              {/* --- THIS IS THE FIX (Part 1) --- */}
-              {/* Replaced 'CategoryButton' with 'ModTypeButton' */}
               {banksList.map(bank => (
                 <ModTypeButton
                   key={bank}
@@ -248,7 +259,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
                   onClick={() => setBankType(bank)}
                 />
               ))}
-              {/* ---------------------------------- */}
             </div>
           </div>
 
