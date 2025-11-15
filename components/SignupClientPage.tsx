@@ -4,42 +4,58 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Loading from '@/app/loading';
-import { EyeIcon, EyeSlashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { 
+  EyeIcon, 
+  EyeSlashIcon, 
+  UserIcon, 
+  BriefcaseIcon, 
+  HomeIcon, 
+  EnvelopeIcon 
+} from '@heroicons/react/24/outline';
+import PhoneInput, { E164Number } from 'react-phone-number-input/input';
 
-// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
-import PhoneInput from 'react-phone-number-input/input';
-// We import the *type* from the 'libphonenumber-js' package
-import { E164Number } from 'libphonenumber-js'; 
-// ---------------------------------------------
-
-// --- "World-Class" Refurbish (Part 1) ---
-// Add new "stunning" props for the Aggregator
+// Add new props for the Aggregator
 type Props = {
   aggregatorId?: string;
   aggregatorName?: string;
 };
 
 export default function SignupClientPage({ aggregatorId, aggregatorName }: Props) {
-// -----------------------------------------
-
   const router = useRouter();
   
   // --- Form States ---
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState<E164Number | string>(''); // Use the correct type
+  const [phone, setPhone] = useState<E164Number | string>('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState(''); // New field
+  const [agreeToTerms, setAgreeToTerms] = useState(false); // New field
   
   // --- UI States ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // --- Form Submission Handler ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // --- New Validation Logic ---
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (!agreeToTerms) {
+      setError("You must agree to the Terms of Service.");
+      return;
+    }
+    // ----------------------------
+
     setIsLoading(true);
 
     try {
@@ -49,6 +65,8 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
         body: JSON.stringify({
           firstName,
           lastName,
+          businessName, // New field
+          address,      // New field
           email,
           phone,
           password,
@@ -61,7 +79,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
         throw new Error(data.error || 'Registration failed. Please try again.');
       }
 
-      // "Stunning" success! Send to the OTP page
+      // Success! Send to the OTP page
       router.push(`/verify-otp?phone=${encodeURIComponent(phone)}`);
 
     } catch (err: any) {
@@ -86,59 +104,24 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
         onSubmit={handleSubmit}
       >
         <div className="space-y-4">
+          {/* --- Name Fields --- */}
           <div className="grid grid-cols-2 gap-4">
-            {/* First Name */}
-            <div>
-              <label htmlFor="first-name" className="block text-sm font-medium text-gray-700">
-                First Name
-              </label>
-              <div className="mt-1">
-                <input
-                  id="first-name" name="first-name" type="text"
-                  value={firstName} onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
-                />
-              </div>
-            </div>
-            {/* Last Name */}
-            <div>
-              <label htmlFor="last-name" className="block text-sm font-medium text-gray-700">
-                Last Name
-              </label>
-              <div className="mt-1">
-                <input
-                  id="last-name" name="last-name" type="text"
-                  value={lastName} onChange={(e) => setLastName(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
-                />
-              </div>
-            </div>
+            <DataInput label="First Name*" id="first-name" value={firstName} onChange={setFirstName} Icon={UserIcon} />
+            <DataInput label="Last Name*" id="last-name" value={lastName} onChange={setLastName} Icon={UserIcon} />
           </div>
+
+          {/* --- Business Fields (Optional) --- */}
+          <DataInput label="Business Name (Optional)" id="business-name" value={businessName} onChange={setBusinessName} Icon={BriefcaseIcon} isRequired={false} />
+          <DataInput label="Business Address (Optional)" id="address" value={address} onChange={setAddress} Icon={HomeIcon} isRequired={false} />
+
+          {/* --- Contact Fields --- */}
+          <DataInput label="Email Address*" id="email" value={email} onChange={(e) => setEmail(e.target.value.toLowerCase())} Icon={EnvelopeIcon} type="email" />
           
-          {/* Email Input */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email Address
-            </label>
-            <div className="mt-1">
-              <input
-                id="email" name="email" type="email"
-                value={email} onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
-              />
-            </div>
-          </div>
-          
-          {/* Phone Input */}
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-              Phone Number
+              WhatsApp Phone Number*
             </label>
             <div className="mt-1">
-              {/* --- THIS IS THE "WORLD-CLASS" FIX (Part 2) --- */}
               <PhoneInput
                 id="phone"
                 name="phone"
@@ -148,35 +131,48 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
                 required
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
               />
-              {/* ------------------------------------- */}
             </div>
           </div>
 
-          {/* Password Input */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
+          {/* --- Password Fields --- */}
+          <PasswordInput
+            label="Create Password*"
+            id="password"
+            value={password}
+            onChange={setPassword}
+            show={showPassword}
+            onToggle={() => setShowPassword(!showPassword)}
+          />
+          <PasswordInput
+            label="Confirm Password*"
+            id="confirm-password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            show={showConfirmPassword}
+            onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+          />
+        </div>
+
+        {/* --- Terms of Service --- */}
+        <div className="flex items-start">
+          <div className="flex h-6 items-center">
+            <input
+              id="terms"
+              name="terms"
+              type="checkbox"
+              checked={agreeToTerms}
+              onChange={(e) => setAgreeToTerms(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+            />
+          </div>
+          <div className="ml-3 text-sm leading-6">
+            <label htmlFor="terms" className="font-medium text-gray-900">
+              I agree to the{' '}
+              <Link href="/terms-of-service" className="text-blue-600 hover:underline">
+                Terms of Service
+              </Link>
+              .
             </label>
-            <div className="mt-1 relative">
-              <input
-                id="password" name="password"
-                type={showPassword ? "text" : "password"}
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <EyeIcon className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
-            </div>
           </div>
         </div>
 
@@ -191,7 +187,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
           </button>
         </div>
         
-        {/* Link to Sign In */}
         <div className="text-center text-sm text-gray-600">
           Already have an account?{' '}
           <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
@@ -202,3 +197,55 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
     </>
   );
 }
+
+// --- Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+  label: string, id: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="relative mt-1">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input
+        id={id} name={id} type={type}
+        value={value} onChange={onChange}
+        required={isRequired}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg pl-10 shadow-sm"
+      />
+    </div>
+  </div>
+);
+
+// --- Reusable Password Component ---
+const PasswordInput = ({ label, id, value, onChange, show, onToggle }: {
+  label: string, id: string, value: string, onChange: (value: string) => void, show: boolean, onToggle: () => void
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+      {label}
+    </label>
+    <div className="mt-1 relative">
+      <input
+        id={id} name={id}
+        type={show ? "text" : "password"}
+        value={value} onChange={(e) => onChange(e.target.value)}
+        required
+        className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-lg shadow-sm"
+      />
+      <button
+        type="button"
+        className="absolute inset-y-0 right-0 flex items-center pr-3"
+        onClick={onToggle}
+      >
+        {show ? (
+          <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+        ) : (
+          <EyeIcon className="h-5 w-5 text-gray-400" />
+        )}
+      </button>
+    </div>
+  </div>
+);
