@@ -12,10 +12,10 @@ import {
   HomeIcon, 
   EnvelopeIcon 
 } from '@heroicons/react/24/outline';
-// --- THIS IS THE FIX (Part 1) ---
+// --- THIS IS THE FIX ---
 import PhoneInput from 'react-phone-number-input/input';
 // We import the *type* from the main package
-import { E164Number } from 'react-phone-number-input'; 
+import E164Number from 'react-phone-number-input'; 
 // ---------------------------------
 
 // Add new props for the Aggregator
