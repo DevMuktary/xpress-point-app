@@ -146,7 +146,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
             onChange={setPassword}
             show={showPassword}
             onToggle={() => setShowPassword(!showPassword)}
-          S/>
+          />
           <PasswordInput
             label="Confirm Password*"
             id="confirm-password"
