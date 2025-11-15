@@ -34,8 +34,8 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+// --- Reusable Input Component (THIS IS THE FIX) ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
   id: string,
   value: string,
@@ -43,7 +43,8 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   Icon: React.ElementType,
   type?: string,
   isRequired?: boolean,
-  placeholder?: string
+  placeholder?: string,
+  maxLength?: number // <-- "Fixed" to accept maxLength
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -59,10 +60,12 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
         placeholder={placeholder}
+        maxLength={maxLength} // <-- It is now correctly passed
       />
     </div>
   </div>
 );
+// -----------------------------------------------------------
 
 // --- Reusable File Upload Component ---
 const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: {
@@ -98,7 +101,7 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
   </div>
 );
 
-// --- The Main "World-Class" Component ---
+// --- The Main Component ---
 export default function BvnRetrievalClientPage() {
   
   type ServiceID = 'BVN_RETRIEVAL_PHONE' | 'BVN_RETRIEVAL_CRM';
@@ -222,7 +225,7 @@ export default function BvnRetrievalClientPage() {
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- Your "Sweet Alert" Style Message --- */}
+      {/* --- Success Message --- */}
       {success && (
         <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6">
           <div className="flex">
@@ -313,7 +316,7 @@ export default function BvnRetrievalClientPage() {
         </form>
       </div>
 
-      {/* --- Your "World-Class" Confirmation Modal --- */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
