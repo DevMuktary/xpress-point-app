@@ -12,7 +12,8 @@ import {
   CalendarDaysIcon,
   EnvelopeIcon,
   LockClosedIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  PencilSquareIcon // For the "Change" button
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -21,12 +22,13 @@ import Link from 'next/link';
 type Props = {
   prices: { [key: string]: number };
 };
-type BankType = 'Agency BVN' | 'B.O.A' | 'NIBSS Microfinance' | 'Enterprise Bank' | 'Heritage Bank' | 'FCMB' | 'First Bank' | 'Keystone Bank' | 'OTHER';
+type BankType = 'Agency BVN' | 'B.O.A' | 'NIBSS Microfinance' | 'Enterprise Bank' | 'Heritage Bank' | 'FCMB' | 'First Bank' | 'Keystone Bank'; // "OTHER" removed
 type ModType = 'BVN_MOD_NAME' | 'BVN_MOD_DOB' | 'BVN_MOD_PHONE' | 'BVN_MOD_NAME_DOB' | 'BVN_MOD_NAME_PHONE' | 'BVN_MOD_DOB_PHONE';
 
+// "Refurbished" list of banks, "OTHER" is removed
 const banksList: BankType[] = [
   'Agency BVN', 'B.O.A', 'NIBSS Microfinance', 'Enterprise Bank', 
-  'Heritage Bank', 'FCMB', 'First Bank', 'Keystone Bank', 'OTHER'
+  'Heritage Bank', 'FCMB', 'First Bank', 'Keystone Bank'
 ];
 const modTypes: { id: ModType, name: string }[] = [
   { id: 'BVN_MOD_NAME', name: 'Change of Name' },
@@ -55,17 +57,9 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- Reusable Input Component (THIS IS THE FIX) ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
-  label: string,
-  id: string,
-  value: string,
-  onChange: (value: string) => void,
-  Icon: React.ElementType,
-  type?: string,
-  isRequired?: boolean,
-  placeholder?: string,
-  maxLength?: number // <-- "Fixed" to accept maxLength
+// --- Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -74,19 +68,58 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id}
-        type={type}
-        value={value}
+        id={id} type={type} value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired}
-        placeholder={placeholder}
-        maxLength={maxLength} // <-- It is now correctly passed
+        required={isRequired} placeholder={placeholder}
       />
     </div>
   </div>
 );
-// -----------------------------------------------------------
+
+// --- "Refurbished" Consent Modal Text ---
+const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
+  <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+      <div className="flex items-center justify-between border-b border-gray-200 p-4">
+        <h2 className="text-lg font-bold text-red-800 flex items-center gap-2">
+          <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
+          BVN Modification Terms
+        </h2>
+        <button onClick={onClose}>
+          <XMarkIcon className="h-5 w-5 text-gray-500" />
+        </button>
+      </div>
+      <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
+        <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>. Ask the customer if they have *ever* made a modification before.</p>
+        <p>2. If they did a NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS does not do double modifications.</p>
+        <p>3. You can only change your details <span className="font-bold">Once</span>. e.g if you modified your Name, you can't do it again. You are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
+        <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we process your work and we later find out:</p>
+        <ul className="list-disc list-inside pl-4">
+          <li>It's a Bank Enrollment (Except Listed Banks).</li>
+          <li>Your Old NIN Details are incorrect.</li>
+          <li>Or you have already done a similar modification.</li>
+        </ul>
+        <p>5. <span className="font-bold">Listed Banks:</span> Agency BVN, B.O.A (Bank of Agriculture), NIBSS Microfinance, Enterprise Bank, Heritage Bank, FCMB, First Bank, Keystone Bank.</p>
+        <p className="font-bold text-red-700">6. Do NOT submit a "Complete Change of Name" (First, Middle, and Last) as the service is currently down.</p>
+      </div>
+      <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+        <Link
+          href="/dashboard/services/bvn"
+          className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+        >
+          Go Back
+        </Link>
+        <button
+          onClick={onClose}
+          className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+        >
+          I Understand & Agree
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 // --- The Main Component ---
 export default function BvnModificationClientPage({ prices }: Props) {
@@ -110,12 +143,12 @@ export default function BvnModificationClientPage({ prices }: Props) {
   const [newLastName, setNewLastName] = useState('');
   const [oldDob, setOldDob] = useState('');
   const [newDob, setNewDob] = useState('');
-  const [fullName, setFullName] = useState(''); // For single name field
+  const [fullName, setFullName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // --- Dynamic Fee Calculation (Your Design) ---
+  // --- Dynamic Fee Calculation ---
   const { totalFee, dobFee, dobError } = useMemo(() => {
     if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null };
 
@@ -140,9 +173,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
             dobFee = 2000;
           }
         }
-      } catch {
-        // Invalid date, ignore
-      }
+      } catch { }
     }
     
     return { totalFee: baseFee + dobFee, dobFee, dobError };
@@ -244,27 +275,47 @@ export default function BvnModificationClientPage({ prices }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- 1. Select Enrollment Institution --- */}
-          <div>
-            <label className="text-lg font-semibold text-gray-900">
-              1. Select Enrollment Institution
-            </label>
-            <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-              {banksList.map(bank => (
-                <ModTypeButton
-                  key={bank}
-                  title={bank}
-                  description="Enrollment Bank"
-                  selected={bankType === bank}
-                  onClick={() => setBankType(bank)}
-                />
-              ))}
+          {/* --- THIS IS THE "UI FLOW" FIX --- */}
+          
+          {/* --- Step 1: Select Institution --- */}
+          {!bankType && (
+            <div>
+              <label className="text-lg font-semibold text-gray-900">
+                1. Select Enrollment Institution
+              </label>
+              <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+                {banksList.map(bank => (
+                  <ModTypeButton
+                    key={bank}
+                    title={bank}
+                    description="Enrollment Bank"
+                    selected={false}
+                    onClick={() => setBankType(bank)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* --- 2. Select Modification Type --- */}
-          {bankType && (
-            <div className="border-t border-gray-200 pt-6">
+          {/* --- Step 2: Select Mod Type --- */}
+          {bankType && !serviceId && (
+            <div className="space-y-6">
+              {/* Summary of Step 1 */}
+              <div className="pb-4 border-b border-gray-200">
+                <label className="text-sm font-medium text-gray-500">Selected Institution</label>
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-semibold text-gray-900">{bankType}</p>
+                  <button
+                    type="button"
+                    onClick={() => { setBankType(null); setServiceId(null); }}
+                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    <PencilSquareIcon className="h-4 w-4" />
+                    Change
+                  </button>
+                </div>
+              </div>
+              
               <label className="text-lg font-semibold text-gray-900">
                 2. Select Modification Type
               </label>
@@ -274,7 +325,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
                     key={mod.id}
                     title={mod.name}
                     description={`Fee: ₦${prices[mod.id] || 'N/A'}`}
-                    selected={serviceId === mod.id}
+                    selected={false}
                     onClick={() => setServiceId(mod.id)}
                   />
                 ))}
@@ -282,140 +333,132 @@ export default function BvnModificationClientPage({ prices }: Props) {
             </div>
           )}
 
-          {/* --- 3. Conditional Form Fields --- */}
-          {serviceId && (
-            <div className="border-t border-gray-200 pt-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">3. Enter Required Details</h3>
+          {/* --- Step 3: Enter Details --- */}
+          {bankType && serviceId && (
+            <div className="space-y-6">
+              {/* Summary of Steps 1 & 2 */}
+              <div className="pb-4 border-b border-gray-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-500">Institution</label>
+                  <button
+                    type="button"
+                    onClick={() => { setBankType(null); setServiceId(null); }}
+                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    <PencilSquareIcon className="h-4 w-4" />
+                    Change
+                  </button>
+                </div>
+                <p className="text-lg font-semibold text-gray-900 -mt-2">{bankType}</p>
+              </div>
               
-              <DataInput label="BVN Number*" id="bvn" value={bvn} onChange={setBvn} Icon={IdentificationIcon} />
-              <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
+              <div className="pb-4 border-b border-gray-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-500">Modification Type</label>
+                  <button
+                    type="button"
+                    onClick={() => setServiceId(null)}
+                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    <PencilSquareIcon className="h-4 w-4" />
+                    Change
+                  </button>
+                </div>
+                <p className="text-lg font-semibold text-gray-900 -mt-2">
+                  {modTypes.find(m => m.id === serviceId)?.name}
+                </p>
+              </div>
               
-              {/* --- Name Fields --- */}
-              {serviceId.includes('NAME') && (
+              {/* Conditional Form Fields */}
+              <div className="pt-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">3. Enter Required Details</h3>
+                
+                <DataInput label="BVN Number*" id="bvn" value={bvn} onChange={setBvn} Icon={IdentificationIcon} />
+                <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
+                
+                {serviceId.includes('NAME') && (
+                  <fieldset className="rounded-lg border border-gray-300 p-4">
+                    <legend className="text-sm font-medium text-gray-700 px-2">New Name Details</legend>
+                    <div className="space-y-4">
+                      <DataInput label="New First Name*" id="new-fname" value={newFirstName} onChange={setNewFirstName} Icon={UserIcon} />
+                      <DataInput label="New Last Name*" id="new-lname" value={newLastName} onChange={setNewLastName} Icon={UserIcon} />
+                      <DataInput label="New Middle Name (Optional)" id="new-mname" value={newMiddleName} onChange={setNewMiddleName} Icon={UserIcon} isRequired={false} />
+                    </div>
+                  </fieldset>
+                )}
+                {serviceId === 'BVN_MOD_NAME' && (
+                  <p className="text-sm text-gray-600">
+                    For Female Change of Surname, Newspaper is Compulsory. 
+                    <Link href="/dashboard/services/newspaper" className="font-medium text-blue-600 hover:underline">
+                      Need one? Get one from us.
+                    </Link>
+                  </p>
+                )}
+                
+                {serviceId.includes('DOB') && (
+                  <fieldset className="rounded-lg border border-gray-300 p-4">
+                    <legend className="text-sm font-medium text-gray-700 px-2">DOB Details</legend>
+                    <div className="space-y-4">
+                      {!serviceId.includes('NAME') && <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />}
+                      <DataInput label="Old DOB*" id="oldDob" value={oldDob} onChange={setOldDob} Icon={CalendarDaysIcon} type="date" />
+                      <DataInput label="New DOB*" id="newDob" value={newDob} onChange={setNewDob} Icon={CalendarDaysIcon} type="date" />
+                    </div>
+                  </fieldset>
+                )}
+                
+                {serviceId.includes('PHONE') && (
+                  <fieldset className="rounded-lg border border-gray-300 p-4">
+                    <legend className="text-sm font-medium text-gray-700 px-2">Phone Details</legend>
+                    <div className="space-y-4">
+                      {!serviceId.includes('NAME') && !serviceId.includes('DOB') && <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />}
+                      <DataInput label="New Phone Number*" id="newPhone" value={newPhone} onChange={setNewPhone} Icon={PhoneIcon} type="tel" maxLength={11} />
+                    </div>
+                  </fieldset>
+                )}
+                
+                {dobError && (
+                  <div className="rounded-md bg-red-50 p-4 border border-red-200">
+                    <p className="text-sm font-bold text-red-800">{dobError}</p>
+                  </div>
+                )}
+                {dobFee > 0 && (
+                  <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
+                    <p className="text-sm font-bold text-yellow-800">An additional fee of ₦{dobFee} applies for DOB changes over 5 years.</p>
+                  </div>
+                )}
+                
                 <fieldset className="rounded-lg border border-gray-300 p-4">
-                  <legend className="text-sm font-medium text-gray-700 px-2">New Name Details</legend>
+                  <legend className="text-sm font-medium text-gray-700 px-2">Login Details</legend>
                   <div className="space-y-4">
-                    <DataInput label="New First Name*" id="new-fname" value={newFirstName} onChange={setNewFirstName} Icon={UserIcon} />
-                    <DataInput label="New Last Name*" id="new-lname" value={newLastName} onChange={setNewLastName} Icon={UserIcon} />
-                    <DataInput label="New Middle Name (Optional)" id="new-mname" value={newMiddleName} onChange={setNewMiddleName} Icon={UserIcon} isRequired={false} />
+                    <DataInput label="New Valid Fresh Email*" id="email" value={email} onChange={setEmail} Icon={EnvelopeIcon} type="email" />
+                    <DataInput label="Email Password*" id="password" value={password} onChange={setPassword} Icon={LockClosedIcon} type="password" />
                   </div>
                 </fieldset>
-              )}
-              {serviceId === 'BVN_MOD_NAME' && (
-                 <p className="text-sm text-gray-600">
-                   For Female Change of Surname, Newspaper is Compulsory. 
-                   <Link href="/dashboard/services/newspaper" className="font-medium text-blue-600 hover:underline">
-                     Need one? Get one from us.
-                   </Link>
-                 </p>
-              )}
-              
-              {/* --- DOB Fields --- */}
-              {serviceId.includes('DOB') && (
-                <fieldset className="rounded-lg border border-gray-300 p-4">
-                  <legend className="text-sm font-medium text-gray-700 px-2">DOB Details</legend>
-                  <div className="space-y-4">
-                    {!serviceId.includes('NAME') && <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />}
-                    <DataInput label="Old DOB*" id="oldDob" value={oldDob} onChange={setOldDob} Icon={CalendarDaysIcon} type="date" />
-                    <DataInput label="New DOB*" id="newDob" value={newDob} onChange={setNewDob} Icon={CalendarDaysIcon} type="date" />
-                  </div>
-                </fieldset>
-              )}
-              
-              {/* --- Phone Fields --- */}
-              {serviceId.includes('PHONE') && (
-                <fieldset className="rounded-lg border border-gray-300 p-4">
-                  <legend className="text-sm font-medium text-gray-700 px-2">Phone Details</legend>
-                  <div className="space-y-4">
-                    {!serviceId.includes('NAME') && !serviceId.includes('DOB') && <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />}
-                    <DataInput label="New Phone Number*" id="newPhone" value={newPhone} onChange={setNewPhone} Icon={PhoneIcon} type="tel" maxLength={11} />
-                  </div>
-                </fieldset>
-              )}
-              
-              {/* --- Dynamic Fee Warning --- */}
-              {dobError && (
-                <div className="rounded-md bg-red-50 p-4 border border-red-200">
-                  <p className="text-sm font-bold text-red-800">{dobError}</p>
-                </div>
-              )}
-              {dobFee > 0 && (
-                <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
-                  <p className="text-sm font-bold text-yellow-800">An additional fee of ₦{dobFee} applies for DOB changes over 5 years.</p>
-                </div>
-              )}
-              
-              {/* --- Common Email/Password --- */}
-              <fieldset className="rounded-lg border border-gray-300 p-4">
-                <legend className="text-sm font-medium text-gray-700 px-2">Login Details</legend>
-                <div className="space-y-4">
-                  <DataInput label="New Valid Fresh Email*" id="email" value={email} onChange={setEmail} Icon={EnvelopeIcon} type="email" />
-                  <DataInput label="Email Password*" id="password" value={password} onChange={setPassword} Icon={LockClosedIcon} type="password" />
-                </div>
-              </fieldset>
-            </div>
-          )}
+              </div>
+            )}
           
-          {/* --- Submit Button --- */}
-          {serviceId && (
-            <div className="border-t border-gray-200 pt-6">
-              {submitError && !dobError && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
-              )}
-              <button
-                type="submit"
-                disabled={isLoading || !!dobError}
-                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${totalFee})`}
-              </button>
-            </div>
-          )}
+            {/* --- Submit Button --- */}
+            {serviceId && (
+              <div className="border-t border-gray-200 pt-6">
+                {submitError && !dobError && (
+                  <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoading || !!dobError}
+                  className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${totalFee})`}
+                </button>
+              </div>
+            )}
+          
         </form>
       </div>
 
       {/* --- Terms Modal --- */}
       {isTermsModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-bold text-red-800 flex items-center gap-2">
-                <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-                BVN Modification Terms
-              </h2>
-              <button onClick={() => setIsTermsModalOpen(false)}>
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
-              <p>1. Make sure it is an **Agency Enrollment** or one of the **Listed Banks**. Ask the customer if he has ever made a modification before.</p>
-              <p>2. If he did NIN Modification, make sure the modification is reflecting on **VNIN Slip** (NIMC Server). NIBSS Don't Do Double Modification.</p>
-              <p>3. You Can Only Change Your Details **Once**. e.g if you modified your Name, you can't do it Again, you are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
-              <p>4. **NO REFUND** if we processed your work and we later found out:</p>
-              <ul className="list-disc list-inside pl-4">
-                <li>It's a Bank Enrollment (Except Listed Banks).</li>
-                <li>Your Old NIN Details are incorrect.</li>
-                <li>Or you have already done a similar modification.</li>
-              </ul>
-              <p>5. **Listed Banks:** Agency BVN, B.O.A (Bank of Agriculture), NIBSS Microfinance, Enterprise Bank, Heritage Bank, FCMB, First Bank, Keystone Bank.</p>
-              <p className="font-bold text-red-700">6. Do NOT submit a "Complete Change of Name" (First, Middle, and Last) as the service is currently down.</p>
-            </div>
-            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <Link
-                href="/dashboard/services/bvn"
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
-              >
-                Go Back
-              </Link>
-              <button
-                onClick={() => setIsTermsModalOpen(false)}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                I Understand & Agree
-              </button>
-            </div>
-          </div>
-        </div>
+        <BvnModificationTermsModal onClose={() => setIsTermsModalOpen(false)} />
       )}
 
       {/* --- Confirmation Modal --- */}
