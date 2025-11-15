@@ -22,10 +22,9 @@ import Link from 'next/link';
 type Props = {
   prices: { [key: string]: number };
 };
-type BankType = 'Agency BVN' | 'B.O.A' | 'NIBSS Microfinance' | 'Enterprise Bank' | 'Heritage Bank' | 'FCMB' | 'First Bank' | 'Keystone Bank'; // "OTHER" removed
+type BankType = 'Agency BVN' | 'B.O.A' | 'NIBSS Microfinance' | 'Enterprise Bank' | 'Heritage Bank' | 'FCMB' | 'First Bank' | 'Keystone Bank';
 type ModType = 'BVN_MOD_NAME' | 'BVN_MOD_DOB' | 'BVN_MOD_PHONE' | 'BVN_MOD_NAME_DOB' | 'BVN_MOD_NAME_PHONE' | 'BVN_MOD_DOB_PHONE';
 
-// "Refurbished" list of banks, "OTHER" is removed
 const banksList: BankType[] = [
   'Agency BVN', 'B.O.A', 'NIBSS Microfinance', 'Enterprise Bank', 
   'Heritage Bank', 'FCMB', 'First Bank', 'Keystone Bank'
@@ -58,8 +57,16 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
 );
 
 // --- Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
-  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
+  label: string,
+  id: string,
+  value: string,
+  onChange: (value: string) => void,
+  Icon: React.ElementType,
+  type?: string,
+  isRequired?: boolean,
+  placeholder?: string,
+  maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -68,16 +75,21 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id} type={type} value={value}
+        id={id}
+        type={type}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired} placeholder={placeholder}
+        required={isRequired}
+        placeholder={placeholder}
+        maxLength={maxLength}
       />
     </div>
   </div>
 );
 
-// --- "Refurbished" Consent Modal Text ---
+// --- THIS IS THE FIX (Part 1) ---
+// --- The Missing Consent Modal Component ---
 const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -92,7 +104,7 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
       </div>
       <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
         <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>. Ask the customer if they have *ever* made a modification before.</p>
-        <p>2. If they did a NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS does not do double modifications.</p>
+        <p>2. If they did NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS does not do double modifications.</p>
         <p>3. You can only change your details <span className="font-bold">Once</span>. e.g if you modified your Name, you can't do it again. You are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
         <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we process your work and we later find out:</p>
         <ul className="list-disc list-inside pl-4">
@@ -120,6 +132,7 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
     </div>
   </div>
 );
+// ------------------------------------
 
 // --- The Main Component ---
 export default function BvnModificationClientPage({ prices }: Props) {
@@ -148,7 +161,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // --- Dynamic Fee Calculation ---
+  // --- Dynamic Fee Calculation (Your Design) ---
   const { totalFee, dobFee, dobError } = useMemo(() => {
     if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null };
 
@@ -275,8 +288,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- THIS IS THE "UI FLOW" FIX --- */}
-          
           {/* --- Step 1: Select Institution --- */}
           {!bankType && (
             <div>
@@ -387,12 +398,12 @@ export default function BvnModificationClientPage({ prices }: Props) {
                   </fieldset>
                 )}
                 {serviceId === 'BVN_MOD_NAME' && (
-                  <p className="text-sm text-gray-600">
-                    For Female Change of Surname, Newspaper is Compulsory. 
-                    <Link href="/dashboard/services/newspaper" className="font-medium text-blue-600 hover:underline">
-                      Need one? Get one from us.
-                    </Link>
-                  </p>
+                 <p className="text-sm text-gray-600">
+                   For Female Change of Surname, Newspaper is Compulsory. 
+                   <Link href="/dashboard/services/newspaper" className="font-medium text-blue-600 hover:underline">
+                     Need one? Get one from us.
+                   </Link>
+                 </p>
                 )}
                 
                 {serviceId.includes('DOB') && (
