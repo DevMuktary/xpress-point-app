@@ -11,7 +11,8 @@ import {
   HomeIcon,
   MapPinIcon,
   BuildingOfficeIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  InformationCircleIcon // <-- Added for the new info box
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -21,8 +22,7 @@ type Props = {
   fee: number;
 };
 
-// --- THIS IS THE FIX ---
-// Data for States, LGAs, and Zones
+// --- Data for States, LGAs, and Zones ---
 const nigeriaData: { [key: string]: { zone: string; lgas: string[] } } = {
   "Abia": { "zone": "South East", "lgas": ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
   "Adamawa": { "zone": "North East", "lgas": ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
@@ -62,7 +62,6 @@ const nigeriaData: { [key: string]: { zone: string; lgas: string[] } } = {
   "Yobe": { "zone": "North East", "lgas": ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
   "Zamfara": { "zone": "North West", "lgas": ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
 };
-// -----------------------
 
 const allStates = Object.keys(nigeriaData);
 const allZones = ["North West", "North East", "North Central", "South West", "South East", "South South"];
@@ -221,6 +220,22 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Enter Enrollment Details</h3>
           </div>
+
+          {/* --- THIS IS THE FIX (Part 1) --- */}
+          {/* Added the new info box */}
+          <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <InformationCircleIcon className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-blue-800">
+                  Ensure you provide a completely new email address and phone number that have never been used before for any Android BVN Enrollment request.
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* ------------------------------- */}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DataInput label="Agent Location*" id="agentLocation" value={agentLocation} onChange={setAgentLocation} Icon={MapPinIcon} />
