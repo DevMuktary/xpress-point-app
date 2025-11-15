@@ -50,11 +50,7 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-
-  // --- THIS IS THE FIX (Part 1) ---
-  // Replaced the 'success' string with a 'receipt' object
   const [receipt, setReceipt] = useState<any | null>(null);
-  // ---------------------------------
 
   // --- Form Data State (All fields) ---
   const [agentLocation, setAgentLocation] = useState('');
@@ -77,7 +73,7 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    setReceipt(null); // Clear old receipt
+    setReceipt(null);
     setIsConfirmModalOpen(true);
   };
   
@@ -108,14 +104,11 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      // --- THIS IS THE FIX (Part 2) ---
-      // Set the receipt data to open the new modal
       setReceipt({
         message: data.message,
         serviceName: "BVN Android Enrollment",
         status: "PENDING",
       });
-      // ---------------------------------
       
       // Reset the form
       setAgentLocation(''); setAgentBvn(''); setBankName(''); setAccountName('');
@@ -217,8 +210,7 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
         </div>
       )}
 
-      {/* --- THIS IS THE FIX (Part 3) --- */}
-      {/* The New "Success Modal" */}
+      {/* --- The New "Success Modal" --- */}
       {receipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
@@ -246,6 +238,23 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
                     <span className="text-sm font-semibold text-gray-900">₦{fee}</span>
                   </div>
                 </div>
+
+                {/* --- THIS IS THE FIX --- */}
+                <div className="mt-4 text-sm text-gray-700">
+                  <p>
+                    To check your enrollment reports visit: 
+                    <a 
+                      href="https://agency.xpresspoint.net" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="font-semibold underline text-blue-600"
+                    >
+                      https://agency.xpresspoint.net
+                    </a>
+                  </p>
+                </div>
+                {/* ----------------------- */}
+                
               </div>
             </div>
             
@@ -266,7 +275,6 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
           </div>
         </div>
       )}
-      {/* ------------------------------- */}
     </div>
   );
 }
