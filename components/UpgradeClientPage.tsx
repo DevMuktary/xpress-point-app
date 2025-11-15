@@ -11,7 +11,8 @@ import {
   ClipboardIcon,
   ClipboardDocumentCheckIcon,
   ArrowPathIcon,
-  UserIcon
+  UserIcon,
+  InformationCircleIcon // For the new modal
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -21,9 +22,13 @@ type Bank = {
   name: string;
   code: string;
 };
+// --- THIS IS THE FIX (Part 1) ---
+// Add the new 'aggregatorId' prop
 type Props = {
   fee: number;
+  aggregatorId: string | null;
 };
+// ---------------------------------
 
 // --- "Sleek Copy Button" Component ---
 const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
@@ -78,12 +83,18 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
 );
 
 // --- The Main "World-Class" Component ---
-export default function UpgradeClientPage({ fee }: Props) {
+export default function UpgradeClientPage({ fee, aggregatorId }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // --- "Stunning" Modal State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // 1: Confirm, 2: Bank, 3: Brand, 4: Success
+  
+  // --- THIS IS THE FIX (Part 2) ---
+  // New state for your "Contact Support" modal
+  const [isSubAgentModalOpen, setIsSubAgentModalOpen] = useState(false);
+  // ---------------------------------
   
   const [banks, setBanks] = useState<Bank[]>([]);
   const [bankCode, setBankCode] = useState('');
@@ -95,18 +106,34 @@ export default function UpgradeClientPage({ fee }: Props) {
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    const fetchBanks = async () => {
-      try {
-        const res = await fetch('/api/services/banks');
-        if (!res.ok) throw new Error('Failed to fetch banks.');
-        const data = await res.json();
-        setBanks(data.banks);
-      } catch (err: any) {
-        console.error("Fetch Banks Error:", err.message);
-      }
-    };
-    fetchBanks();
-  }, []);
+    // Only fetch banks if the user is *not* a sub-agent
+    if (!aggregatorId) {
+      const fetchBanks = async () => {
+        try {
+          const res = await fetch('/api/services/banks');
+          if (!res.ok) throw new Error('Failed to fetch banks.');
+          const data = await res.json();
+          setBanks(data.banks);
+        } catch (err: any) {
+          console.error("Fetch Banks Error:", err.message);
+        }
+      };
+      fetchBanks();
+    }
+  }, [aggregatorId]);
+
+  // --- THIS IS THE FIX (Part 3) ---
+  // This function is now "smart"
+  const handleUpgradeClick = () => {
+    if (aggregatorId) {
+      // If they are a sub-agent, show *your* "stunning" new modal
+      setIsSubAgentModalOpen(true);
+    } else {
+      // If they are a normal agent, show the "world-class" payment flow
+      setIsModalOpen(true);
+    }
+  };
+  // ---------------------------------
 
   const handleVerifyAccount = async () => {
     setIsVerifying(true);
@@ -211,7 +238,7 @@ export default function UpgradeClientPage({ fee }: Props) {
         <div className="border-t border-gray-100 mt-6 pt-6">
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleUpgradeClick} // <-- "Refurbished" to call the "smart" function
             className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700"
           >
             Upgrade Now (One-Time Fee: ₦{fee})
@@ -219,6 +246,7 @@ export default function UpgradeClientPage({ fee }: Props) {
         </div>
       </div>
 
+      {/* --- 2. Your "World-Class" Multi-Step Modal (for normal agents) --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
@@ -306,7 +334,6 @@ export default function UpgradeClientPage({ fee }: Props) {
                 </div>
               )}
               
-              {/* --- THIS IS THE "WORLD-CLASS" FIX --- */}
               {step === 4 && (
                 <div className="space-y-4 text-center">
                   <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto" />
@@ -323,7 +350,6 @@ export default function UpgradeClientPage({ fee }: Props) {
                   </div>
                 </div>
               )}
-              {/* ------------------------------------ */}
             </div>
             
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
@@ -365,6 +391,48 @@ export default function UpgradeClientPage({ fee }: Props) {
           </div>
         </div>
       )}
+      
+      {/* --- THIS IS THE FIX (Part 4) --- */}
+      {/* Your "Stunning" new modal for Sub-Agents */}
+      {isSubAgentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 p-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Upgrade Request
+              </h2>
+              <button onClick={() => setIsSubAgentModalOpen(false)}>
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex justify-center">
+                <InformationCircleIcon className="h-12 w-12 text-blue-500" />
+              </div>
+              <p className="mt-4 text-center text-gray-600">
+                You are currently registered under an aggregator. To upgrade your account, you must first contact support.
+              </p>
+            </div>
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <button
+                onClick={() => setIsSubAgentModalOpen(false)}
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+              >
+                CANCEL
+              </button>
+              <a
+                href={`https://wa.me/YOUR_WHATSAPP_NUMBER?text=${encodeURIComponent("Hi, I'm a sub-agent and I would like to upgrade to the position of an aggregator.")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 rounded-lg bg-green-600 py-2.5 px-4 text-sm font-semibold text-white text-center transition-colors hover:bg-green-700"
+              >
+                Contact Support
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ------------------------------------------- */}
     </div>
   );
 }
