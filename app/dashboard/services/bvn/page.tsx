@@ -2,49 +2,45 @@ import React from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
-import ServiceItemCard from '@/components/ServiceItemCard'; // We re-use our "world-class" card
-import { 
-  ShieldCheckIcon,
-  DocumentMagnifyingGlassIcon,
-  PencilSquareIcon,
-  UserPlusIcon,
-  LinkIcon
-} from '@heroicons/react/24/outline';
+// We no longer need the other icons, as we are using the BVN logo
+// import { 
+//   ShieldCheckIcon,
+//   DocumentMagnifyingGlassIcon,
+//   PencilSquareIcon,
+//   UserPlusIcon,
+//   LinkIcon
+// } from '@heroicons/react/24/outline';
 
 // This is a Server Component, so it's very fast.
 export default function BvnHubPage() {
   
-  // --- This is the 5-Card "Hub" you designed ---
+  // This is the list of BVN Services
+  // The 'logo' prop has been removed, as we will use the BVN logo for all
   const bvnServices = [
     {
       title: 'BVN Verification',
-      description: 'Verify BVN and print a "world-class" verification slip.',
-      href: '/dashboard/services/bvn/verification', // We will build this last
-      logo: ShieldCheckIcon,
+      description: 'Verify BVN and print a verification slip.',
+      href: '/dashboard/services/bvn/verification',
     },
     {
       title: 'BVN Retrieval',
       description: 'Retrieve a BVN using a Phone Number or C.R.M. details.',
-      href: '/dashboard/services/bvn/retrieval', // We are building this NOW
-      logo: DocumentMagnifyingGlassIcon,
+      href: '/dashboard/services/bvn/retrieval',
     },
     {
       title: 'BVN Modification',
       description: 'Request manual modification for Name, DOB, or Phone.',
-      href: '/dashboard/services/bvn/modification', // We will build this next
-      logo: PencilSquareIcon,
+      href: '/dashboard/services/bvn/modification',
     },
     {
       title: 'BVN Android Enrollment',
       description: 'Submit details for a new BVN Android Enrollment.',
-      href: '/dashboard/services/bvn/enrollment', // We will build this next
-      logo: UserPlusIcon,
+      href: '/dashboard/services/bvn/enrollment',
     },
     {
       title: 'VNIN to NIBSS',
       description: 'Submit a VNIN slip to NIBSS for manual processing.',
-      href: '/dashboard/services/bvn/vnin-to-nibss', // We will build this next
-      logo: LinkIcon,
+      href: '/dashboard/services/bvn/vnin-to-nibss',
     },
   ];
 
@@ -66,7 +62,7 @@ export default function BvnHubPage() {
         <h1 className="text-2xl font-bold text-gray-900">BVN Services</h1>
       </div>
 
-      {/* --- "Refurbished" Card List (1-column, stable on phone) --- */}
+      {/* --- Card List (1-column on mobile) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {bvnServices.map((service) => (
           <Link
@@ -76,7 +72,17 @@ export default function BvnHubPage() {
                        transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
           >
             <div>
-              <service.logo className="h-10 w-10 text-blue-600" />
+              {/* --- THIS IS THE FIX --- */}
+              {/* Replaced the SVG icon with the SafeImage component */}
+              <SafeImage
+                src="/logos/bvn.png"
+                alt={service.title}
+                width={40}
+                height={40}
+                fallbackSrc="/logos/default.png"
+                className="rounded-full"
+              />
+              {/* ----------------------- */}
               <h3 className="mt-4 text-lg font-bold text-gray-900">{service.title}</h3>
               <p className="mt-1 text-sm text-gray-600 line-clamp-2">{service.description}</p>
             </div>
