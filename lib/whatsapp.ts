@@ -1,23 +1,26 @@
 import axios from 'axios';
 
-// "World-Class" API Credentials
-const WHATSAPP_API_TOKEN = process.env.WHATSAPP_API_TOKEN;
-const WHATSAPP_FROM_PHONE_ID = process.env.WHATSAPP_FROM_PHONE_ID;
+// --- THIS IS THE FIX ---
+// Using the correct environment variable names you provided
+const WHATSAPP_API_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
+const WHATSAPP_FROM_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+// -----------------------
+
 const WHATSAPP_API_URL = `https://graph.facebook.com/v19.0/${WHATSAPP_FROM_PHONE_ID}/messages`;
 
 if (!WHATSAPP_API_TOKEN || !WHATSAPP_FROM_PHONE_ID) {
   console.error("CRITICAL: WhatsApp environment variables are not set.");
 }
 
-// "Stunning" function to send the OTP
+// Function to send the OTP
 export async function sendOtpMessage(to: string, otpCode: string) {
   if (!WHATSAPP_API_TOKEN || !WHATSAPP_FROM_PHONE_ID) {
     console.error("Cannot send WhatsApp OTP: API variables are missing.");
-    // We "fail silently" so we don't crash the registration
+    // We fail silently so we don't crash the registration
     return;
   }
   
-  // "Refurbish" the number to remove the '+'
+  // Format the number to remove the '+'
   const formattedTo = to.replace('+', '');
 
   const payload = {
@@ -50,8 +53,8 @@ export async function sendOtpMessage(to: string, otpCode: string) {
         'Content-Type': 'application/json'
       }
     });
-    console.log(`"World-class" WhatsApp OTP sent to: ${formattedTo}`);
+    console.log(`WhatsApp OTP sent to: ${formattedTo}`);
   } catch (error: any) {
-    console.error("RUBBISH WhatsApp Error:", error.response?.data || error.message);
+    console.error("WhatsApp Error:", error.response?.data || error.message);
   }
 }
