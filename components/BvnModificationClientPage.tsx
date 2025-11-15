@@ -444,23 +444,24 @@ export default function BvnModificationClientPage({ prices }: Props) {
                   </div>
                 </fieldset>
               </div>
-           )}   
+            </div>
+          )}
           
-            {/* --- Submit Button --- */}
-            {serviceId && (
-              <div className="border-t border-gray-200 pt-6">
-                {submitError && !dobError && (
-                  <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
-                )}
-                <button
-                  type="submit"
-                  disabled={isLoading || !!dobError}
-                  className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${totalFee})`}
-                </button>
-              </div>
-            )}
+          {/* --- Submit Button --- */}
+          {serviceId && (
+            <div className="border-t border-gray-200 pt-6">
+              {submitError && !dobError && (
+                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={isLoading || !!dobError}
+                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${totalFee})`}
+              </button>
+            </div>
+          )}
           
         </form>
       </div>
