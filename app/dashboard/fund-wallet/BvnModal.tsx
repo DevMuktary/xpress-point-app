@@ -10,9 +10,8 @@ export default function BvnModal() {
   // --- Modal State ---
   const [isOpen, setIsOpen] = useState(false);
   
-  // --- THIS IS THE FIX: New Step Logic ---
+  // --- Step Logic ---
   const [step, setStep] = useState(1); // 1: Enter Details, 2: Confirm
-  // -------------------------------------
   
   // --- Form States ---
   const [bvn, setBvn] = useState('');
@@ -32,7 +31,7 @@ export default function BvnModal() {
     setError(null);
 
     try {
-      // Call our NEW verification API
+      // Call our verification API
       const response = await fetch('/api/wallet/bvn-verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +61,7 @@ export default function BvnModal() {
     setError(null);
 
     try {
-      // Call our new, simpler activation API
+      // Call our activation API
       const response = await fetch('/api/wallet/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,13 +74,15 @@ export default function BvnModal() {
       }
 
       // --- FINAL SUCCESS! ---
-      // Close the modal and refresh the page.
       setIsOpen(false);
       router.refresh();
 
     } catch (err: any) {
+      // --- THIS IS THE FIX ---
+      // We set the error and STAY on Step 2
       setError(err.message);
-      setStep(1); // Go back to Step 1 if it fails
+      // setStep(1); // <-- Removed this line
+      // -----------------------
     } finally {
       setIsLoading(false);
     }
@@ -180,6 +181,8 @@ export default function BvnModal() {
                 <p className="mt-2 text-sm text-gray-600 text-left">
                   Please confirm these details are correct before activating.
                 </p>
+                {/* --- THIS IS THE FIX (Part 2) --- */}
+                {/* The NIN field is now removed */}
                 <div className="mt-4 space-y-2 rounded-lg border bg-gray-50 p-4">
                   <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-500">Name:</span>
@@ -189,12 +192,11 @@ export default function BvnModal() {
                     <span className="text-sm font-medium text-gray-500">BVN:</span>
                     <span className="text-sm font-semibold text-gray-900">{verifiedData.bvn}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-500">NIN:</span>
-                    <span className="text-sm font-semibold text-gray-900">{verifiedData.finalNin}</span>
-                  </div>
                 </div>
-                {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+                {/* ---------------------------------- */}
+                
+                {error && <p className="mt-4 text-sm text-red-600 text-center">{error}</p>}
+                
                 <button
                   type="button"
                   onClick={handleActivateWallet}
@@ -204,7 +206,7 @@ export default function BvnModal() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStep(1)}
+                  onClick={() => { setStep(1); setError(null); }}
                   className="mt-2 flex w-full justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-300"
                 >
                   Go Back
