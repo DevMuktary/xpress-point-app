@@ -23,7 +23,7 @@ function parseBvnData(data: any): {
 } {
   console.log("--- DEBUG: Parsing BVN Data ---");
   const coreData = data.data?.data || data.data;
-  console.log("Core Data:", coreData);
+  console.log("Core Data:", JSON.stringify(coreData));
   const firstName = data.firstName || coreData?.firstname || coreData?.firstName || null;
   const lastName = data.lastName || coreData?.surname || coreData?.lastName || null;
   const dateOfBirth = coreData?.dateOfBirth || coreData?.birthdate || null;
@@ -43,49 +43,50 @@ function formatPhoneForPayvessel(internationalPhone: string): string {
 // ---------------------------------------------
 
 export async function POST(request: Request) {
-  console.log("\n--- NEW WALLET ACTIVATION REQUEST ---");
+  console.log("\n--- [DEBUG] NEW WALLET ACTIVATION REQUEST ---");
   // 1. Get User
   const user = await getUserFromSession();
   if (!user) {
-    console.error("DEBUG: Auth check failed. User not found.");
+    console.error("[DEBUG] Auth check failed. User not found.");
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  console.log(`DEBUG: User '${user.email}' authenticated.`);
+  console.log(`[DEBUG] User '${user.email}' authenticated.`);
 
   // 2. Check for missing API keys
   if (!RAUDAH_API_KEY || !PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
-    console.error('CRITICAL DEBUG: Missing one or more API keys.');
+    console.error('[DEBUG] CRITICAL: Missing one or more API keys.');
     return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
   }
 
   try {
     const body = await request.json();
     const { bvn, dob } = body; 
-    console.log(`DEBUG: Received BVN: ${bvn}, DOB: ${dob}`);
+    console.log(`[DEBUG] Received BVN: ${bvn}, DOB: ${dob}`);
 
     if (!bvn || !dob) {
-      console.error("DEBUG: BVN or DOB missing.");
+      console.error("[DEBUG] BVN or DOB missing.");
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
-    // --- 3. Get Price & Check Wallet ---
+    // --- 3. Get Price & Check Wallet (THIS IS THE FIX) ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service) {
-      console.error("DEBUG: NIN_LOOKUP service not found in database.");
+      console.error("[DEBUG] NIN_LOOKUP service not found in database.");
       return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
     }
     
+    // Use the new pricing logic
     const price = user.role === 'AGGREGATOR' 
       ? service.platformPrice 
       : service.defaultAgentPrice;
-    console.log(`DEBUG: User role is ${user.role}, price is ₦${price}`);
+    console.log(`[DEBUG] User role is ${user.role}, price is ₦${price}`);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
-      console.error("DEBUG: Insufficient funds.");
+      console.error("[DEBUG] Insufficient funds.");
       return NextResponse.json({ error: `Insufficient funds for BVN verification. You need ₦${price}.` }, { status: 402 });
     }
-    console.log("DEBUG: Wallet check passed.");
+    console.log("[DEBUG] Wallet check passed.");
 
     // --- 4. Call Raudah BVN API ---
     let data: any; 
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
     // Using your original, working payload structure
     const userReference = `XPS-BVN-${user.id.substring(0, 5)}-${Date.now()}`;
     const raudahPayload = {
-      value: bvn,
+      value: bvn, // This is from your working file
       ref: userReference
     };
     
@@ -102,11 +103,10 @@ export async function POST(request: Request) {
       'Authorization': RAUDAH_API_KEY,
     };
 
-    console.log("--- DEBUG: Sending to Raudah ---");
+    console.log("--- [DEBUG] Sending to Raudah ---");
     console.log("Endpoint:", RAUDAH_ENDPOINT);
     console.log("Payload:", JSON.stringify(raudahPayload));
     console.log("Headers:", { ...raudahHeaders, 'Authorization': 'Bearer [REDACTED]' }); // Mask key
-    // ---------------------------------
 
     try {
       const raudahResponse = await axios.post(
@@ -116,13 +116,12 @@ export async function POST(request: Request) {
       );
       data = raudahResponse.data; 
       
-      console.log("--- DEBUG: Received from Raudah (Success) ---");
+      console.log("--- [DEBUG] Received from Raudah (Success) ---");
       console.log("Status:", raudahResponse.status);
       console.log("Data:", JSON.stringify(data));
-      // ---------------------------------
       
     } catch (apiError: any) {
-      console.error("--- DEBUG: Received from Raudah (ERROR) ---");
+      console.error("--- [DEBUG] Received from Raudah (ERROR) ---");
       if (apiError.response) {
         console.error("Status:", apiError.response.status);
         console.error("Data:", JSON.stringify(apiError.response.data));
@@ -130,7 +129,6 @@ export async function POST(request: Request) {
       } else {
         console.error("Message:", apiError.message);
       }
-      // ---------------------------------
       
       if (apiError.response && apiError.response.data && (apiError.response.data.success === true || apiError.response.data.status === true)) {
         data = apiError.response.data;
@@ -142,7 +140,7 @@ export async function POST(request: Request) {
     // --- 5. Handle Raudah Error Response ---
     if (data.status === false || data.success === false) {
       let errorMessage = data.message && typeof data.message === 'object' ? data.message['0'] : data.message;
-      console.error("DEBUG: Raudah logic error:", errorMessage);
+      console.error("[DEBUG] Raudah logic error:", errorMessage);
       throw new Error(errorMessage || "BVN verification failed.");
     }
     
@@ -150,30 +148,30 @@ export async function POST(request: Request) {
     const { firstName, lastName, dateOfBirth, nin } = parseBvnData(data);
 
     if (!firstName || !lastName || !dateOfBirth) {
-      console.error("DEBUG: Parsing failed. Data was incomplete.");
+      console.error("[DEBUG] Parsing failed. Data was incomplete.");
       throw new Error("BVN record not found or response was incomplete.");
     }
 
     let bvnDob = dateOfBirth;
     if (bvnDob.includes('-') && bvnDob.length === 10) {
       const parts = bvnDob.split('-');
-      if (parts[0].length !== 4) {
+      if (parts[0].length !== 4) { // Convert DD-MM-YYYY to YYYY-MM-DD
         bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
       }
     }
 
     if (bvnDob !== dob) {
-      console.error(`DEBUG: DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
+      console.error(`[DEBUG] DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
       return NextResponse.json(
         { error: 'Date of Birth does not match BVN record.' }, { status: 400 }
       );
     }
-    console.log("DEBUG: DOB Match successful.");
+    console.log("[DEBUG] DOB Match successful.");
 
     const finalNin = nin || bvn;
     
     // --- 7. Update User & Charge Wallet (in a transaction) ---
-    console.log("DEBUG: Starting database transaction (Charge user, update profile)...");
+    console.log("[DEBUG] Starting database transaction (Charge user, update profile)...");
     await prisma.$transaction([
       prisma.wallet.update({
         where: { userId: user.id },
@@ -201,7 +199,7 @@ export async function POST(request: Request) {
         },
       })
     ]);
-    console.log("DEBUG: Database transaction successful.");
+    console.log("[DEBUG] Database transaction successful.");
 
     // --- 8. Call Payvessel API ---
     const payvesselPayload = {
@@ -215,7 +213,7 @@ export async function POST(request: Request) {
       nin: finalNin,
     };
     
-    console.log("--- DEBUG: Sending to Payvessel ---");
+    console.log("--- [DEBUG] Sending to Payvessel ---");
     console.log("Payload:", JSON.stringify(payvesselPayload));
     
     const payvesselResponse = await axios.post(
@@ -231,14 +229,14 @@ export async function POST(request: Request) {
     );
 
     const payvesselData = payvesselResponse.data;
-    console.log("--- DEBUG: Received from Payvessel ---", JSON.stringify(payvesselData));
+    console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
 
     if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
       throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
     }
 
     // --- 9. Save Accounts to Database ---
-    console.log("DEBUG: Saving virtual accounts to database...");
+    console.log("[DEBUG] Saving virtual accounts to database...");
     const accountData = payvesselData.banks.map((bank: any) => ({
       userId: user.id,
       bankName: bank.bankName,
@@ -251,7 +249,7 @@ export async function POST(request: Request) {
     await prisma.virtualAccount.createMany({
       data: accountData,
     });
-    console.log("DEBUG: Virtual accounts saved.");
+    console.log("[DEBUG] Virtual accounts saved.");
 
     // --- 10. Send Success Response ---
     return NextResponse.json({ 
@@ -260,7 +258,7 @@ export async function POST(request: Request) {
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('--- DEBUG: FINAL CATCH BLOCK ---');
+    console.error('--- [DEBUG] FINAL CATCH BLOCK ---');
     console.error('Wallet Activation Error:', error.message);
     // ---------------------------------
     return NextResponse.json(
