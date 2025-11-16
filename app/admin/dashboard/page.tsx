@@ -15,27 +15,29 @@ import {
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
-// This is a local component for the top stat cards
+// This is the new component for the top stat cards
+// It follows your layout: Number on Left, Icon on Right.
 const StatCard = ({ title, value, icon: Icon, color }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
   color: string;
 }) => (
-  <div className={`rounded-2xl bg-white p-6 shadow-lg`}>
+  <div className="rounded-2xl bg-white p-6 shadow-lg">
     <div className="flex items-center justify-between">
-      <div className={`rounded-full p-3 ${color}`}>
-        <Icon className="h-6 w-6 text-white" />
-      </div>
-      <div className="text-right">
+      <div>
         <p className="text-3xl font-bold text-gray-900">{value}</p>
         <p className="text-sm font-medium text-gray-500">{title}</p>
+      </div>
+      <div className={`rounded-full p-3 ${color}`}>
+        <Icon className="h-6 w-6 text-white" />
       </div>
     </div>
   </div>
 );
 
-// This is a local component for the main navigation cards
+// This is the new component for the main navigation cards
+// It has a cleaner design with a colored header.
 const AdminToolCard = ({ title, description, href, logo: Icon, color }: {
   title: string;
   description: string;
@@ -45,13 +47,17 @@ const AdminToolCard = ({ title, description, href, logo: Icon, color }: {
 }) => (
   <Link
     href={href}
-    className="group block rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+    className="group block rounded-2xl bg-white shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
   >
-    <div className={`rounded-lg p-3 inline-block ${color}`}>
+    {/* Colored Header */}
+    <div className={`flex items-center gap-4 p-4 ${color}`}>
       <Icon className="h-8 w-8 text-white" />
+      <h3 className="text-lg font-bold text-white">{title}</h3>
     </div>
-    <h3 className="mt-4 text-lg font-bold text-gray-900">{title}</h3>
-    <p className="mt-1 text-sm text-gray-600 line-clamp-2">{description}</p>
+    {/* Description Content */}
+    <div className="p-4">
+      <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+    </div>
   </Link>
 );
 
@@ -122,7 +128,7 @@ export default async function AdminDashboardPage() {
         Welcome, {user.firstName}!
       </h1>
       
-      {/* --- Glaring Stat Cards --- */}
+      {/* --- Stat Cards (New Design) --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
           title="Total Users" 
@@ -144,7 +150,7 @@ export default async function AdminDashboardPage() {
         />
       </div>
       
-      {/* --- Main Navigation Cards --- */}
+      {/* --- Main Navigation Cards (New Design) --- */}
       <h2 className="text-2xl font-bold text-gray-900 mb-4">
         Admin Tools
       </h2>
