@@ -3,13 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 
-// --- THIS IS THE FIX (Part 1) ---
-// We now use the ConfirmIdent API for BVN
+// --- ConfirmIdent (BVN) Credentials ---
 const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
 const BVN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/bvn_search';
-// -------------------------------
 
-// --- Payvessel Credentials (Unchanged) ---
+// --- Payvessel Credentials ---
 const PAYVESSEL_API_KEY = process.env.PAYVESSEL_API_KEY;
 const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
 const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
@@ -22,15 +20,13 @@ function parseBvnData(data: any): {
   dateOfBirth: string | null;
   nin: string | null;
 } {
-  // --- THIS IS THE FIX (Part 2) ---
-  // Updated to parse the ConfirmIdent response structure
-  const coreData = data.data; // ConfirmIdent puts data directly in 'data'
-  const firstName = coreData?.firs_tname || null; // Match 'firs_tname'
-  const lastName = coreData?.last_name || null;   // Match 'last_name'
-  const dateOfBirth = coreData?.date_of_birth || null; // Match 'date_of_birth'
+  console.log("Parsing BVN data..."); // DEBUG
+  const coreData = data.data;
+  const firstName = coreData?.firs_tname || null;
+  const lastName = coreData?.last_name || null;
+  const dateOfBirth = coreData?.date_of_birth || null;
   const nin = coreData?.nin || null;
   return { firstName, lastName, dateOfBirth, nin };
-  // ---------------------------------
 }
 
 function formatPhoneForPayvessel(internationalPhone: string): string {
@@ -42,9 +38,12 @@ function formatPhoneForPayvessel(internationalPhone: string): string {
 // ---------------------------------------------
 
 export async function POST(request: Request) {
+  console.log("--- BVN WALLET ACTIVATION API HIT ---"); // DEBUG
+  
   // 1. Get User
   const user = await getUserFromSession();
   if (!user) {
+    console.error("Auth Error: No user session found.");
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -54,41 +53,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
   }
 
+  let price: any;
+  let wallet: any;
+
   try {
     const body = await request.json();
     const { bvn, dob } = body; 
 
     if (!bvn || !dob) {
+      console.error("Validation Error: BVN or DOB missing.");
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
+    console.log(`Payload received: BVN ${bvn}, DOB ${dob}`); // DEBUG
 
     // --- 3. Get Price & Check Wallet ---
+    console.log("Fetching service price for NIN_LOOKUP..."); // DEBUG
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service) {
+      console.error("DB Error: NIN_LOOKUP service not found.");
       return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
     }
     
-    // Use the correct pricing logic
-    const price = user.role === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice;
-    
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    price = user.role === 'AGGREGATOR' ? service.platformPrice : service.defaultAgentPrice;
+    console.log(`Price calculated: ₦${price}`); // DEBUG
+
+    wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
+      console.error("Wallet Error: Insufficient funds.");
       return NextResponse.json({ error: 'Insufficient funds for BVN verification.' }, { status: 402 });
     }
+    console.log("Wallet check passed."); // DEBUG
 
     // --- 4. Call ConfirmIdent BVN API ---
     let data: any; 
     
-    // --- THIS IS THE FIX (Part 3) ---
-    const userReference = `XPS-BVN-${user.id.substring(0, 5)}-${Date.now()}`;
+    // --- THIS IS THE FIX ---
+    // The payload must *only* contain 'bvn', as per their documentation.
     const confirmIdentPayload = {
       bvn: bvn,
-      ref: userReference // Add the ref, just in case
     };
+    // -----------------------
     
-    console.log("Sending to ConfirmIdent:", confirmIdentPayload); // Debug line
+    console.log("Sending to ConfirmIdent:", confirmIdentPayload); // DEBUG
 
     try {
       const apiResponse = await axios.post(
@@ -96,22 +102,22 @@ export async function POST(request: Request) {
         confirmIdentPayload,
         { 
           headers: {
-            'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
+            'api-key': CONFIRMIDENT_API_KEY,
             'Content-Type': 'application/json',
           },
         }
       );
       data = apiResponse.data; 
-      console.log("Received from ConfirmIdent (Success):", data); // Debug line
+      console.log("Received from ConfirmIdent (Success):", JSON.stringify(data, null, 2)); // DEBUG
       
     } catch (apiError: any) {
-      console.error("ConfirmIdent API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
+      console.error("ConfirmIdent API CALL FAILED:", apiError.response ? JSON.stringify(apiError.response.data) : apiError.message); // DEBUG
       throw new Error("The BVN verification service is currently unavailable.");
     }
-    // ------------------------------------
 
     // --- 5. Handle ConfirmIdent Error Response ---
     if (data.success !== true) {
+      console.error("ConfirmIdent Logic Error:", data.message); // DEBUG
       throw new Error(data.message || "BVN verification failed.");
     }
     
@@ -119,29 +125,28 @@ export async function POST(request: Request) {
     const { firstName, lastName, dateOfBirth, nin } = parseBvnData(data);
 
     if (!firstName || !lastName || !dateOfBirth) {
+      console.error("Parsing Error: Required fields (name, dob) not found in API response."); // DEBUG
       throw new Error("BVN record not found or response was incomplete.");
     }
 
-    // --- THIS IS THE FIX (Part 4) ---
-    // Handle ConfirmIdent's "DD-MM-YYYY" format
     let bvnDob = dateOfBirth; // e.g., "01-01-2000"
     if (bvnDob.includes('-') && bvnDob.length === 10) {
       const parts = bvnDob.split('-');
-      // Convert DD-MM-YYYY to YYYY-MM-DD
-      bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // "2000-01-01"
     }
-    // ---------------------------------
 
     if (bvnDob !== dob) {
-      console.error(`DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
+      console.error(`DOB Mismatch. User: ${dob}, BVN: ${bvnDob}`); // DEBUG
       return NextResponse.json(
         { error: 'Date of Birth does not match BVN record.' }, { status: 400 }
       );
     }
+    console.log("DOB Matched."); // DEBUG
 
     const finalNin = nin || bvn;
     
     // --- 7. Update User & Charge Wallet (in a transaction) ---
+    console.log("Starting database transaction (charge user, save data)..."); // DEBUG
     await prisma.$transaction([
       prisma.wallet.update({
         where: { userId: user.id },
@@ -154,7 +159,7 @@ export async function POST(request: Request) {
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
           description: `BVN Verification (Wallet Activation)`,
-          reference: userReference,
+          reference: `BVN-ACTIVATE-${Date.now()}`,
           status: 'COMPLETED',
         },
       }),
@@ -169,20 +174,21 @@ export async function POST(request: Request) {
         },
       })
     ]);
+    console.log("Database transaction successful."); // DEBUG
 
     // --- 8. Call Payvessel API ---
     const payvesselPayload = {
       email: user.email,
       name: `${firstName} ${lastName}`,
       phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
-      bankcode: ["999991", "120001"], // PalmPay, 9Payment
+      bankcode: ["999991", "120001"],
       account_type: "STATIC",
       businessid: PAYVESSEL_BUSINESS_ID,
       bvn: bvn,
       nin: finalNin,
     };
     
-    console.log("Sending to Payvessel:", payvesselPayload); // Debug line
+    console.log("Sending to Payvessel:", payvesselPayload); // DEBUG
 
     const payvesselResponse = await axios.post(
       PAYVESSEL_ENDPOINT,
@@ -197,13 +203,14 @@ export async function POST(request: Request) {
     );
 
     const payvesselData = payvesselResponse.data;
-    console.log("Received from Payvessel:", payvesselData); // Debug line
+    console.log("Received from Payvessel:", payvesselData); // DEBUG
 
     if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
       throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
     }
 
     // --- 9. Save Accounts to Database ---
+    console.log("Saving virtual accounts to database..."); // DEBUG
     const accountData = payvesselData.banks.map((bank: any) => ({
       userId: user.id,
       bankName: bank.bankName,
@@ -216,6 +223,7 @@ export async function POST(request: Request) {
     await prisma.virtualAccount.createMany({
       data: accountData,
     });
+    console.log("Virtual accounts saved."); // DEBUG
 
     // --- 10. Send Success Response ---
     return NextResponse.json({ 
@@ -224,10 +232,10 @@ export async function POST(request: Request) {
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Wallet Activation Error:', error.message);
+    console.error('Wallet Activation Error (Final Catch):', error.message); // DEBUG
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
-      { status: 400 }
+      { status: 400 } 
     );
   }
 }
