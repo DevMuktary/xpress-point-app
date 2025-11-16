@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 
-// --- Raudah (BVN) Credentials ---
-const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
-const RAUDAH_ENDPOINT = 'https://raudah.com.ng/api/bvn/bvn';
+// --- THIS IS THE FIX (Part 1) ---
+// We now use the ConfirmIdent API for BVN
+const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
+const BVN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/bvn_search';
 
-if (!RAUDAH_API_KEY) {
-  console.error("CRITICAL: RAUDAH_API_KEY is not set.");
+if (!CONFIRMIDENT_API_KEY) {
+  console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
+// -------------------------------
 
 // --- Helper Functions ---
 function parseBvnData(data: any): {
@@ -17,13 +19,22 @@ function parseBvnData(data: any): {
   dateOfBirth: string | null;
   nin: string | null;
 } {
-  console.log("--- DEBUG: Parsing BVN Data ---");
-  const coreData = data.data?.data || data.data;
-  const firstName = data.firstName || coreData?.firstname || coreData?.firstName || null;
-  const lastName = data.lastName || coreData?.surname || coreData?.lastName || null;
-  const dateOfBirth = coreData?.dateOfBirth || coreData?.birthdate || null;
+  // --- THIS IS THE FIX (Part 2) ---
+  // Updated to parse the ConfirmIdent response structure
+  console.log("--- DEBUG: Parsing ConfirmIdent Data ---");
+  const coreData = data.data; // ConfirmIdent puts data directly in 'data'
+  console.log("Core Data:", JSON.stringify(coreData));
+  
+  const firstName = coreData?.firs_tname || null; // Match 'firs_tname'
+  const lastName = coreData?.last_name || null;   // Match 'last_name'
+  const dateOfBirth = coreData?.date_of_birth || null; // Match 'date_of_birth'
   const nin = coreData?.nin || null;
+
+  console.log("Parsed Name:", `${firstName} ${lastName}`);
+  console.log("Parsed DOB:", dateOfBirth);
+  console.log("Parsed NIN:", nin);
   return { firstName, lastName, dateOfBirth, nin };
+  // ---------------------------------
 }
 
 export async function POST(request: Request) {
@@ -45,34 +56,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
-    // --- 2. Call Raudah BVN API ---
+    // --- 2. Call ConfirmIdent BVN API ---
+    // --- THIS IS THE FIX (Part 3) ---
     const userReference = `XPS-BVN-${user.id.substring(0, 5)}-${Date.now()}`;
-    const raudahPayload = {
-      value: bvn,       // Using 'value' as per your original code
+    const confirmIdentPayload = {
+      bvn: bvn,
       ref: userReference
     };
     
-    console.log("--- [DEBUG] Sending to Raudah ---");
-    console.log("Payload:", JSON.stringify(raudahPayload));
+    console.log("--- [DEBUG] Sending to ConfirmIdent ---");
+    console.log("Payload:", JSON.stringify(confirmIdentPayload));
 
     let data: any;
     try {
-      const raudahResponse = await axios.post(
-        RAUDAH_ENDPOINT, 
-        raudahPayload,
-        { headers: { 'Content-Type': 'application/json', 'Authorization': RAUDAH_API_KEY } }
+      const apiResponse = await axios.post(
+        BVN_VERIFY_ENDPOINT, 
+        confirmIdentPayload,
+        { 
+          headers: {
+            'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
+            'Content-Type': 'application/json',
+          },
+        }
       );
-      data = raudahResponse.data; 
-      console.log("--- [DEBUG] Received from Raudah (Success) ---");
+      data = apiResponse.data; 
+      console.log("--- [DEBUG] Received from ConfirmIdent (Success) ---");
+      console.log("Data:", JSON.stringify(data));
+      
     } catch (apiError: any) {
-      console.error("--- [DEBUG] Received from Raudah (ERROR) ---", apiError.response?.data);
+      console.error("--- [DEBUG] Received from ConfirmIdent (ERROR) ---", apiError.response?.data);
       throw new Error("The BVN verification service is currently unavailable.");
     }
+    // ------------------------------------
 
-    // --- 3. Handle Raudah Error Response ---
-    if (data.status === false || data.success === false) {
-      let errorMessage = data.message && typeof data.message === 'object' ? data.message['0'] : data.message;
-      throw new Error(errorMessage || "BVN verification failed.");
+    // --- 3. Handle ConfirmIdent Error Response ---
+    if (data.success !== true) {
+      throw new Error(data.message || "BVN verification failed.");
     }
     
     // --- 4. Parse and Validate ---
@@ -82,13 +101,15 @@ export async function POST(request: Request) {
       throw new Error("BVN record not found or response was incomplete.");
     }
 
-    let bvnDob = dateOfBirth;
+    // --- THIS IS THE FIX (Part 4) ---
+    // Handle ConfirmIdent's "DD-MM-YYYY" format
+    let bvnDob = dateOfBirth; // e.g., "01-01-2000"
     if (bvnDob.includes('-') && bvnDob.length === 10) {
       const parts = bvnDob.split('-');
-      if (parts[0].length !== 4) { // Convert DD-MM-YYYY to YYYY-MM-DD
-        bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
-      }
+      // Convert DD-MM-YYYY to YYYY-MM-DD
+      bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
+    // ---------------------------------
 
     if (bvnDob !== dob) {
       console.error(`[DEBUG] DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
@@ -101,7 +122,6 @@ export async function POST(request: Request) {
     const finalNin = nin || bvn; // Your requested logic
 
     // --- 5. Return Success Data to Frontend ---
-    // We send back the verified data. The client will send this to the *next* API.
     return NextResponse.json({ 
       message: "Verification Successful",
       firstName,
