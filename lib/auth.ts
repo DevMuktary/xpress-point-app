@@ -25,7 +25,7 @@ export async function getUserFromSession() {
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       // --- THIS IS THE FIX ---
-      // We must select all the new fields we added to the schema.
+      // We must select all the fields we need from the database.
       select: {
         id: true,
         email: true,
@@ -36,13 +36,14 @@ export async function getUserFromSession() {
         isEmailVerified: true,
         isIdentityVerified: true,
         bvn: true,
+        nin: true, // <-- THE MISSING LINE IS NOW ADDED
         hasAgreedToModificationTerms: true,
         subdomain: true,
         businessName: true,
         accountName: true,
         accountNumber: true,
         bankName: true,
-        aggregatorId: true, // <-- THE MISSING LINE
+        aggregatorId: true, // Added this for our sub-agent logic
       }
       // -----------------------
     });
