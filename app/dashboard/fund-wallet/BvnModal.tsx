@@ -240,7 +240,6 @@ Activate Your Wallet
     </div>
   )}
 </>
-```
 
 );
 }
