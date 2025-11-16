@@ -1,1 +1,207 @@
+import { NextResponse } from ‘next/server’;
+import { prisma } from ‘@/lib/prisma’;
+import { getUserFromSession } from ‘@/lib/auth’;
+import axios from ‘axios’;
+import { Decimal } from ‘@prisma/client/runtime/library’;
 
+// — Payvessel Credentials —
+const PAYVESSEL_API_KEY = process.env.PAYVESSEL_API_KEY;
+const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
+const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
+const PAYVESSEL_ENDPOINT = ‘https://api.payvessel.com/pms/api/external/request/customerReservedAccount/’;
+
+function formatPhoneForPayvessel(internationalPhone: string): string {
+if (internationalPhone.startsWith(’+234’)) {
+return ‘0’ + internationalPhone.substring(4);
+}
+return internationalPhone;
+}
+
+export async function POST(request: Request) {
+console.log(”\n— [DEBUG] NEW WALLET ACTIVATION REQUEST —”);
+
+// 1. Get User
+const user = await getUserFromSession();
+if (!user) {
+console.error(”[DEBUG] Auth check failed. User not found.”);
+return NextResponse.json({ error: ‘Unauthorized’ }, { status: 401 });
+}
+console.log(`[DEBUG] User '${user.email}' authenticated.`);
+
+// 2. Check for missing API keys
+if (!PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
+console.error(’[DEBUG] CRITICAL: Missing Payvessel API keys.’);
+return NextResponse.json({ error: ‘Server configuration error.’ }, { status: 500 });
+}
+
+try {
+const body = await request.json();
+const { bvn, firstName, lastName, finalNin } = body;
+
+```
+if (!bvn || !firstName || !lastName || !finalNin) {
+  console.error("[DEBUG] Missing verified data.");
+  return NextResponse.json({ error: 'Verified data is required.' }, { status: 400 });
+}
+
+// --- 3. Get Price & Check Wallet ---
+const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
+if (!service) {
+  console.error("[DEBUG] NIN_LOOKUP service not found in database.");
+  return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
+}
+
+// Get the correct price based on user role
+const rawPrice = user.role === 'AGGREGATOR' 
+  ? service.platformPrice 
+  : service.defaultAgentPrice;
+
+const price = new Decimal(rawPrice);
+
+// ===== DETAILED LOGGING =====
+console.log('\n=== DETAILED DEBUG INFO ===');
+console.log('rawPrice:', rawPrice);
+console.log('rawPrice type:', typeof rawPrice);
+console.log('price (Decimal object):', price);
+console.log('price.toString():', price.toString());
+console.log('price.toFixed(2):', price.toFixed(2));
+console.log('price.toNumber():', price.toNumber());
+
+const priceForDecrement = price.toFixed(2);
+const negativeAmount = price.mul(-1).toFixed(2);
+
+console.log('priceForDecrement:', priceForDecrement);
+console.log('priceForDecrement type:', typeof priceForDecrement);
+console.log('negativeAmount:', negativeAmount);
+console.log('negativeAmount type:', typeof negativeAmount);
+console.log('=== END DEBUG INFO ===\n');
+// ============================
+
+const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+if (!wallet || wallet.balance.lessThan(price)) {
+  console.error("[DEBUG] Insufficient funds.");
+  return NextResponse.json({ 
+    error: `Insufficient funds for BVN verification. You need ₦${price.toFixed(2)}.` 
+  }, { status: 402 });
+}
+console.log("[DEBUG] Wallet check passed.");
+
+const userReference = `XPS-ACT-${user.id.substring(0, 5)}-${Date.now()}`;
+
+// --- 4. Update User & Charge Wallet (in a transaction) ---
+console.log("[DEBUG] Starting database transaction...");
+console.log("[DEBUG] Transaction data:", {
+  userId: user.id,
+  priceForDecrement,
+  negativeAmount,
+  userReference
+});
+
+await prisma.$transaction([
+  prisma.wallet.update({
+    where: { userId: user.id },
+    data: { 
+      balance: { 
+        decrement: priceForDecrement
+      } 
+    },
+  }),
+  prisma.transaction.create({
+    data: {
+      userId: user.id,
+      serviceId: service.id,
+      type: 'SERVICE_CHARGE',
+      amount: negativeAmount,
+      description: `BVN Verification (Wallet Activation)`,
+      reference: userReference,
+      status: 'COMPLETED',
+    },
+  }),
+  prisma.user.update({
+    where: { id: user.id },
+    data: {
+      firstName: firstName,
+      lastName: lastName,
+      bvn: bvn,
+      nin: finalNin,
+      isIdentityVerified: true,
+    },
+  })
+]);
+console.log("[DEBUG] Database transaction successful.");
+
+// --- 5. Call Payvessel API ---
+const payvesselPayload = {
+  email: user.email,
+  name: `${firstName} ${lastName}`,
+  phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
+  bankcode: ["999991", "120001"], // PalmPay, 9Payment
+  account_type: "STATIC",
+  businessid: PAYVESSEL_BUSINESS_ID,
+  bvn: bvn,
+  nin: finalNin,
+};
+
+console.log("--- [DEBUG] Sending to Payvessel ---");
+console.log("Payload:", JSON.stringify(payvesselPayload));
+
+const payvesselResponse = await axios.post(
+  PAYVESSEL_ENDPOINT,
+  payvesselPayload,
+  {
+    headers: {
+      'api-key': PAYVESSEL_API_KEY,
+      'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
+      'Content-Type': 'application/json',
+    },
+  }
+);
+
+const payvesselData = payvesselResponse.data;
+console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
+
+if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
+  throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
+}
+
+// --- 6. Save Accounts to Database ---
+console.log("[DEBUG] Saving virtual accounts to database...");
+const accountData = payvesselData.banks.map((bank: any) => ({
+  userId: user.id,
+  bankName: bank.bankName,
+  accountNumber: bank.accountNumber,
+  accountName: bank.accountName,
+  accountType: bank.account_type,
+  reference: bank.trackingReference,
+}));
+
+await prisma.virtualAccount.createMany({
+  data: accountData,
+});
+console.log("[DEBUG] Virtual accounts saved.");
+
+// --- 7. Send Success Response ---
+return NextResponse.json({ 
+  message: "Wallet activated successfully!",
+  banks: payvesselData.banks 
+}, { status: 200 });
+```
+
+} catch (error: any) {
+console.error(’\n=== FULL ERROR DETAILS ===’);
+console.error(‘Error name:’, error.name);
+console.error(‘Error message:’, error.message);
+console.error(‘Error code:’, error.code);
+console.error(‘Full error object:’, JSON.stringify(error, null, 2));
+console.error(‘Stack trace:’, error.stack);
+console.error(’=== END ERROR DETAILS ===\n’);
+
+```
+return NextResponse.json(
+  { error: error.message || 'An internal server error occurred.' },
+  { status: 400 } 
+);
+```
+
+}
+}
