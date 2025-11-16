@@ -24,7 +24,9 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/admin-login', {
+      // --- THIS IS THE FIX (Part 1) ---
+      // We call the new, "unprotected" API route
+      const response = await fetch('/api/auth/login-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -32,6 +34,7 @@ export default function AdminLoginPage() {
           password,
         }),
       });
+      // ---------------------------------
 
       const data = await response.json();
       if (!response.ok) {
