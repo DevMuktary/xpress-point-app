@@ -60,17 +60,26 @@ export async function POST(request: Request) {
     // --- 3. Call Raudah BVN API ---
     let data: any; 
     try {
-      // --- THIS IS THE FIX ---
-      // The API expects the key to be 'bvn', not 'value'
+      // --- THIS IS THE "WORLD-CLASS" FIX ---
+      // 1. The key is 'value', as your new docs confirmed.
+      // 2. We are now sending the 'ref' field, which will fix the "pattern" error.
+      const raudahPayload = {
+        value: bvn,
+        ref: `XPS-BVN-${user.id}-${Date.now()}`
+      };
+      
       const raudahResponse = await axios.post(
-        RAUDAH_ENDPOINT, { bvn: bvn }, { 
-      // -----------------------
+        RAUDAH_ENDPOINT, 
+        raudahPayload, // Send the "refurbished" payload
+        {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': RAUDAH_API_KEY,
           },
         }
       );
+      // ------------------------------------
+      
       data = raudahResponse.data; 
       
     } catch (apiError: any) {
