@@ -2,46 +2,164 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import Link from 'next/link';
+import {
+  UsersIcon,
+  ShieldCheckIcon,
+  BanknotesIcon,
+  ClockIcon,
+  UserGroupIcon,
+  CurrencyDollarIcon,
+  CogIcon,
+  WalletIcon,
+  DocumentTextIcon
+} from '@heroicons/react/24/outline';
 
-// This is a Server Component to fetch stats
+// This is a local component for the top stat cards
+const StatCard = ({ title, value, icon: Icon, color }: {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: string;
+}) => (
+  <div className={`rounded-2xl bg-white p-6 shadow-lg`}>
+    <div className="flex items-center justify-between">
+      <div className={`rounded-full p-3 ${color}`}>
+        <Icon className="h-6 w-6 text-white" />
+      </div>
+      <div className="text-right">
+        <p className="text-3xl font-bold text-gray-900">{value}</p>
+        <p className="text-sm font-medium text-gray-500">{title}</p>
+      </div>
+    </div>
+  </div>
+);
+
+// This is a local component for the main navigation cards
+const AdminToolCard = ({ title, description, href, logo: Icon, color }: {
+  title: string;
+  description: string;
+  href: string;
+  logo: React.ElementType;
+  color: string;
+}) => (
+  <Link
+    href={href}
+    className="group block rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+  >
+    <div className={`rounded-lg p-3 inline-block ${color}`}>
+      <Icon className="h-8 w-8 text-white" />
+    </div>
+    <h3 className="mt-4 text-lg font-bold text-gray-900">{title}</h3>
+    <p className="mt-1 text-sm text-gray-600 line-clamp-2">{description}</p>
+  </Link>
+);
+
+
+// This is the Server Component to fetch stats
 export default async function AdminDashboardPage() {
   const user = await getUserFromSession();
   if (!user) {
     redirect('/login-admin');
   }
 
-  // We will add more stats here later
-  const totalUsers = await prisma.user.count();
-  const totalAggregators = await prisma.user.count({ where: { role: 'AGGREGATOR' } });
+  // Fetch all stats in parallel
+  const [totalUsers, totalAggregators, pendingPayouts] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.count({ where: { role: 'AGGREGATOR' } }),
+    prisma.withdrawalRequest.count({ where: { status: 'PENDING' } })
+  ]);
+
+  // Main Admin Tools Navigation
+  const adminTools = [
+    {
+      title: "Manage Manual Requests",
+      description: "Approve or reject NIN, BVN, CAC, and other pending requests.",
+      href: "/admin/requests",
+      logo: ClockIcon,
+      color: "bg-yellow-500"
+    },
+    {
+      title: "Manage Payouts",
+      description: "Process pending withdrawal requests from your Aggregators.",
+      href: "/admin/payouts",
+      logo: BanknotesIcon,
+      color: "bg-green-500"
+    },
+    {
+      title: "Manage Users",
+      description: "View, search, and manage all users and agents on the platform.",
+      href: "/admin/users",
+      logo: UserGroupIcon,
+      color: "bg-blue-500"
+    },
+    {
+      title: "Service Pricing",
+      description: "Set the default agent price for all services on the platform.",
+      href: "/admin/pricing/services",
+      logo: CurrencyDollarIcon,
+      color: "bg-indigo-500"
+    },
+    {
+      title: "Aggregator Commissions",
+      description: "Set the specific commission each aggregator earns per service.",
+      href: "/admin/pricing/commissions",
+      logo: ShieldCheckIcon,
+      color: "bg-purple-500"
+    },
+    {
+      title: "Transaction Log",
+      description: "View a complete log of all transactions across the platform.",
+      href: "/admin/transactions",
+      logo: DocumentTextIcon,
+      color: "bg-gray-500"
+    },
+  ];
 
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold text-gray-900 mb-6">
         Welcome, {user.firstName}!
       </h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Users Card */}
-        <div className="rounded-2xl bg-white p-6 shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Users</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{totalUsers}</p>
-        </div>
-        
-        {/* Total Aggregators Card */}
-        <div className="rounded-2xl bg-white p-6 shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Aggregators</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{totalAggregators}</p>
-        </div>
-        
-        {/* Pending Requests Card (Placeholder) */}
-        <div className="rounded-2xl bg-white p-6 shadow">
-          <h3 className="text-sm font-medium text-gray-500">Pending Payouts</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
-        </div>
+      {/* --- Glaring Stat Cards --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatCard 
+          title="Total Users" 
+          value={totalUsers} 
+          icon={UsersIcon} 
+          color="bg-blue-500" 
+        />
+        <StatCard 
+          title="Total Aggregators" 
+          value={totalAggregators} 
+          icon={ShieldCheckIcon} 
+          color="bg-purple-500" 
+        />
+        <StatCard 
+          title="Pending Payouts" 
+          value={pendingPayouts} 
+          icon={BanknotesIcon} 
+          color={pendingPayouts > 0 ? "bg-red-500" : "bg-green-500"} 
+        />
       </div>
       
-      {/* We will add a table of recent activities here later */}
-      
+      {/* --- Main Navigation Cards --- */}
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        Admin Tools
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {adminTools.map((tool) => (
+          <AdminToolCard
+            key={tool.title}
+            title={tool.title}
+            description={tool.description}
+            href={tool.href}
+            logo={tool.logo}
+            color={tool.color}
+          />
+        ))}
+      </div>
     </div>
   );
 }
