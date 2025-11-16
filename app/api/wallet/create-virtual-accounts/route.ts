@@ -36,22 +36,22 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 3. Check if user already has accounts
-    const existingAccounts = await prisma.virtualAccount.count({
-      where: { userId: user.id }
-    });
+    // --- THIS IS THE FIX (Part 1) ---
+    // We now get the *specific* bankCode from the client
+    const body = await request.json();
+    const { bankCode } = body; // e.g., "20946"
 
-    if (existingAccounts > 0) {
-      console.log("[DEBUG] User already has virtual accounts. Aborting.");
-      return NextResponse.json({ error: 'Virtual accounts already generated.' }, { status: 409 });
+    if (!bankCode) {
+      return NextResponse.json({ error: 'Bank Code is required.' }, { status: 400 });
     }
+    // ---------------------------------
 
-    // 4. Call Payment Point API
+    // 3. Call Payment Point API
     const payload = {
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
       phoneNumber: formatPhone(user.phoneNumber),
-      bankCode: ["20946", "20897"], // Palmpay, OPay
+      bankCode: [bankCode], // <-- Pass only the single bank code
       account_type: "STATIC",
       businessId: BUSINESS_ID,
       bvn: user.bvn, // This is the NIN we saved in the BVN field
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       {
         headers: {
           'api-key': API_KEY,
-          'Authorization': API_SECRET, // This includes "Bearer"
+          'Authorization': API_SECRET,
           'Content-Type': 'application/json',
         },
       }
@@ -77,28 +77,29 @@ export async function POST(request: Request) {
     console.log("--- [DEBUG] Received from Payment Point ---", JSON.stringify(data));
 
     if (data.status !== 'success' || !data.bankAccounts || data.bankAccounts.length === 0) {
-      throw new Error(data.message || 'Failed to create virtual accounts.');
+      throw new Error(data.message || 'Failed to create virtual account.');
     }
 
-    // 5. Save Accounts to Database
-    const accountData = data.bankAccounts.map((bank: any) => ({
+    // 4. Save the *single* new account
+    const newAccount = data.bankAccounts[0];
+    const accountData = {
       userId: user.id,
-      bankName: bank.bankName,
-      accountNumber: bank.accountNumber,
-      accountName: bank.accountName,
-      accountType: bank.account_type || "STATIC",
-      reference: bank.Reserved_Account_Id || bank.accountNumber, // Use Reserved_Account_Id
-    }));
+      bankName: newAccount.bankName,
+      accountNumber: newAccount.accountNumber,
+      accountName: newAccount.accountName,
+      accountType: newAccount.account_type || "STATIC",
+      reference: newAccount.Reserved_Account_Id || newAccount.accountNumber,
+    };
 
-    await prisma.virtualAccount.createMany({
+    await prisma.virtualAccount.create({
       data: accountData,
     });
-    console.log("[DEBUG] Virtual accounts saved.");
+    console.log("[DEBUG] Virtual account saved.");
 
-    // 6. Send Success Response
+    // 5. Send Success Response
     return NextResponse.json({ 
-      message: "Virtual accounts created successfully!",
-      banks: data.bankAccounts 
+      message: "Virtual account created successfully!",
+      bank: accountData 
     }, { status: 200 });
 
   } catch (error: any) {
