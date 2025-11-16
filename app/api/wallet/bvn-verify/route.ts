@@ -10,25 +10,35 @@ if (!CONFIRMIDENT_API_KEY) {
   console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
 
-// --- Helper Functions ---
+// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
+// We "refurbish" this function to *exactly* match your "stunning" log file
 function parseBvnData(data: any): {
   firstName: string | null;
   lastName: string | null;
   dateOfBirth: string | null;
   nin: string | null;
 } {
-  const coreData = data.data; // ConfirmIdent puts data directly in 'data'
-  const firstName = coreData?.firs_tname || null; 
-  const lastName = coreData?.last_name || null;
-  const dateOfBirth = coreData?.date_of_birth || null;
+  console.log("--- DEBUG: Parsing ConfirmIdent Data ---");
+  // The "data.data" object is the *only* "world-class" source of truth
+  const coreData = data.data; 
+  console.log("Core Data:", JSON.stringify(coreData));
+  
+  // "Refurbished" to use the *exact* field names from your log
+  const firstName = coreData?.firstName || coreData?.firs_tname || null;
+  const lastName = coreData?.lastName || coreData?.last_name || null;
+  const dateOfBirth = coreData?.dateOfBirth || coreData?.date_of_birth || null;
   const nin = coreData?.nin || null;
+
+  console.log("Parsed Name:", `${firstName} ${lastName}`);
+  console.log("Parsed DOB:", dateOfBirth);
+  console.log("Parsed NIN:", nin);
   return { firstName, lastName, dateOfBirth, nin };
 }
+// --------------------------------------------------
 
 export async function POST(request: Request) {
   console.log("\n--- [DEBUG] NEW BVN VERIFICATION REQUEST ---");
   
-  // 1. Get User
   const user = await getUserFromSession();
   if (!user) {
     console.error("[DEBUG] Auth check failed. User not found.");
@@ -74,15 +84,13 @@ export async function POST(request: Request) {
       throw new Error("The BVN verification service is currently unavailable.");
     }
 
-    // --- 3. Handle ConfirmIdent Response (THIS IS THE FIX) ---
+    // --- 3. Handle ConfirmIdent Response ---
     // We check for the 'data' object, not 'success: true'.
     if (data.data) {
       console.log("[DEBUG] data.data object exists. Proceeding...");
     } else {
-      // This will catch "Verification Successfull." if it's sent as a failure
       throw new Error(data.message || "BVN verification failed.");
     }
-    // -----------------------------------------------------
     
     // --- 4. Parse and Validate ---
     const { firstName, lastName, dateOfBirth, nin } = parseBvnData(data);
@@ -91,12 +99,17 @@ export async function POST(request: Request) {
       throw new Error("BVN record not found or response was incomplete.");
     }
 
-    let bvnDob = dateOfBirth; // e.g., "01-01-2000"
+    // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
+    // Handle ConfirmIdent's "01-01-2001" format
+    let bvnDob = dateOfBirth; // e.g., "01-01-2001" (from your log)
     if (bvnDob.includes('-') && bvnDob.length === 10) {
       const parts = bvnDob.split('-');
       // Convert DD-MM-YYYY to YYYY-MM-DD
-      bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      if (parts[0].length === 2) {
+        bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
     }
+    // ---------------------------------
 
     if (bvnDob !== dob) {
       console.error(`[DEBUG] DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
