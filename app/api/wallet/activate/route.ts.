@@ -57,7 +57,25 @@ const rawPrice = user.role === 'AGGREGATOR'
   : service.defaultAgentPrice;
 
 const price = new Decimal(rawPrice);
-console.log(`[DEBUG] User role is ${user.role}, price is ₦${price.toFixed(2)}`);
+
+// ===== DETAILED LOGGING =====
+console.log('\n=== DETAILED DEBUG INFO ===');
+console.log('rawPrice:', rawPrice);
+console.log('rawPrice type:', typeof rawPrice);
+console.log('price (Decimal object):', price);
+console.log('price.toString():', price.toString());
+console.log('price.toFixed(2):', price.toFixed(2));
+console.log('price.toNumber():', price.toNumber());
+
+const priceForDecrement = price.toFixed(2);
+const negativeAmount = price.mul(-1).toFixed(2);
+
+console.log('priceForDecrement:', priceForDecrement);
+console.log('priceForDecrement type:', typeof priceForDecrement);
+console.log('negativeAmount:', negativeAmount);
+console.log('negativeAmount type:', typeof negativeAmount);
+console.log('=== END DEBUG INFO ===\n');
+// ============================
 
 const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
 if (!wallet || wallet.balance.lessThan(price)) {
@@ -71,11 +89,13 @@ console.log("[DEBUG] Wallet check passed.");
 const userReference = `XPS-ACT-${user.id.substring(0, 5)}-${Date.now()}`;
 
 // --- 4. Update User & Charge Wallet (in a transaction) ---
-console.log("[DEBUG] Starting database transaction (Charge user, update profile)...");
-
-// Convert price to properly formatted strings with 2 decimal places
-const priceForDecrement = price.toFixed(2);
-const negativeAmount = price.mul(-1).toFixed(2);
+console.log("[DEBUG] Starting database transaction...");
+console.log("[DEBUG] Transaction data:", {
+  userId: user.id,
+  priceForDecrement,
+  negativeAmount,
+  userReference
+});
 
 await prisma.$transaction([
   prisma.wallet.update({
@@ -168,11 +188,20 @@ return NextResponse.json({
 ```
 
 } catch (error: any) {
-console.error(’— [DEBUG] FINAL CATCH BLOCK (ACTIVATE) —’);
-console.error(‘Wallet Activation Error:’, error.message);
+console.error(’\n=== FULL ERROR DETAILS ===’);
+console.error(‘Error name:’, error.name);
+console.error(‘Error message:’, error.message);
+console.error(‘Error code:’, error.code);
+console.error(‘Full error object:’, JSON.stringify(error, null, 2));
+console.error(‘Stack trace:’, error.stack);
+console.error(’=== END ERROR DETAILS ===\n’);
+
+```
 return NextResponse.json(
-{ error: error.message || ‘An internal server error occurred.’ },
-{ status: 400 }
+  { error: error.message || 'An internal server error occurred.' },
+  { status: 400 } 
 );
+```
+
 }
 }
