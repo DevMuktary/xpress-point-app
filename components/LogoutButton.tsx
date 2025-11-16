@@ -12,8 +12,8 @@ export default function LogoutButton() {
     setIsLoading(true);
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      // Redirect to login and refresh the page to clear all state
-      router.push('/login');
+      // Redirect to admin login and refresh
+      router.push('/login-admin');
       router.refresh(); 
     } catch (error) {
       console.error('Logout failed:', error);
