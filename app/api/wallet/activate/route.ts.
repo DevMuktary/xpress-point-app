@@ -1,207 +1,251 @@
-import { NextResponse } from ‘next/server’;
-import { prisma } from ‘@/lib/prisma’;
-import { getUserFromSession } from ‘@/lib/auth’;
-import axios from ‘axios’;
-import { Decimal } from ‘@prisma/client/runtime/library’;
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getUserFromSession } from '@/lib/auth';
+import axios from 'axios';
+import { Decimal } from '@prisma/client/runtime/library'; // Import Decimal
 
-// — Payvessel Credentials —
+// --- Raudah (BVN) Credentials ---
+const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
+const RAUDAH_ENDPOINT = 'https://raudah.com.ng/api/bvn/bvn';
+
+// --- Payvessel Credentials ---
 const PAYVESSEL_API_KEY = process.env.PAYVESSEL_API_KEY;
 const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
 const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
-const PAYVESSEL_ENDPOINT = ‘https://api.payvessel.com/pms/api/external/request/customerReservedAccount/’;
+const PAYVESSEL_ENDPOINT = 'https://api.payvessel.com/pms/api/external/request/customerReservedAccount/';
+
+// --- Helper Functions ---
+function parseBvnData(data: any): {
+  firstName: string | null;
+  lastName: string | null;
+  dateOfBirth: string | null;
+  nin: string | null;
+} {
+  console.log("--- DEBUG: Parsing BVN Data ---");
+  const coreData = data.data?.data || data.data;
+  console.log("Core Data:", JSON.stringify(coreData));
+  const firstName = data.firstName || coreData?.firstname || coreData?.firstName || null;
+  const lastName = data.lastName || coreData?.surname || coreData?.lastName || null;
+  const dateOfBirth = coreData?.dateOfBirth || coreData?.birthdate || null;
+  const nin = coreData?.nin || null;
+  return { firstName, lastName, dateOfBirth, nin };
+}
 
 function formatPhoneForPayvessel(internationalPhone: string): string {
-if (internationalPhone.startsWith(’+234’)) {
-return ‘0’ + internationalPhone.substring(4);
+  if (internationalPhone.startsWith('+234')) {
+    return '0' + internationalPhone.substring(4);
+  }
+  return internationalPhone;
 }
-return internationalPhone;
-}
+// ---------------------------------------------
 
 export async function POST(request: Request) {
-console.log(”\n— [DEBUG] NEW WALLET ACTIVATION REQUEST —”);
-
-// 1. Get User
-const user = await getUserFromSession();
-if (!user) {
-console.error(”[DEBUG] Auth check failed. User not found.”);
-return NextResponse.json({ error: ‘Unauthorized’ }, { status: 401 });
-}
-console.log(`[DEBUG] User '${user.email}' authenticated.`);
-
-// 2. Check for missing API keys
-if (!PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
-console.error(’[DEBUG] CRITICAL: Missing Payvessel API keys.’);
-return NextResponse.json({ error: ‘Server configuration error.’ }, { status: 500 });
-}
-
-try {
-const body = await request.json();
-const { bvn, firstName, lastName, finalNin } = body;
-
-```
-if (!bvn || !firstName || !lastName || !finalNin) {
-  console.error("[DEBUG] Missing verified data.");
-  return NextResponse.json({ error: 'Verified data is required.' }, { status: 400 });
-}
-
-// --- 3. Get Price & Check Wallet ---
-const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
-if (!service) {
-  console.error("[DEBUG] NIN_LOOKUP service not found in database.");
-  return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
-}
-
-// Get the correct price based on user role
-const rawPrice = user.role === 'AGGREGATOR' 
-  ? service.platformPrice 
-  : service.defaultAgentPrice;
-
-const price = new Decimal(rawPrice);
-
-// ===== DETAILED LOGGING =====
-console.log('\n=== DETAILED DEBUG INFO ===');
-console.log('rawPrice:', rawPrice);
-console.log('rawPrice type:', typeof rawPrice);
-console.log('price (Decimal object):', price);
-console.log('price.toString():', price.toString());
-console.log('price.toFixed(2):', price.toFixed(2));
-console.log('price.toNumber():', price.toNumber());
-
-const priceForDecrement = price.toFixed(2);
-const negativeAmount = price.mul(-1).toFixed(2);
-
-console.log('priceForDecrement:', priceForDecrement);
-console.log('priceForDecrement type:', typeof priceForDecrement);
-console.log('negativeAmount:', negativeAmount);
-console.log('negativeAmount type:', typeof negativeAmount);
-console.log('=== END DEBUG INFO ===\n');
-// ============================
-
-const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-if (!wallet || wallet.balance.lessThan(price)) {
-  console.error("[DEBUG] Insufficient funds.");
-  return NextResponse.json({ 
-    error: `Insufficient funds for BVN verification. You need ₦${price.toFixed(2)}.` 
-  }, { status: 402 });
-}
-console.log("[DEBUG] Wallet check passed.");
-
-const userReference = `XPS-ACT-${user.id.substring(0, 5)}-${Date.now()}`;
-
-// --- 4. Update User & Charge Wallet (in a transaction) ---
-console.log("[DEBUG] Starting database transaction...");
-console.log("[DEBUG] Transaction data:", {
-  userId: user.id,
-  priceForDecrement,
-  negativeAmount,
-  userReference
-});
-
-await prisma.$transaction([
-  prisma.wallet.update({
-    where: { userId: user.id },
-    data: { 
-      balance: { 
-        decrement: priceForDecrement
-      } 
-    },
-  }),
-  prisma.transaction.create({
-    data: {
-      userId: user.id,
-      serviceId: service.id,
-      type: 'SERVICE_CHARGE',
-      amount: negativeAmount,
-      description: `BVN Verification (Wallet Activation)`,
-      reference: userReference,
-      status: 'COMPLETED',
-    },
-  }),
-  prisma.user.update({
-    where: { id: user.id },
-    data: {
-      firstName: firstName,
-      lastName: lastName,
-      bvn: bvn,
-      nin: finalNin,
-      isIdentityVerified: true,
-    },
-  })
-]);
-console.log("[DEBUG] Database transaction successful.");
-
-// --- 5. Call Payvessel API ---
-const payvesselPayload = {
-  email: user.email,
-  name: `${firstName} ${lastName}`,
-  phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
-  bankcode: ["999991", "120001"], // PalmPay, 9Payment
-  account_type: "STATIC",
-  businessid: PAYVESSEL_BUSINESS_ID,
-  bvn: bvn,
-  nin: finalNin,
-};
-
-console.log("--- [DEBUG] Sending to Payvessel ---");
-console.log("Payload:", JSON.stringify(payvesselPayload));
-
-const payvesselResponse = await axios.post(
-  PAYVESSEL_ENDPOINT,
-  payvesselPayload,
-  {
-    headers: {
-      'api-key': PAYVESSEL_API_KEY,
-      'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
-      'Content-Type': 'application/json',
-    },
+  console.log("\n--- [DEBUG] NEW WALLET ACTIVATION REQUEST ---");
+  // 1. Get User
+  const user = await getUserFromSession();
+  if (!user) {
+    console.error("[DEBUG] Auth check failed. User not found.");
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-);
+  console.log(`[DEBUG] User '${user.email}' authenticated.`);
 
-const payvesselData = payvesselResponse.data;
-console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
+  // 2. Check for missing API keys
+  if (!RAUDAH_API_KEY || !PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
+    console.error('[DEBUG] CRITICAL: Missing one or more API keys.');
+    return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
+  }
 
-if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
-  throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
-}
+  try {
+    const body = await request.json();
+    const { bvn, dob } = body; 
 
-// --- 6. Save Accounts to Database ---
-console.log("[DEBUG] Saving virtual accounts to database...");
-const accountData = payvesselData.banks.map((bank: any) => ({
-  userId: user.id,
-  bankName: bank.bankName,
-  accountNumber: bank.accountNumber,
-  accountName: bank.accountName,
-  accountType: bank.account_type,
-  reference: bank.trackingReference,
-}));
+    if (!bvn || !dob) {
+      return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
+    }
 
-await prisma.virtualAccount.createMany({
-  data: accountData,
-});
-console.log("[DEBUG] Virtual accounts saved.");
+    // --- 3. Get Price & Check Wallet ---
+    const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
+    if (!service) {
+      return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
+    }
+    
+    const rawPrice = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    
+    const price = new Decimal(rawPrice); // Your correct fix (Part 1)
+    
+    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    if (!wallet || wallet.balance.lessThan(price)) {
+      return NextResponse.json({ error: `Insufficient funds for BVN verification. You need ₦${price}.` }, { status: 402 });
+    }
+    console.log("[DEBUG] Wallet check passed.");
 
-// --- 7. Send Success Response ---
-return NextResponse.json({ 
-  message: "Wallet activated successfully!",
-  banks: payvesselData.banks 
-}, { status: 200 });
-```
+    // --- 4. Call Raudah BVN API ---
+    let data: any; 
+    const userReference = `XPS-BVN-${user.id.substring(0, 5)}-${Date.now()}`;
+    const raudahPayload = {
+      value: bvn,
+      ref: userReference
+    };
+    
+    console.log("--- [DEBUG] Sending to Raudah ---");
+    console.log("Payload:", JSON.stringify(raudahPayload));
 
-} catch (error: any) {
-console.error(’\n=== FULL ERROR DETAILS ===’);
-console.error(‘Error name:’, error.name);
-console.error(‘Error message:’, error.message);
-console.error(‘Error code:’, error.code);
-console.error(‘Full error object:’, JSON.stringify(error, null, 2));
-console.error(‘Stack trace:’, error.stack);
-console.error(’=== END ERROR DETAILS ===\n’);
+    try {
+      const raudahResponse = await axios.post(
+        RAUDAH_ENDPOINT, 
+        raudahPayload,
+        { 
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': RAUDAH_API_KEY,
+          },
+        }
+      );
+      data = raudahResponse.data; 
+      console.log("--- [DEBUG] Received from Raudah (Success) ---", JSON.stringify(data));
+      
+    } catch (apiError: any) {
+      console.error("--- [DEBUG] Received from Raudah (ERROR) ---", apiError.response?.data);
+      if (apiError.response && apiError.response.data && (apiError.response.data.success === true || apiError.response.data.status === true)) {
+        data = apiError.response.data;
+      } else {
+        throw new Error("The BVN verification service is currently unavailable.");
+      }
+    }
 
-```
-return NextResponse.json(
-  { error: error.message || 'An internal server error occurred.' },
-  { status: 400 } 
-);
-```
+    // --- 5. Handle Raudah Error Response ---
+    if (data.status === false || data.success === false) {
+      let errorMessage = data.message && typeof data.message === 'object' ? data.message['0'] : data.message;
+      throw new Error(errorMessage || "BVN verification failed.");
+    }
+    
+    // --- 6. Parse and Validate ---
+    const { firstName, lastName, dateOfBirth, nin } = parseBvnData(data);
 
-}
+    if (!firstName || !lastName || !dateOfBirth) {
+      throw new Error("BVN record not found or response was incomplete.");
+    }
+
+    let bvnDob = dateOfBirth;
+    if (bvnDob.includes('-') && bvnDob.length === 10) {
+      const parts = bvnDob.split('-');
+      if (parts[0].length !== 4) {
+        bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+
+    if (bvnDob !== dob) {
+      console.error(`[DEBUG] DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
+      return NextResponse.json(
+        { error: 'Date of Birth does not match BVN record.' }, { status: 400 }
+      );
+    }
+    console.log("[DEBUG] DOB Match successful.");
+
+    const finalNin = nin || bvn;
+    
+    // --- 7. Update User & Charge Wallet (in a transaction) ---
+    console.log("[DEBUG] Starting database transaction...");
+    
+    // Your 100% correct fix for Prisma Decimals
+    const priceAsString = price.toString();
+    const negatedPriceAsString = price.negated().toString();
+    
+    await prisma.$transaction([
+      prisma.wallet.update({
+        where: { userId: user.id },
+        data: { balance: { decrement: priceAsString } }, // FIX
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: user.id,
+          serviceId: service.id,
+          type: 'SERVICE_CHARGE',
+          amount: negatedPriceAsString, // FIX
+          description: `BVN Verification (Wallet Activation)`,
+          reference: userReference,
+          status: 'COMPLETED',
+        },
+      }),
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          firstName: firstName,
+          lastName: lastName,
+          bvn: bvn,
+          nin: finalNin,
+          isIdentityVerified: true,
+        },
+      })
+    ]);
+    console.log("[DEBUG] Database transaction successful.");
+
+    // --- 8. Call Payvessel API ---
+    // --- THIS IS THE NEW FIX ---
+    const payvesselPayload = {
+      email: user.email,
+      name: `${firstName} ${lastName}`,
+      phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
+      bankcode: ["999991", "120001"],
+      account_type: "STATIC",
+      businessid: PAYVESSEL_BUSINESS_ID,
+      bvn: Number(bvn),       // Convert string to number
+      nin: Number(finalNin),  // Convert string to number
+    };
+    // --------------------------
+    
+    console.log("--- [DEBUG] Sending to Payvessel ---");
+    console.log("Payload:", JSON.stringify(payvesselPayload));
+    
+    const payvesselResponse = await axios.post(
+      PAYVESSEL_ENDPOINT,
+      payvesselPayload,
+      {
+        headers: {
+          'api-key': PAYVESSEL_API_KEY,
+          'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const payvesselData = payvesselResponse.data;
+    console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
+
+    if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
+      throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
+    }
+
+    // --- 9. Save Accounts to Database ---
+    console.log("[DEBUG] Saving virtual accounts to database...");
+    const accountData = payvesselData.banks.map((bank: any) => ({
+      userId: user.id,
+      bankName: bank.bankName,
+      accountNumber: bank.accountNumber,
+      accountName: bank.accountName,
+      accountType: bank.account_type,
+      reference: bank.trackingReference,
+    }));
+
+    await prisma.virtualAccount.createMany({
+      data: accountData,
+    });
+    console.log("[DEBUG] Virtual accounts saved.");
+
+    // --- 10. Send Success Response ---
+    return NextResponse.json({ 
+      message: "Wallet activated successfully!",
+      banks: payvesselData.banks 
+    }, { status: 200 });
+
+  } catch (error: any) {
+    console.error('--- [DEBUG] FINAL CATCH BLOCK ---');
+    console.error('Wallet Activation Error:', error.message);
+    return NextResponse.json(
+      { error: error.message || 'An internal server error occurred.' },
+      { status: 400 } 
+    );
+  }
 }
