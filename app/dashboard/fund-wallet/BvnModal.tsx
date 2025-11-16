@@ -1,6 +1,6 @@
-“use client”;
+"use client";
 
-import React, { useState } from ‘react’;
+import React, { useState } from 'react';
 import { useRouter } from ‘next/navigation’;
 import Loading from ‘@/app/loading’;
 
@@ -20,7 +20,7 @@ e.preventDefault();
 setIsLoading(true);
 setError(null);
 
-```
+
 try {
   const response = await fetch('/api/wallet/bvn-verify', {
     method: 'POST',
@@ -55,7 +55,7 @@ try {
 } finally {
   setIsLoading(false);
 }
-```
+
 
 };
 
@@ -63,7 +63,7 @@ const handleActivateWallet = async () => {
 setIsLoading(true);
 setError(null);
 
-```
+
 try {
   // === PREPARE CLEAN PAYLOAD ===
   const payload = {
@@ -111,7 +111,7 @@ try {
 } finally {
   setIsLoading(false);
 }
-```
+
 
 };
 
@@ -133,7 +133,7 @@ className=“mt-6 flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 te
 Activate Your Wallet
 </button>
 
-```
+
   {isOpen && (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       
