@@ -2,7 +2,6 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import AdminHeader from '@/components/AdminHeader';
-import { headers } from 'next/headers'; // Import headers to read the URL
 
 // This is a Server Component that acts as a security firewall
 export default async function AdminLayout({
@@ -11,31 +10,21 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   
-  // --- THIS IS THE FIX ---
-  // We need to find out what page the user is *currently* on.
-  const headersList = headers();
-  const pathname = headersList.get('x-next-pathname') || '';
-
-  // If the user is on the login page, DO NOTHING.
-  // Let them see the page.
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
-  // -------------------------
+  // --- THIS IS THE FIX (Part 2) ---
+  // The login page is no longer in this folder,
+  // so this code is now 100% safe.
   
-  // --- CRITICAL SECURITY CHECK (for all other admin pages) ---
   const user = await getUserFromSession();
 
+  // If user is not an admin, send them to the NEW admin login page
   if (!user || user.role !== 'ADMIN') {
-    // If user is not an admin, send them to the admin login page
-    redirect('/admin/login?error=Access+Denied');
+    redirect('/login-admin?error=Access+Denied');
   }
   // --------------------------------
   
-  // If they ARE an Admin and NOT on the login page, show the layout
+  // If they are an Admin, show the layout
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* We will add a sidebar later */}
       <div className="flex flex-col">
         <AdminHeader user={user} />
         <main className="flex-1 p-6">
