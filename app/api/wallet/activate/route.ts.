@@ -57,8 +57,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
-    // --- 3. Get Price & Check Wallet (THIS IS FIX #1) ---
-    // We get the price for the NIN_LOOKUP service, as this is a NIN/BVN check
+    // --- 3. Get Price & Check Wallet (FIX #1) ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service) {
       return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
@@ -77,12 +76,24 @@ export async function POST(request: Request) {
 
     // --- 4. Call Raudah BVN API ---
     let data: any; 
+    
+    // --- THIS IS FIX #2 (The Payload Error) ---
+    const userReference = `XPS-BVN-${user.id.substring(0, 5)}-${Date.now()}`;
+    const raudahPayload = {
+      value: bvn,
+      ref: userReference
+    };
+    // -----------------------------------------
+
+    // --- DEBUG LINE (As requested) ---
+    console.log("Sending to Raudah:", raudahPayload);
+    // ---------------------------------
+
     try {
-      // --- THIS IS FIX #2 (The "Pattern" Error) ---
-      // The API expects the key to be 'bvn', not 'value'
       const raudahResponse = await axios.post(
-        RAUDAH_ENDPOINT, { bvn: bvn }, { 
-      // --------------------------------------------
+        RAUDAH_ENDPOINT, 
+        raudahPayload, // Send the corrected payload
+        { 
           headers: {
             'Content-Type': 'application/json',
             'Authorization': RAUDAH_API_KEY,
@@ -91,11 +102,18 @@ export async function POST(request: Request) {
       );
       data = raudahResponse.data; 
       
+      // --- DEBUG LINE (As requested) ---
+      console.log("Received from Raudah (Success):", data);
+      // ---------------------------------
+      
     } catch (apiError: any) {
+      // --- DEBUG LINE (As requested) ---
+      console.error("Received from Raudah (Error):", apiError.response ? apiError.response.data : apiError.message);
+      // ---------------------------------
+      
       if (apiError.response && apiError.response.data && (apiError.response.data.success === true || apiError.response.data.status === true)) {
         data = apiError.response.data;
       } else {
-        console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
         throw new Error("The BVN verification service is currently unavailable.");
       }
     }
@@ -131,12 +149,10 @@ export async function POST(request: Request) {
     
     // --- 7. Update User & Charge Wallet (in a transaction) ---
     await prisma.$transaction([
-      // a) Charge the wallet
       prisma.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: price } },
       }),
-      // b) Log the transaction
       prisma.transaction.create({
         data: {
           userId: user.id,
@@ -144,11 +160,10 @@ export async function POST(request: Request) {
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
           description: `BVN Verification (Wallet Activation)`,
-          reference: `BVN-ACTIVATE-${Date.now()}`,
+          reference: userReference, // Use our reference
           status: 'COMPLETED',
         },
       }),
-      // c) Update the user's details
       prisma.user.update({
         where: { id: user.id },
         data: {
@@ -162,7 +177,7 @@ export async function POST(request: Request) {
     ]);
 
     // --- 8. Call Payvessel API ---
-    const payload = {
+    const payvesselPayload = {
       email: user.email,
       name: `${firstName} ${lastName}`,
       phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
@@ -172,10 +187,14 @@ export async function POST(request: Request) {
       bvn: bvn,
       nin: finalNin,
     };
+    
+    // --- DEBUG LINE (As requested) ---
+    console.log("Sending to Payvessel:", payvesselPayload);
+    // ---------------------------------
 
     const payvesselResponse = await axios.post(
       PAYVESSEL_ENDPOINT,
-      payload,
+      payvesselPayload,
       {
         headers: {
           'api-key': PAYVESSEL_API_KEY,
@@ -186,6 +205,10 @@ export async function POST(request: Request) {
     );
 
     const payvesselData = payvesselResponse.data;
+
+    // --- DEBUG LINE (As requested) ---
+    console.log("Received from Payvessel:", payvesselData);
+    // ---------------------------------
 
     if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
       throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
@@ -215,7 +238,7 @@ export async function POST(request: Request) {
     console.error('Wallet Activation Error:', error.message);
     return NextResponse.json(
       { error: error.message || 'An internal server error occurred.' },
-      { status: 400 } // Send a 400 so the frontend can display the clean error
+      { status: 400 }
     );
   }
 }
