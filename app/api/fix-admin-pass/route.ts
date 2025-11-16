@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 // !! IMPORTANT !!
 // 1. Change this email to your *exact* admin email
 // 2. Change this password to the new password you want
-const ADMIN_EMAIL = "admin@xpresspoint.net";
+const ADMIN_EMAIL = "mukhtaradeshinaabdulwaheed@gmail.com";
 const NEW_PASSWORD = "Mkolodart2002";
 // !!!!!!!!!!!!!!!!!!!
 
