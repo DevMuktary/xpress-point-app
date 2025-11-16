@@ -13,30 +13,27 @@ import {
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
-// --- Stat Card Component ---
-// This component now has the layout you requested:
-// Number on the Left, Icon on the Right.
-const StatCard = ({ title, value, icon: Icon, color }: {
+// --- New "Quick Action" Style Stat Card ---
+// This new design follows your request:
+// - Colorful, glaring, and like the user's Quick Action buttons.
+const StatCard = ({ title, value, icon: Icon, color, href }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
   color: string;
+  href: string;
 }) => (
-  <div className="rounded-2xl bg-white p-6 shadow-lg">
-    <div className="flex items-center justify-between">
-      {/* Left Side: Number and Title */}
-      <div className="space-y-1">
-        <p className="text-3xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm font-medium text-gray-500">{title}</p>
-      </div>
-      {/* Right Side: Icon */}
-      <div className={`rounded-full p-3 ${color}`}>
-        <Icon className="h-6 w-6 text-white" />
-      </div>
-    </div>
-  </div>
+  <Link
+    href={href}
+    className={`group flex flex-col items-center justify-center rounded-2xl 
+               p-6 text-center text-white shadow-lg transition-all 
+               hover:shadow-xl hover:-translate-y-1 ${color}`}
+  >
+    <Icon className="h-10 w-10" />
+    <p className="mt-4 text-3xl font-bold">{value}</p>
+    <p className="mt-1 text-sm font-medium">{title}</p>
+  </Link>
 );
-
 
 // This is the Server Component
 export default async function AdminDashboardPage() {
@@ -46,11 +43,14 @@ export default async function AdminDashboardPage() {
   }
 
   // Fetch all stats in parallel
-  const [totalUsers, totalAggregators, pendingPayouts] = await Promise.all([
-    prisma.user.count(),
+  // --- THIS IS THE FIX ---
+  // The query now correctly counts *only* AGENTs
+  const [totalAgents, totalAggregators, pendingPayouts] = await Promise.all([
+    prisma.user.count({ where: { role: 'AGENT' } }),
     prisma.user.count({ where: { role: 'AGGREGATOR' } }),
     prisma.withdrawalRequest.count({ where: { status: 'PENDING' } })
   ]);
+  // -----------------------
 
   // Main Admin Tools Navigation
   const adminTools = [
@@ -108,22 +108,25 @@ export default async function AdminDashboardPage() {
       {/* --- Stat Cards (New Design) --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
-          title="Total Users" 
-          value={totalUsers} 
+          title="Total Agents" 
+          value={totalAgents} 
           icon={UsersIcon} 
           color="bg-blue-500" 
+          href="/admin/users?role=AGENT" // Link to a pre-filtered list
         />
         <StatCard 
           title="Total Aggregators" 
           value={totalAggregators} 
           icon={ShieldCheckIcon} 
-          color="bg-purple-500" 
+          color="bg-purple-500"
+          href="/admin/users?role=AGGREGATOR" // Link to a pre-filtered list
         />
         <StatCard 
           title="Pending Payouts" 
           value={pendingPayouts} 
           icon={BanknotesIcon} 
-          color={pendingPayouts > 0 ? "bg-red-500" : "bg-green-500"} 
+          color={pendingPayouts > 0 ? "bg-red-500" : "bg-green-500"}
+          href="/admin/payouts"
         />
       </div>
       
