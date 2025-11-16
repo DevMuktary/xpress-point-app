@@ -1,29 +1,31 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Using a "world-class" standard font
-import "./globals.css"; // This imports your Tailwind CSS
+import type { Metadata, Viewport } from 'next'; // Import Viewport
+import { Inter } from 'next/font/google';
+import './globals.css';
 
-// Setup the font
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
-// Setup "world-class" SEO and metadata
 export const metadata: Metadata = {
-  title: "Xpress Point",
-  description: "Your all-in-one platform for NIN, BVN, and VTU services.",
+  title: 'Xpress Point',
+  description: 'All your services in one place',
 };
+
+// --- THIS IS THE FIX for "Pinch Zoom" ---
+// This tells all mobile devices not to allow zooming
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1, // This disables pinch-zoom
+};
+// ----------------------------------------
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {/* This 'children' prop is where all your pages (like 'app/login/page.tsx' 
-          or 'app/dashboard/layout.tsx') will be rendered.
-        */}
-        {children}
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
