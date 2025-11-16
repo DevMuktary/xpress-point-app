@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
-    // --- 3. Get Price & Check Wallet ---
+    // --- 3. Get Price & Check Wallet (YOUR FIX #1) ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service) {
       return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
@@ -73,7 +73,8 @@ export async function POST(request: Request) {
       ? service.platformPrice 
       : service.defaultAgentPrice;
     
-    const price = new Decimal(rawPrice); // Your correct fix (Part 1)
+    const price = new Decimal(rawPrice); // Instantiate as Decimal
+    console.log(`[DEBUG] User role is ${user.role}, price is ₦${price.toString()}`);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
@@ -137,7 +138,6 @@ export async function POST(request: Request) {
     }
 
     if (bvnDob !== dob) {
-      console.error(`[DEBUG] DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
       return NextResponse.json(
         { error: 'Date of Birth does not match BVN record.' }, { status: 400 }
       );
@@ -146,10 +146,9 @@ export async function POST(request: Request) {
 
     const finalNin = nin || bvn;
     
-    // --- 7. Update User & Charge Wallet (in a transaction) ---
+    // --- 7. Update User & Charge Wallet (YOUR FIX #1) ---
     console.log("[DEBUG] Starting database transaction...");
     
-    // Your 100% correct fix for Prisma Decimals
     const priceAsString = price.toString();
     const negatedPriceAsString = price.negated().toString();
     
@@ -182,8 +181,7 @@ export async function POST(request: Request) {
     ]);
     console.log("[DEBUG] Database transaction successful.");
 
-    // --- 8. Call Payvessel API ---
-    // --- THIS IS THE NEW FIX ---
+    // --- 8. Call Payvessel API (YOUR FIX #2) ---
     const payvesselPayload = {
       email: user.email,
       name: `${firstName} ${lastName}`,
@@ -191,28 +189,39 @@ export async function POST(request: Request) {
       bankcode: ["999991", "120001"],
       account_type: "STATIC",
       businessid: PAYVESSEL_BUSINESS_ID,
-      bvn: Number(bvn),       // Convert string to number
-      nin: Number(finalNin),  // Convert string to number
+      bvn: bvn,     // Sent as STRING
+      nin: finalNin,  // Sent as STRING
     };
-    // --------------------------
     
     console.log("--- [DEBUG] Sending to Payvessel ---");
     console.log("Payload:", JSON.stringify(payvesselPayload));
     
-    const payvesselResponse = await axios.post(
-      PAYVESSEL_ENDPOINT,
-      payvesselPayload,
-      {
-        headers: {
-          'api-key': PAYVESSEL_API_KEY,
-          'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
-          'Content-Type': 'application/json',
-        },
+    let payvesselData: any;
+    try {
+      const payvesselResponse = await axios.post(
+        PAYVESSEL_ENDPOINT,
+        payvesselPayload,
+        {
+          headers: {
+            'api-key': PAYVESSEL_API_KEY,
+            'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      payvesselData = payvesselResponse.data;
+      console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
+    } catch (payvesselError: any) {
+      // --- YOUR FIX #3 ---
+      console.error("--- [DEBUG] Payvessel API call FAILED ---");
+      if (payvesselError.response) {
+        console.error("Payvessel Status:", payvesselError.response.status);
+        console.error("Payvessel Data:", JSON.stringify(payvesselError.response.data));
+      } else {
+        console.error("Payvessel Error:", payvesselError.message);
       }
-    );
-
-    const payvesselData = payvesselResponse.data;
-    console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
+      throw new Error(payvesselError.response?.data?.message || "Failed to create virtual accounts.");
+    }
 
     if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
       throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
