@@ -57,34 +57,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
-    // --- 3. Call Raudah BVN API ---
+    // --- 3. Get Price & Check Wallet (THIS IS FIX #1) ---
+    // We get the price for the NIN_LOOKUP service, as this is a NIN/BVN check
+    const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
+    if (!service) {
+      return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
+    }
+    
+    // Use the new pricing logic
+    const price = user.role === 'AGGREGATOR' 
+      ? service.platformPrice 
+      : service.defaultAgentPrice;
+    
+    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    if (!wallet || wallet.balance.lessThan(price)) {
+      return NextResponse.json({ error: 'Insufficient funds for BVN verification.' }, { status: 402 });
+    }
+    // ----------------------------------------------------
+
+    // --- 4. Call Raudah BVN API ---
     let data: any; 
     try {
-      // --- THIS IS THE "WORLD-CLASS" FIX ---
-      // 1. The key is 'value', as your new docs confirmed.
-      // 2. We are now sending the 'ref' field, which will fix the "pattern" error.
-      const raudahPayload = {
-        value: bvn,
-        ref: `XPS-BVN-${user.id}-${Date.now()}`
-      };
-      
+      // --- THIS IS FIX #2 (The "Pattern" Error) ---
+      // The API expects the key to be 'bvn', not 'value'
       const raudahResponse = await axios.post(
-        RAUDAH_ENDPOINT, 
-        raudahPayload, // Send the "refurbished" payload
-        {
+        RAUDAH_ENDPOINT, { bvn: bvn }, { 
+      // --------------------------------------------
           headers: {
             'Content-Type': 'application/json',
             'Authorization': RAUDAH_API_KEY,
           },
         }
       );
-      // ------------------------------------
-      
       data = raudahResponse.data; 
       
     } catch (apiError: any) {
       if (apiError.response && apiError.response.data && (apiError.response.data.success === true || apiError.response.data.status === true)) {
-        console.log("Raudah API (Warning): Treating error-status payload as success.");
         data = apiError.response.data;
       } else {
         console.error("RAUDAH API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
@@ -92,13 +100,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // --- 4. Handle Raudah Error Response ---
+    // --- 5. Handle Raudah Error Response ---
     if (data.status === false || data.success === false) {
       let errorMessage = data.message && typeof data.message === 'object' ? data.message['0'] : data.message;
       throw new Error(errorMessage || "BVN verification failed.");
     }
     
-    // --- 5. Parse and Validate ---
+    // --- 6. Parse and Validate ---
     const { firstName, lastName, dateOfBirth, nin } = parseBvnData(data);
 
     if (!firstName || !lastName || !dateOfBirth) {
@@ -119,20 +127,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // --- 6. Your "finalNin" Logic ---
     const finalNin = nin || bvn;
     
-    // --- 7. Update User in Database ---
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        firstName: firstName,
-        lastName: lastName,
-        bvn: bvn,
-        nin: finalNin,
-        isIdentityVerified: true,
-      },
-    });
+    // --- 7. Update User & Charge Wallet (in a transaction) ---
+    await prisma.$transaction([
+      // a) Charge the wallet
+      prisma.wallet.update({
+        where: { userId: user.id },
+        data: { balance: { decrement: price } },
+      }),
+      // b) Log the transaction
+      prisma.transaction.create({
+        data: {
+          userId: user.id,
+          serviceId: service.id,
+          type: 'SERVICE_CHARGE',
+          amount: price.negated(),
+          description: `BVN Verification (Wallet Activation)`,
+          reference: `BVN-ACTIVATE-${Date.now()}`,
+          status: 'COMPLETED',
+        },
+      }),
+      // c) Update the user's details
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          firstName: firstName,
+          lastName: lastName,
+          bvn: bvn,
+          nin: finalNin,
+          isIdentityVerified: true,
+        },
+      })
+    ]);
 
     // --- 8. Call Payvessel API ---
     const payload = {
