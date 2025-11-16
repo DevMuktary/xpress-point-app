@@ -3,11 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 
-// --- Raudah (BVN) Credentials ---
-const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
-const RAUDAH_ENDPOINT = 'https://raudah.com.ng/api/bvn/bvn';
+// --- THIS IS THE FIX (Part 1) ---
+// We now use the ConfirmIdent API for BVN
+const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
+const BVN_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/bvn_search';
+// -------------------------------
 
-// --- Payvessel Credentials ---
+// --- Payvessel Credentials (Unchanged) ---
 const PAYVESSEL_API_KEY = process.env.PAYVESSEL_API_KEY;
 const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
 const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
@@ -20,12 +22,15 @@ function parseBvnData(data: any): {
   dateOfBirth: string | null;
   nin: string | null;
 } {
-  const coreData = data.data?.data || data.data;
-  const firstName = data.firstName || coreData?.firstname || coreData?.firstName || null;
-  const lastName = data.lastName || coreData?.surname || coreData?.lastName || null;
-  const dateOfBirth = coreData?.dateOfBirth || coreData?.birthdate || null;
+  // --- THIS IS THE FIX (Part 2) ---
+  // Updated to parse the ConfirmIdent response structure
+  const coreData = data.data; // ConfirmIdent puts data directly in 'data'
+  const firstName = coreData?.firs_tname || null; // Match 'firs_tname'
+  const lastName = coreData?.last_name || null;   // Match 'last_name'
+  const dateOfBirth = coreData?.date_of_birth || null; // Match 'date_of_birth'
   const nin = coreData?.nin || null;
   return { firstName, lastName, dateOfBirth, nin };
+  // ---------------------------------
 }
 
 function formatPhoneForPayvessel(internationalPhone: string): string {
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
   }
 
   // 2. Check for missing API keys
-  if (!RAUDAH_API_KEY || !PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
+  if (!CONFIRMIDENT_API_KEY || !PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
     console.error('CRITICAL: Missing one or more API keys in environment.');
     return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
   }
@@ -57,13 +62,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'BVN and Date of Birth are required' }, { status: 400 });
     }
 
-    // --- 3. Get Price & Check Wallet (FIX #1) ---
+    // --- 3. Get Price & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service) {
       return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
     }
     
-    // Use the new pricing logic
+    // Use the correct pricing logic
     const price = user.role === 'AGGREGATOR' 
       ? service.platformPrice 
       : service.defaultAgentPrice;
@@ -72,56 +77,42 @@ export async function POST(request: Request) {
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: 'Insufficient funds for BVN verification.' }, { status: 402 });
     }
-    // ----------------------------------------------------
 
-    // --- 4. Call Raudah BVN API ---
+    // --- 4. Call ConfirmIdent BVN API ---
     let data: any; 
     
-    // --- THIS IS FIX #2 (The Payload Error) ---
+    // --- THIS IS THE FIX (Part 3) ---
     const userReference = `XPS-BVN-${user.id.substring(0, 5)}-${Date.now()}`;
-    const raudahPayload = {
-      value: bvn,
-      ref: userReference
+    const confirmIdentPayload = {
+      bvn: bvn,
+      ref: userReference // Add the ref, just in case
     };
-    // -----------------------------------------
-
-    // --- DEBUG LINE (As requested) ---
-    console.log("Sending to Raudah:", raudahPayload);
-    // ---------------------------------
+    
+    console.log("Sending to ConfirmIdent:", confirmIdentPayload); // Debug line
 
     try {
-      const raudahResponse = await axios.post(
-        RAUDAH_ENDPOINT, 
-        raudahPayload, // Send the corrected payload
+      const apiResponse = await axios.post(
+        BVN_VERIFY_ENDPOINT, 
+        confirmIdentPayload,
         { 
           headers: {
+            'api-key': CONFIRMIDENT_API_KEY, // Use 'api-key' header
             'Content-Type': 'application/json',
-            'Authorization': RAUDAH_API_KEY,
           },
         }
       );
-      data = raudahResponse.data; 
-      
-      // --- DEBUG LINE (As requested) ---
-      console.log("Received from Raudah (Success):", data);
-      // ---------------------------------
+      data = apiResponse.data; 
+      console.log("Received from ConfirmIdent (Success):", data); // Debug line
       
     } catch (apiError: any) {
-      // --- DEBUG LINE (As requested) ---
-      console.error("Received from Raudah (Error):", apiError.response ? apiError.response.data : apiError.message);
-      // ---------------------------------
-      
-      if (apiError.response && apiError.response.data && (apiError.response.data.success === true || apiError.response.data.status === true)) {
-        data = apiError.response.data;
-      } else {
-        throw new Error("The BVN verification service is currently unavailable.");
-      }
+      console.error("ConfirmIdent API CALL FAILED:", apiError.response ? apiError.response.data : apiError.message);
+      throw new Error("The BVN verification service is currently unavailable.");
     }
+    // ------------------------------------
 
-    // --- 5. Handle Raudah Error Response ---
-    if (data.status === false || data.success === false) {
-      let errorMessage = data.message && typeof data.message === 'object' ? data.message['0'] : data.message;
-      throw new Error(errorMessage || "BVN verification failed.");
+    // --- 5. Handle ConfirmIdent Error Response ---
+    if (data.success !== true) {
+      throw new Error(data.message || "BVN verification failed.");
     }
     
     // --- 6. Parse and Validate ---
@@ -131,15 +122,18 @@ export async function POST(request: Request) {
       throw new Error("BVN record not found or response was incomplete.");
     }
 
-    let bvnDob = dateOfBirth;
+    // --- THIS IS THE FIX (Part 4) ---
+    // Handle ConfirmIdent's "DD-MM-YYYY" format
+    let bvnDob = dateOfBirth; // e.g., "01-01-2000"
     if (bvnDob.includes('-') && bvnDob.length === 10) {
       const parts = bvnDob.split('-');
-      if (parts[0].length !== 4) { // Convert DD-MM-YYYY to YYYY-MM-DD
-        bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
-      }
+      // Convert DD-MM-YYYY to YYYY-MM-DD
+      bvnDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
+    // ---------------------------------
 
     if (bvnDob !== dob) {
+      console.error(`DOB Mismatch. User entered: ${dob}, BVN returned: ${bvnDob}`);
       return NextResponse.json(
         { error: 'Date of Birth does not match BVN record.' }, { status: 400 }
       );
@@ -160,7 +154,7 @@ export async function POST(request: Request) {
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
           description: `BVN Verification (Wallet Activation)`,
-          reference: userReference, // Use our reference
+          reference: userReference,
           status: 'COMPLETED',
         },
       }),
@@ -188,9 +182,7 @@ export async function POST(request: Request) {
       nin: finalNin,
     };
     
-    // --- DEBUG LINE (As requested) ---
-    console.log("Sending to Payvessel:", payvesselPayload);
-    // ---------------------------------
+    console.log("Sending to Payvessel:", payvesselPayload); // Debug line
 
     const payvesselResponse = await axios.post(
       PAYVESSEL_ENDPOINT,
@@ -205,10 +197,7 @@ export async function POST(request: Request) {
     );
 
     const payvesselData = payvesselResponse.data;
-
-    // --- DEBUG LINE (As requested) ---
-    console.log("Received from Payvessel:", payvesselData);
-    // ---------------------------------
+    console.log("Received from Payvessel:", payvesselData); // Debug line
 
     if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
       throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
