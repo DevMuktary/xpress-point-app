@@ -57,13 +57,13 @@ const rawPrice = user.role === 'AGGREGATOR'
   : service.defaultAgentPrice;
 
 const price = new Decimal(rawPrice);
-console.log(`[DEBUG] User role is ${user.role}, price is ₦${price.toString()}`);
+console.log(`[DEBUG] User role is ${user.role}, price is ₦${price.toFixed(2)}`);
 
 const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
 if (!wallet || wallet.balance.lessThan(price)) {
   console.error("[DEBUG] Insufficient funds.");
   return NextResponse.json({ 
-    error: `Insufficient funds for BVN verification. You need ₦${price.toString()}.` 
+    error: `Insufficient funds for BVN verification. You need ₦${price.toFixed(2)}.` 
   }, { status: 402 });
 }
 console.log("[DEBUG] Wallet check passed.");
@@ -73,12 +73,16 @@ const userReference = `XPS-ACT-${user.id.substring(0, 5)}-${Date.now()}`;
 // --- 4. Update User & Charge Wallet (in a transaction) ---
 console.log("[DEBUG] Starting database transaction (Charge user, update profile)...");
 
+// Convert price to properly formatted strings with 2 decimal places
+const priceForDecrement = price.toFixed(2);
+const negativeAmount = price.mul(-1).toFixed(2);
+
 await prisma.$transaction([
   prisma.wallet.update({
     where: { userId: user.id },
     data: { 
       balance: { 
-        decrement: price.toNumber()
+        decrement: priceForDecrement
       } 
     },
   }),
@@ -87,7 +91,7 @@ await prisma.$transaction([
       userId: user.id,
       serviceId: service.id,
       type: 'SERVICE_CHARGE',
-      amount: price.mul(-1).toString(),
+      amount: negativeAmount,
       description: `BVN Verification (Wallet Activation)`,
       reference: userReference,
       status: 'COMPLETED',
