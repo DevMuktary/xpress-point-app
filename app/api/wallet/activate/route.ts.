@@ -1,173 +1,174 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getUserFromSession } from '@/lib/auth';
-import axios from 'axios';
-import { Decimal } from '@prisma/client/runtime/library'; // Import Decimal
+import { NextResponse } from ‘next/server’;
+import { prisma } from ‘@/lib/prisma’;
+import { getUserFromSession } from ‘@/lib/auth’;
+import axios from ‘axios’;
+import { Decimal } from ‘@prisma/client/runtime/library’;
 
-// --- Payvessel Credentials ---
+// — Payvessel Credentials —
 const PAYVESSEL_API_KEY = process.env.PAYVESSEL_API_KEY;
 const PAYVESSEL_API_SECRET = process.env.PAYVESSEL_API_SECRET;
 const PAYVESSEL_BUSINESS_ID = process.env.PAYVESSEL_BUSINESS_ID;
-const PAYVESSEL_ENDPOINT = 'https://api.payvessel.com/pms/api/external/request/customerReservedAccount/';
+const PAYVESSEL_ENDPOINT = ‘https://api.payvessel.com/pms/api/external/request/customerReservedAccount/’;
 
 function formatPhoneForPayvessel(internationalPhone: string): string {
-  if (internationalPhone.startsWith('+234')) {
-    return '0' + internationalPhone.substring(4);
-  }
-  return internationalPhone;
+if (internationalPhone.startsWith(’+234’)) {
+return ‘0’ + internationalPhone.substring(4);
+}
+return internationalPhone;
 }
 
 export async function POST(request: Request) {
-  console.log("\n--- [DEBUG] NEW WALLET ACTIVATION REQUEST ---");
-  // 1. Get User
-  const user = await getUserFromSession();
-  if (!user) {
-    console.error("[DEBUG] Auth check failed. User not found.");
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  console.log(`[DEBUG] User '${user.email}' authenticated.`);
+console.log(”\n— [DEBUG] NEW WALLET ACTIVATION REQUEST —”);
 
-  // 2. Check for missing API keys
-  if (!PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
-    console.error('[DEBUG] CRITICAL: Missing Payvessel API keys.');
-    return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
-  }
+// 1. Get User
+const user = await getUserFromSession();
+if (!user) {
+console.error(”[DEBUG] Auth check failed. User not found.”);
+return NextResponse.json({ error: ‘Unauthorized’ }, { status: 401 });
+}
+console.log(`[DEBUG] User '${user.email}' authenticated.`);
 
-  try {
-    const body = await request.json();
-    // This data comes from the *client* after a successful bvn-verify call
-    const { bvn, firstName, lastName, finalNin } = body; 
+// 2. Check for missing API keys
+if (!PAYVESSEL_API_KEY || !PAYVESSEL_API_SECRET || !PAYVESSEL_BUSINESS_ID) {
+console.error(’[DEBUG] CRITICAL: Missing Payvessel API keys.’);
+return NextResponse.json({ error: ‘Server configuration error.’ }, { status: 500 });
+}
 
-    if (!bvn || !firstName || !lastName || !finalNin) {
-      console.error("[DEBUG] Missing verified data.");
-      return NextResponse.json({ error: 'Verified data is required.' }, { status: 400 });
-    }
+try {
+const body = await request.json();
+const { bvn, firstName, lastName, finalNin } = body;
 
-    // --- 3. Get Price & Check Wallet ---
-    const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
-    if (!service) {
-      console.error("[DEBUG] NIN_LOOKUP service not found in database.");
-      return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
-    }
-    
-    // --- THIS IS YOUR 100% CORRECT FIX (Part 1) ---
-    const rawPrice = user.role === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice;
-    
-    const price = new Decimal(rawPrice); // Instantiate as Decimal
-    console.log(`[DEBUG] User role is ${user.role}, price is ₦${price.toString()}`);
-    // -----------------------------------------------
-    
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-    if (!wallet || wallet.balance.lessThan(price)) {
-      console.error("[DEBUG] Insufficient funds.");
-      return NextResponse.json({ error: `Insufficient funds for BVN verification. You need ₦${price.toString()}.` }, { status: 402 });
-    }
-    console.log("[DEBUG] Wallet check passed.");
+```
+if (!bvn || !firstName || !lastName || !finalNin) {
+  console.error("[DEBUG] Missing verified data.");
+  return NextResponse.json({ error: 'Verified data is required.' }, { status: 400 });
+}
 
-    const userReference = `XPS-ACT-${user.id.substring(0, 5)}-${Date.now()}`;
-    
-    // --- 4. Update User & Charge Wallet (in a transaction) ---
-    console.log("[DEBUG] Starting database transaction (Charge user, update profile)...");
-    
-    // --- THIS IS YOUR 100% CORRECT FIX (Part 2) ---
-    // We use .toString() to pass strings to Prisma, not Decimal objects
-    const priceAsString = price.toString();
-    const negatedPriceAsString = price.negated().toString();
-    // -----------------------------------------------
-    
-    await prisma.$transaction([
-      prisma.wallet.update({
-        where: { userId: user.id },
-        data: { balance: { decrement: priceAsString } }, // FIX
-      }),
-      prisma.transaction.create({
-        data: {
-          userId: user.id,
-          serviceId: service.id,
-          type: 'SERVICE_CHARGE',
-          amount: negatedPriceAsString, // FIX
-          description: `BVN Verification (Wallet Activation)`,
-          reference: userReference,
-          status: 'COMPLETED',
-        },
-      }),
-      prisma.user.update({
-        where: { id: user.id },
-        data: {
-          firstName: firstName,
-          lastName: lastName,
-          bvn: bvn,
-          nin: finalNin,
-          isIdentityVerified: true,
-        },
-      })
-    ]);
-    console.log("[DEBUG] Database transaction successful.");
+// --- 3. Get Price & Check Wallet ---
+const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
+if (!service) {
+  console.error("[DEBUG] NIN_LOOKUP service not found in database.");
+  return NextResponse.json({ error: 'Verification service (NIN_LOOKUP) not found.' }, { status: 503 });
+}
 
-    // --- 5. Call Payvessel API ---
-    const payvesselPayload = {
-      email: user.email,
-      name: `${firstName} ${lastName}`,
-      phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
-      bankcode: ["999991", "120001"], // PalmPay, 9Payment
-      account_type: "STATIC",
-      businessid: PAYVESSEL_BUSINESS_ID,
+// Get the correct price based on user role
+const rawPrice = user.role === 'AGGREGATOR' 
+  ? service.platformPrice 
+  : service.defaultAgentPrice;
+
+const price = new Decimal(rawPrice);
+console.log(`[DEBUG] User role is ${user.role}, price is ₦${price.toString()}`);
+
+const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+if (!wallet || wallet.balance.lessThan(price)) {
+  console.error("[DEBUG] Insufficient funds.");
+  return NextResponse.json({ 
+    error: `Insufficient funds for BVN verification. You need ₦${price.toString()}.` 
+  }, { status: 402 });
+}
+console.log("[DEBUG] Wallet check passed.");
+
+const userReference = `XPS-ACT-${user.id.substring(0, 5)}-${Date.now()}`;
+
+// --- 4. Update User & Charge Wallet (in a transaction) ---
+console.log("[DEBUG] Starting database transaction (Charge user, update profile)...");
+
+await prisma.$transaction([
+  prisma.wallet.update({
+    where: { userId: user.id },
+    data: { 
+      balance: { 
+        decrement: price.toNumber()
+      } 
+    },
+  }),
+  prisma.transaction.create({
+    data: {
+      userId: user.id,
+      serviceId: service.id,
+      type: 'SERVICE_CHARGE',
+      amount: price.mul(-1).toString(),
+      description: `BVN Verification (Wallet Activation)`,
+      reference: userReference,
+      status: 'COMPLETED',
+    },
+  }),
+  prisma.user.update({
+    where: { id: user.id },
+    data: {
+      firstName: firstName,
+      lastName: lastName,
       bvn: bvn,
       nin: finalNin,
-    };
-    
-    console.log("--- [DEBUG] Sending to Payvessel ---");
-    console.log("Payload:", JSON.stringify(payvesselPayload));
-    
-    const payvesselResponse = await axios.post(
-      PAYVESSEL_ENDPOINT,
-      payvesselPayload,
-      {
-        headers: {
-          'api-key': PAYVESSEL_API_KEY,
-          'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+      isIdentityVerified: true,
+    },
+  })
+]);
+console.log("[DEBUG] Database transaction successful.");
 
-    const payvesselData = payvesselResponse.data;
-    console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
+// --- 5. Call Payvessel API ---
+const payvesselPayload = {
+  email: user.email,
+  name: `${firstName} ${lastName}`,
+  phoneNumber: formatPhoneForPayvessel(user.phoneNumber),
+  bankcode: ["999991", "120001"], // PalmPay, 9Payment
+  account_type: "STATIC",
+  businessid: PAYVESSEL_BUSINESS_ID,
+  bvn: bvn,
+  nin: finalNin,
+};
 
-    if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
-      throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
-    }
+console.log("--- [DEBUG] Sending to Payvessel ---");
+console.log("Payload:", JSON.stringify(payvesselPayload));
 
-    // --- 6. Save Accounts to Database ---
-    console.log("[DEBUG] Saving virtual accounts to database...");
-    const accountData = payvesselData.banks.map((bank: any) => ({
-      userId: user.id,
-      bankName: bank.bankName,
-      accountNumber: bank.accountNumber,
-      accountName: bank.accountName,
-      accountType: bank.account_type,
-      reference: bank.trackingReference,
-    }));
-
-    await prisma.virtualAccount.createMany({
-      data: accountData,
-    });
-    console.log("[DEBUG] Virtual accounts saved.");
-
-    // --- 7. Send Success Response ---
-    return NextResponse.json({ 
-      message: "Wallet activated successfully!",
-      banks: payvesselData.banks 
-    }, { status: 200 });
-
-  } catch (error: any) {
-    console.error('--- [DEBUG] FINAL CATCH BLOCK (ACTIVATE) ---');
-    console.error('Wallet Activation Error:', error.message);
-    return NextResponse.json(
-      { error: error.message || 'An internal server error occurred.' },
-      { status: 400 } 
-    );
+const payvesselResponse = await axios.post(
+  PAYVESSEL_ENDPOINT,
+  payvesselPayload,
+  {
+    headers: {
+      'api-key': PAYVESSEL_API_KEY,
+      'api-secret': `Bearer ${PAYVESSEL_API_SECRET}`,
+      'Content-Type': 'application/json',
+    },
   }
+);
+
+const payvesselData = payvesselResponse.data;
+console.log("--- [DEBUG] Received from Payvessel ---", JSON.stringify(payvesselData));
+
+if (!payvesselData.status || !payvesselData.banks || payvesselData.banks.length === 0) {
+  throw new Error(payvesselData.message || 'Failed to create virtual accounts.');
+}
+
+// --- 6. Save Accounts to Database ---
+console.log("[DEBUG] Saving virtual accounts to database...");
+const accountData = payvesselData.banks.map((bank: any) => ({
+  userId: user.id,
+  bankName: bank.bankName,
+  accountNumber: bank.accountNumber,
+  accountName: bank.accountName,
+  accountType: bank.account_type,
+  reference: bank.trackingReference,
+}));
+
+await prisma.virtualAccount.createMany({
+  data: accountData,
+});
+console.log("[DEBUG] Virtual accounts saved.");
+
+// --- 7. Send Success Response ---
+return NextResponse.json({ 
+  message: "Wallet activated successfully!",
+  banks: payvesselData.banks 
+}, { status: 200 });
+```
+
+} catch (error: any) {
+console.error(’— [DEBUG] FINAL CATCH BLOCK (ACTIVATE) —’);
+console.error(‘Wallet Activation Error:’, error.message);
+return NextResponse.json(
+{ error: error.message || ‘An internal server error occurred.’ },
+{ status: 400 }
+);
+}
 }
