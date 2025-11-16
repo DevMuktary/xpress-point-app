@@ -2,11 +2,11 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import NinVerifyModal from './NinVerifyModal'; // We will rename BvnModal
+import NinVerifyModal from './NinVerifyModal';
 import { BanknotesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { VirtualAccount } from '@prisma/client';
 import AccountCard from '@/components/AccountCard';
-import GenerateAccountButton from '@/components/GenerateAccountButton'; // We will create this
+import GenerateAccountControls from '@/components/GenerateAccountControls'; // <-- FIX: Import new component
 
 // Helper function to get user's virtual accounts
 async function getVirtualAccounts(userId: string) {
@@ -32,9 +32,7 @@ export default async function FundWalletPage() {
     <div className="w-full max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Fund Wallet</h1>
 
-      {/* --- THIS IS THE NEW 3-STEP LOGIC --- */}
-      
-      {/* 1. If user is NOT verified, show the NIN Modal */}
+      {/* --- 1. If user is NOT verified, show the NIN Modal --- */}
       {!user.isIdentityVerified && (
         <div className="rounded-2xl bg-white p-6 text-center shadow-lg">
           <BanknotesIcon className="mx-auto h-12 w-12 text-blue-500" />
@@ -49,13 +47,8 @@ export default async function FundWalletPage() {
         </div>
       )}
 
-      {/* 2. If user IS verified, but has NO accounts, show Generate Button */}
-      {user.isIdentityVerified && virtualAccounts.length === 0 && (
-        <GenerateAccountButton />
-      )}
-
-      {/* 3. If user IS verified AND has accounts, show the accounts */}
-      {user.isIdentityVerified && virtualAccounts.length > 0 && (
+      {/* --- 2. If user IS verified, show controls and accounts --- */}
+      {user.isIdentityVerified && (
         <div className="space-y-6">
           <div className="rounded-lg bg-red-50 p-4 border border-red-200">
             <div className="flex">
@@ -75,28 +68,39 @@ export default async function FundWalletPage() {
               </div>
             </div>
           </div>
-
-          <h2 className="text-lg font-semibold text-gray-900">
-            Your Personal Account Numbers
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Transfer to any of these accounts. Your wallet will be credited
-            automatically.
-          </p>
           
-          <div className="space-y-4">
-            {virtualAccounts.map((account) => (
-              <AccountCard
-                key={account.id}
-                bankName={account.bankName}
-                accountNumber={account.accountNumber}
-                accountName={account.accountName}
-              />
-            ))}
-          </div>
+          {/* --- THIS IS THE FIX --- */}
+          {/* This component will show the "Generate" buttons IF accounts are missing */}
+          <GenerateAccountControls 
+            existingAccounts={virtualAccounts} 
+          />
+          {/* ----------------------- */}
+
+          {/* This section will *only* show accounts that exist */}
+          {virtualAccounts.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Your Personal Account Numbers
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Transfer to any of these accounts. Your wallet will be credited
+                automatically.
+              </p>
+              
+              <div className="space-y-4 mt-4">
+                {virtualAccounts.map((account) => (
+                  <AccountCard
+                    key={account.id}
+                    bankName={account.bankName}
+                    accountNumber={account.accountNumber}
+                    accountName={account.accountName}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
-      {/* --- END OF NEW LOGIC --- */}
     </div>
   );
 }
