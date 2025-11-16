@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "rm -rf .next || true && prisma db push --accept-data-loss && prisma generate && npm run seed && next build",
+    "build": "npx next-build",
     "start": "next start",
     "lint": "next lint",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "db:fixstatus": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/fixstatus.ts"
+    "db:fixstatus": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/fixstatus.ts",
+    "force-build": "rm -rf .next && npm run build"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.3",
