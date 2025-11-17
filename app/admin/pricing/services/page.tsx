@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import AdminServicePricingClientPage from '@/components/AdminServicePricingClientPage'; // We will create this
+import AdminServicePricingClientPage from '@/components/AdminServicePricingClientPage';
 
 // This is a Server Component.
 export default async function AdminServicePricingPage() {
@@ -21,6 +21,16 @@ export default async function AdminServicePricingPage() {
     ]
   });
 
+  // --- THIS IS THE FIX ---
+  // We must serialize the Decimal objects to strings before sending them
+  // to the client component, as they cannot be passed as props.
+  const serializedServices = services.map(service => ({
+    ...service,
+    platformPrice: service.platformPrice.toString(),
+    defaultAgentPrice: service.defaultAgentPrice.toString(),
+  }));
+  // -----------------------
+
   return (
     <div className="w-full max-w-7xl mx-auto">
       {/* --- Page Header --- */}
@@ -34,8 +44,8 @@ export default async function AdminServicePricingPage() {
         </h1>
       </div>
       
-      {/* 2. Pass all services to the Client Component */}
-      <AdminServicePricingClientPage initialServices={services} />
+      {/* 2. Pass the *serialized* services to the Client Component */}
+      <AdminServicePricingClientPage initialServices={serializedServices} />
     </div>
   );
 }
