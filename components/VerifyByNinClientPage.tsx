@@ -4,26 +4,19 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { IdentificationIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import Loading from '@/app/loading'; 
+import Loading from '@/app/loading';
 import SafeImage from '@/components/SafeImage';
 
-// --- Helper Functions ---
+// --- (Helper functions) ---
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "" || value === "****") {
     return ''; // Return blank
   }
   return decodeHtmlEntities(value.toString());
 }
-
 function decodeHtmlEntities(text: string): string {
   if (typeof text !== 'string') return text;
-  return text
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
+  return text.replace(/&apos;/g, "'").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 }
 function formatGender(gender: string): string {
   if (!gender) return '';
@@ -39,21 +32,21 @@ const DataRow = ({ label, value }: { label: string; value: any }) => (
   </div>
 );
 
-// --- Type Definitions ---
+// --- (Types) ---
 type NinData = {
   photo: string;
-  firstname: string;
-  surname: string;
+  firstname: string; 
+  surname: string;   
   middlename: string;
   birthdate: string;
-  nin: string;
+  nin: string;       
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
   gender?: string;
   residence_lga?: string;
   residence_state?: string;
-  telephoneno: string;
+  telephoneno: string; 
   birthstate?: string;
   maritalstatus?: string;
 };
@@ -79,7 +72,7 @@ const exampleImageMap = {
 };
 
 // --- Main Component ---
-export default function NinLookupClientPage({ serviceFee }: { serviceFee: number }) {
+export default function VerifyByNinClientPage({ serviceFee }: { serviceFee: number }) {
   const [searchValue, setSearchValue] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
@@ -94,8 +87,10 @@ export default function NinLookupClientPage({ serviceFee }: { serviceFee: number
     exampleImage: '' 
   });
 
-  // Use the fee from the server
-  const lookupFee = serviceFee; 
+  // --- THIS IS THE FIX ---
+  // The fee is now passed in as a prop
+  const lookupFee = serviceFee;
+  // -----------------------
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,14 +197,14 @@ export default function NinLookupClientPage({ serviceFee }: { serviceFee: number
       exampleImage: exampleImageMap[slipType],
     });
   };
-  
+
   const resetSearch = () => {
     setVerificationData(null);
     setError(null);
     setSuccess(null);
     setSearchValue('');
   };
-
+  
   const renderSearchForm = () => (
     <div className="rounded-2xl bg-white p-6 shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900">Enter NIN</h3>
@@ -243,6 +238,17 @@ export default function NinLookupClientPage({ serviceFee }: { serviceFee: number
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
+        {/* New Header for Results */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Verified Information</h2>
+          <button
+            onClick={resetSearch}
+            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+          >
+            + New Lookup
+          </button>
+        </div>
+        
         <div className="flex justify-center mb-4">
           <SafeImage
             src={`data:image/png;base64,${data.data.photo}`}
@@ -263,12 +269,17 @@ export default function NinLookupClientPage({ serviceFee }: { serviceFee: number
           <DataRow label="DOB" value={data.data.birthdate} />
           <DataRow label="Gender" value={formatGender(data.data.gender || '')} />
           <DataRow label="Address" value={data.data.residence_AdressLine1} />
-          <DataRow label="LGA / State" value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} />
+          <DataRow 
+            label="Address LGA/State" 
+            value={`${displayField(data.data.residence_lga)}, ${displayField(data.data.residence_state)}`} 
+          />
           <DataRow label="Birth LGA" value={data.data.birthlga} />
           <DataRow label="Birth State" value={data.data.birthstate} />
           <DataRow label="Marital Status" value={data.data.maritalstatus} />
         </div>
       </div>
+      
+      {/* --- Slip Generation Section --- */}
       <div className="border-t border-gray-100 bg-gray-50 p-6 rounded-b-2xl">
         <h3 className="text-lg font-semibold text-gray-900">Generate Slip</h3>
         <div className="mt-2 mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
@@ -321,24 +332,7 @@ export default function NinLookupClientPage({ serviceFee }: { serviceFee: number
   );
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      {isLoading && <Loading />}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
-            <ChevronLeftIcon className="h-6 w-6" />
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Verify by NIN</h1>
-        </div>
-        {verificationData && (
-          <button
-            onClick={resetSearch}
-            className="text-sm font-medium text-blue-600 hover:text-blue-500"
-          >
-            + New Lookup
-          </button>
-        )}
-      </div>
+    <div className="space-y-6">
       {error && (
         <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
           {error}
@@ -350,6 +344,8 @@ export default function NinLookupClientPage({ serviceFee }: { serviceFee: number
         </div>
       )}
       {!verificationData ? renderSearchForm() : renderResults(verificationData)}
+      
+      {/* Confirmation Modal */}
       {modalState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
@@ -380,9 +376,6 @@ export default function NinLookupClientPage({ serviceFee }: { serviceFee: number
                 <strong className="text-2xl font-bold text-blue-600">
                   ₦{modalState.price}
                 </strong>.
-              </p>
-              <p className="text-center text-sm text-gray-500">
-                Are you sure you want to continue?
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
