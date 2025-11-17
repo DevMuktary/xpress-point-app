@@ -9,17 +9,27 @@ import {
   PencilIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/library'; // Import Decimal
 
 // Define the props to receive the initial data from the server
+// We must re-map the initial services to ensure prices are Decimal objects
 type Props = {
   initialServices: Service[];
 };
 
+// --- THIS IS THE FIX (Part 1) ---
+// Create a helper function to ensure prices are always Decimal
+const ensureDecimal = (service: Service): Service => ({
+  ...service,
+  platformPrice: new Decimal(service.platformPrice),
+  defaultAgentPrice: new Decimal(service.defaultAgentPrice),
+});
+// ---------------------------------
+
 export default function AdminServicePricingClientPage({ initialServices }: Props) {
   
   // --- State Management ---
-  const [services, setServices] = useState(initialServices);
+  const [services, setServices] = useState(initialServices.map(ensureDecimal)); // Fix state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,7 +59,6 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
   // --- Edit Handlers ---
   const handleEdit = (service: Service) => {
     setEditingId(service.id);
-    // Set *both* prices for editing
     setCurrentPlatformPrice(service.platformPrice.toString());
     setCurrentAgentPrice(service.defaultAgentPrice.toString());
     setError(null);
@@ -84,10 +93,15 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
         throw new Error(data.error || 'Failed to update price.');
       }
 
-      // Update the price in our local state
+      // --- THIS IS THE FIX (Part 2) ---
+      // We must "re-hydrate" the service object with Decimal prices
+      // before saving it to the state.
+      const updatedServiceWithDecimals = ensureDecimal(data.updatedService);
+      
       setServices(services.map(s => 
-        s.id === serviceId ? data.updatedService : s
+        s.id === serviceId ? updatedServiceWithDecimals : s
       ));
+      // ---------------------------------
       
       setSuccess('Price updated successfully!');
       handleCancel(); // Close the edit state
@@ -190,6 +204,7 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
                       {/* --- Est. Profit --- */}
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-gray-800">
+                          {/* This .minus() is now safe */}
                           ₦{service.defaultAgentPrice.minus(service.platformPrice).toString()}
                         </span>
                       </td>
@@ -232,8 +247,7 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
         ))}
       </div>
 
-      {/* --- The Modal (for small screens, not used yet but good for future) --- */}
-      {/* This modal logic is simplified as we are editing inline now */}
+      {/* --- Edit Modal is no longer needed for this design --- */}
     </div>
   );
 }
