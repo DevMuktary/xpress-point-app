@@ -1,51 +1,38 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon } from '@heroicons/react/24/outline';
-import SafeImage from '@/components/SafeImage';
-
+import { ChevronLeftIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-// We will create this new "world-class" client component next
-import PersonalizationClientPage from '@/components/PersonalizationClientPage'; 
+import NinPersonalizationClientPage from '@/components/NinPersonalizationClientPage';
 
-// This is a Server Component. It fetches data on the server.
-export default async function PersonalizeNinPage() {
+export default async function NinPersonalizationPage() {
   const user = await getUserFromSession();
   if (!user) {
-    redirect('/login');
+    redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get the user's existing requests from our database
-  const requests = await prisma.personalizationRequest.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' }, // Show newest first
-  });
+  const service = await prisma.service.findUnique({ where: { id: 'NIN_PERSONALIZATION' } });
+  if (!service) {
+    throw new Error("NIN_PERSONALIZATION service not found.");
+  }
+
+  // --- THIS IS THE FIX ---
+  const serviceFee = service.defaultAgentPrice.toNumber();
+  // -----------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        <SafeImage
-          src="/logos/nin.png"
-          alt="NIN Logo"
-          width={40}
-          height={40}
-          fallbackSrc="/logos/default.png"
-          className="rounded-full"
-        />
+        <UserCircleIcon className="h-8 w-8 text-gray-900" />
         <h1 className="text-2xl font-bold text-gray-900">
-          Personalize NIN (Tracking ID)
+          NIN Personalization
         </h1>
       </div>
-      
-      {/* 2. Pass the requests (from the server) to the 
-           interactive Client Component, which will handle the rest.
-      */}
-      <PersonalizationClientPage initialRequests={requests} />
+      <NinPersonalizationClientPage serviceFee={serviceFee} />
     </div>
   );
 }
