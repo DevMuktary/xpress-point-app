@@ -1,93 +1,81 @@
 "use client"; // This is an interactive component
 
-import React, { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { PersonalizationRequest, RequestStatus } from '@prisma/client';
+import React, { useState, useEffect } from 'react';
 import { 
-  ExclamationTriangleIcon, 
-  ArrowPathIcon, 
   CheckCircleIcon,
+  XMarkIcon,
+  IdentificationIcon,
+  ArrowPathIcon,
   DocumentMagnifyingGlassIcon,
-  MagnifyingGlassIcon,
-  ClipboardIcon,
-  ClipboardDocumentCheckIcon
+  ClockIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
+import { PersonalizationRequest, RequestStatus } from '@prisma/client';
 
-// Define the props to receive the initial data from the server
+// --- THIS IS THE FIX (Part 1) ---
+// Define the props to receive the serviceFee and requests
 type Props = {
   initialRequests: PersonalizationRequest[];
+  serviceFee: number;
 };
+// ---------------------------------
 
-// --- "Sleek Copy Button" Component ---
-const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
-  const [copied, setCopied] = useState(false);
+// --- Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
+  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="relative mt-1">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input
+        id={id} type={type} value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        required={isRequired} placeholder={placeholder}
+      />
+    </div>
+  </div>
+);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
-    });
-  };
+// --- THIS IS THE FIX (Part 2) ---
+// The component now accepts the props
+export default function PersonalizationClientPage({ initialRequests, serviceFee }: Props) {
+// ---------------------------------
 
-  return (
-    <button
-      onClick={handleCopy}
-      className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all
-        ${copied 
-          ? 'bg-green-100 text-green-700' 
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
-    >
-      {copied ? (
-        <ClipboardDocumentCheckIcon className="h-4 w-4" />
-      ) : (
-        <ClipboardIcon className="h-4 w-4" />
-      )}
-      {copied ? 'Copied!' : 'Copy'}
-    </button>
-  );
-};
-// ------------------------------------
-
-export default function PersonalizationClientPage({ initialRequests }: Props) {
-  const router = useRouter();
-  
-  // --- State Management ---
   const [requests, setRequests] = useState(initialRequests);
-  const [trackingId, setTrackingId] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingId, setIsCheckingId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [receipt, setReceipt] = useState<any | null>(null); // For success modal
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [trackingId, setTrackingId] = useState('');
 
-  // --- Filtered Requests ---
-  const filteredRequests = useMemo(() => {
-    return requests.filter(req => {
-      const matchesSearch = req.trackingId.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = (statusFilter === 'ALL' || req.status === statusFilter);
-      return matchesSearch && matchesStatus;
-    });
-  }, [requests, searchTerm, statusFilter]);
+  // --- THIS IS THE FIX (Part 3) ---
+  // The fee is now read from the prop, not hardcoded
+  const fee = serviceFee;
+  // ---------------------------------
 
-  // --- API 1: Submit New Request ---
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setSubmitError(null);
-    setSubmitSuccess(null);
-    setStatusMessage(null);
-
-    if (trackingId.length !== 15) {
-      setSubmitError("Tracking ID must be exactly 15 characters.");
-      setIsSubmitting(false);
+    setReceipt(null);
+    
+    if (!trackingId) {
+      setSubmitError("A valid Tracking ID is required.");
       return;
     }
-
+    
+    setIsConfirmModalOpen(true);
+  };
+  
+  const handleFinalSubmit = async () => {
+    setIsConfirmModalOpen(false);
+    setIsLoading(true);
+    
     try {
       const response = await fetch('/api/services/nin/personalization-submit', {
         method: 'POST',
@@ -100,275 +88,192 @@ export default function PersonalizationClientPage({ initialRequests }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSubmitSuccess(data.message);
+      setReceipt({
+        message: data.message,
+        serviceName: "NIN Personalization",
+        status: "PROCESSING"
+      });
+      setRequests([data.newRequest, ...requests]); // Add new request to history
       setTrackingId('');
-      
-      const newRequests = await fetchHistory();
-      setRequests(newRequests);
 
     } catch (err: any) {
       setSubmitError(err.message);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  // --- API 2: Check Status (Manual Button) ---
-  const handleCheckStatus = async (request: PersonalizationRequest) => {
-    setIsCheckingId(request.id);
-    setSubmitError(null);
-    setSubmitSuccess(null);
-    setStatusMessage(`Checking ${request.trackingId}...`);
-
-    try {
-      const response = await fetch('/api/services/nin/personalization-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackingId: request.trackingId }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to check status.');
-      }
-
-      setStatusMessage(data.message);
-
-      const newRequests = await fetchHistory();
-      setRequests(newRequests);
-
-    } catch (err: any) {
-      setStatusMessage(`Error: ${err.message}`);
-    } finally {
-      setIsCheckingId(null);
-    }
-  };
-
-  // Helper function to re-fetch the history
-  const fetchHistory = async () => {
-    const res = await fetch('/api/services/nin/personalization-history');
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.requests;
-  };
-
-  // Helper to format the date
-  const formatDate = (dateString: Date) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+  const closeReceiptModal = () => {
+    setReceipt(null);
   };
   
-  // Helper to get "world-class" status colors
-  const getStatusColor = (status: RequestStatus) => {
+  const getStatusInfo = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED':
-        return 'bg-green-100 text-green-800';
+        return { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Completed' };
       case 'PROCESSING':
-        return 'bg-yellow-100 text-yellow-800';
+        return { color: 'bg-blue-100 text-blue-800', icon: ArrowPathIcon, text: 'Processing' };
+      case 'PENDING':
+        return { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon, text: 'Pending' };
       case 'FAILED':
-        return 'bg-red-100 text-red-800';
+        return { color: 'bg-red-100 text-red-800', icon: XCircleIcon, text: 'Failed' };
       default:
-        return 'bg-gray-100 text-gray-800';
+        return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
     }
   };
-  
-  // --- THIS IS THE FIX ---
-  // Helper for the "smart" button (Refurbished)
-  const renderActionButton = (request: PersonalizationRequest) => {
-    const isLoading = isCheckingId === request.id;
-    
-    switch (request.status) {
-      case 'COMPLETED':
-        // Get the NIN from the 'data' object
-        // The 'data' object is the full JSON response from Robosttech
-        const nin = (request.data as any)?.nin || (request.data as any)?.idNumber;
-        
-        return (
-          <div className="text-left">
-            <p className="text-xs text-gray-500">NIN Result:</p>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-green-700">{nin || 'Error'}</span>
-              {nin && <CopyButton textToCopy={nin} />}
-            </div>
-          </div>
-        );
-      case 'PROCESSING':
-        return (
-          <button
-            onClick={() => handleCheckStatus(request)}
-            disabled={isLoading}
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
-          >
-            {isLoading ? (
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
-            ) : (
-              'Check Status'
-            )}
-          </button>
-        );
-      case 'FAILED':
-        return (
-          <span className="text-sm text-red-600" title={request.statusMessage || 'Failed'}>
-            Sorry, this failed 😞
-          </span>
-        );
-    }
-  };
-  // -----------------------
 
   return (
     <div className="space-y-6">
-      {(isSubmitting) && <Loading />}
-
-      {/* --- 1. The "No Refund" Warning --- */}
-      <div className="rounded-lg bg-red-50 p-4 border border-red-200">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-          </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-bold text-red-800">
-              Important: No Refunds
-            </h3>
-            <div className="mt-2 text-sm text-red-700">
-              <p>
-                There is <strong className="font-semibold">no refund</strong> for this service. Please make sure the
-                Tracking ID is correct before submitting.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* --- 2. The "Submit New Request" Form --- */}
+      {(isLoading) && <Loading />}
+      
+      {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
-        <h3 className="text-lg font-semibold text-gray-900">Submit New Request</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Enter 15-Characters Tracking ID to get NIN NUMBER.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-4">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <DocumentMagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={trackingId}
-              onChange={(e) => setTrackingId(e.target.value.toUpperCase())}
-              placeholder="Enter 15-character Tracking ID"
-              maxLength={15}
-              className="w-full rounded-lg border border-gray-300 p-3 pl-10 text-lg uppercase shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              required
-            />
+        <form onSubmit={handleOpenConfirmModal} className="space-y-4">
+          
+          <DataInput 
+            label="Tracking ID*" 
+            id="trackingId" 
+            value={trackingId} 
+            onChange={setTrackingId} 
+            Icon={IdentificationIcon} 
+            placeholder="Enter the Tracking ID"
+          />
+          
+          <div className="border-t border-gray-200 pt-6">
+            {submitError && (
+              <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
+            </button>
           </div>
-          
-          {submitSuccess && (
-            <p className="mt-2 text-sm font-medium text-green-600">{submitSuccess}</p>
-          )}
-          {submitError && (
-            <p className="mt-2 text-sm font-medium text-red-600">{submitError}</p>
-          )}
-          
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-4 flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Submitting...' : `Submit Request (Fee: ₦1000)`}
-          </button>
         </form>
       </div>
-      
-      {/* --- 3. The "My Requests" History --- */}
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
-        <h3 className="text-lg font-semibold text-gray-900">My Requests</h3>
+
+      {/* --- 2. The "My Requests" History --- */}
+      <div className="rounded-2xl bg-white p-6 shadow-lg mt-6">
+        <h3 className="text-lg font-semibold text-gray-900">My Personalization History</h3>
         
-        {/* --- Filter & Search Bar --- */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search by Tracking ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 p-2.5 pl-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+        {requests.length === 0 && (
+          <div className="py-8 text-center text-gray-500">
+            <DocumentMagnifyingGlassIcon className="mx-auto h-12 w-12" />
+            <p className="mt-2 font-semibold">No History Found</p>
+            <p className="text-sm">You have not submitted any personalization requests.</p>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="PROCESSING">Processing</option> 
-            <option value="COMPLETED">Completed</option>
-            <option value="FAILED">Failed</option>
-          </select>
-        </div>
-        
-        {statusMessage && (
-          <p className="mt-4 text-sm font-medium text-center text-blue-600">{statusMessage}</p>
         )}
         
-        {/* --- "One-by-One" Card List --- */}
         <div className="mt-6 space-y-4">
-          {filteredRequests.length === 0 && (
-            <div className="py-8 text-center text-gray-500">
-              <p>No requests found.</p>
-            </div>
-          )}
-
-          {filteredRequests.map((request) => (
-            <div 
-              key={request.id} 
-              className="rounded-lg border border-gray-200 p-4"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-base font-semibold text-gray-900 break-all">
-                    {request.trackingId}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {formatDate(request.createdAt)}
-                  </p>
-                </div>
-                
-                <div className="mt-4 sm:mt-0 sm:ml-4 flex flex-col sm:items-end gap-2">
+          {requests.map((request) => {
+            const statusInfo = getStatusInfo(request.status);
+            return (
+              <div key={request.id} className="rounded-lg border border-gray-200 p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      Tracking ID: {request.trackingId}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(request.createdAt).toLocaleString()}
+                    </p>
+                  </div>
                   <span 
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(request.status)}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusInfo.color}`}
                   >
-                    {request.status}
+                    <statusInfo.icon className={`h-4 w-4 ${request.status === 'PROCESSING' ? 'animate-spin' : ''}`} />
+                    {statusInfo.text}
                   </span>
-                  
-                  <div className="mt-2">
-                    {renderActionButton(request)}
+                </div>
+                <p className="text-sm text-gray-700">{request.statusMessage}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* --- Your Confirmation Modal --- */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 p-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Please Confirm
+              </h2>
+              <button onClick={() => setIsConfirmModalOpen(false)}>
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-center text-gray-600">
+                Are you sure you want to submit this request for <strong className="text-gray-900">{trackingId}</strong>?
+              </p>
+              <p className="mt-4 text-center text-2xl font-bold text-blue-600">
+                Total Fee: ₦{fee}
+              </p>
+            </div>
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleFinalSubmit}
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                YES, SUBMIT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Success Modal (Receipt) --- */}
+      {receipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center">
+                <CheckCircleIcon className="h-16 w-16 text-green-500" />
+                <h2 className="mt-4 text-xl font-bold text-gray-900">
+                  Request Submitted
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {receipt.message}
+                </p>
+                
+                <div className="w-full mt-6 space-y-2 rounded-lg border bg-gray-50 p-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Service:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.serviceName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Status:</span>
+                    <span className="text-sm font-semibold text-blue-600">{receipt.status}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Amount:</span>
+                    <span className="text-sm font-semibold text-gray-900">₦{fee}</span>
                   </div>
                 </div>
               </div>
-              
-              {/* --- THIS IS THE FIX (Part 2) --- */}
-              {/* Your "World-Class" Instruction */}
-              {request.status === 'COMPLETED' && (
-                <div className="mt-4 border-t border-gray-100 pt-3">
-                  <p className="text-sm text-gray-600">
-                    Need slip? Go to
-                    <Link href="/dashboard/services/nin/verify-by-nin" className="font-medium text-blue-600 hover:underline">
-                      'NIN Verification by NIN'
-                    </Link>
-                    and use your new NIN to get your slip.
-                  </p>
-                </div>
-              )}
             </div>
-          ))}
+            
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <button
+                onClick={closeReceiptModal}
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
