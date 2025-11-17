@@ -8,15 +8,12 @@ import DataClientPage from '@/components/DataClientPage';
 import SafeImage from '@/components/SafeImage';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// "World-Class" type for our structured plan
 type DataPlan = {
   id: string;
-  name: string; // This will be the "Amount" (e.g., "1GB")
-  duration: string; // This will be the "Duration" (e.g., "(30 Days)")
+  name: string;
+  duration: string;
   price: number;
 };
-
-// "World-Class" type for our "stunning" nested object
 type DataPlansObject = {
   [network: string]: {
     logo: string;
@@ -26,7 +23,6 @@ type DataPlansObject = {
   };
 };
 
-// "World-Class" helper to build the object
 function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   const dataPlans: DataPlansObject = {
     'MTN': { logo: '/logos/mtn.png', categories: {} },
@@ -38,17 +34,15 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   services.sort((a, b) => a.defaultAgentPrice.comparedTo(b.defaultAgentPrice));
 
   for (const service of services) {
-    const price = (userRole === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice
-    ).toNumber();
+    // --- THIS IS THE FIX ---
+    // All users (Agents and Aggregators) see the *same* price.
+    const price = service.defaultAgentPrice.toNumber();
+    // -----------------------
     
     let network: string | null = null;
     let category: string | null = null;
     let serviceName = service.name as string;
 
-    // --- "Refurbished" Categorization Logic ---
-    // This now correctly finds all 10+ categories
     if (service.id.includes('MTN_SME')) { network = 'MTN'; category = 'MTN SME'; }
     else if (service.id.includes('MTN_GIFT')) { network = 'MTN'; category = 'MTN Gifting'; }
     else if (service.id.includes('MTN_CG')) { network = 'MTN'; category = 'MTN Corporate (CG)'; }
@@ -72,7 +66,6 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
         dataPlans[network].categories[category] = [];
       }
       
-      // --- "World-Class" Name Parsing (for your "stunning" button) ---
       let name = serviceName.replace(network, '').replace(category, '').replace('Data', '').replace('Gifting', '').replace('SME', '').replace('CG', '').replace('Awoof', '').replace('Cloud', '').replace('Coupon', '').replace('Share', '').replace('Lite', '').trim();
       let duration = '';
       
@@ -90,12 +83,11 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
         if (!duration.startsWith('(')) duration = `(${duration})`;
         name = name.replace(durationMatch[0], '').trim();
       }
-      // --- End "world-class" parser ---
 
       dataPlans[network].categories[category].push({
         id: service.id,
-        name: name, // e.g., "1GB"
-        duration: duration, // e.g., "(30 Days)" or "(1 Day)"
+        name: name,
+        duration: duration,
         price: price,
       });
     }
@@ -103,32 +95,25 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   return dataPlans;
 }
 
-// This is the Server Component.
 export default async function DataPage() {
   const user = await getUserFromSession();
   if (!user) {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
-  // 1. Get all VTU_DATA services from the database
   const dataServices = await prisma.service.findMany({
     where: { 
-      // "Refurbished" to find ALL data categories
       category: {
         startsWith: 'VTU_DATA'
       },
       isActive: true
     },
   });
-  // -------------------------------------------
 
-  // 2. "Refurbish" the flat list into a "stunning" nested object
   const dataPlans = buildDataPlans(dataServices, user.role);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/services/vtu" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
@@ -138,8 +123,6 @@ export default async function DataPage() {
           Buy Data
         </h1>
       </div>
-      
-      {/* 3. Pass the "world-class" dataPlans object to the Client Component */}
       <DataClientPage dataPlans={dataPlans} />
     </div>
   );
