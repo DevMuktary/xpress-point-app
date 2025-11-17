@@ -13,26 +13,18 @@ export default async function JambPinPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get BOTH prices from the database
   const [utmeService, deService] = await Promise.all([
     prisma.service.findUnique({ where: { id: 'JAMB_UTME_PIN' } }),
     prisma.service.findUnique({ where: { id: 'JAMB_DE_PIN' } }),
   ]);
-
   if (!utmeService || !deService) {
     throw new Error("JAMB services not found.");
   }
 
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // We now use the "refurbished" price fields: platformPrice and defaultAgentPrice
-  const utmeFee = user.role === 'AGGREGATOR' 
-    ? utmeService.platformPrice.toNumber() 
-    : utmeService.defaultAgentPrice.toNumber();
-    
-  const deFee = user.role === 'AGGREGATOR' 
-    ? deService.platformPrice.toNumber() 
-    : deService.defaultAgentPrice.toNumber();
-  // ------------------------------------
+  // --- THIS IS THE FIX ---
+  const utmeFee = utmeService.defaultAgentPrice.toNumber();
+  const deFee = deService.defaultAgentPrice.toNumber();
+  // -----------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -52,8 +44,6 @@ export default async function JambPinPage() {
           JAMB PINs
         </h1>
       </div>
-      
-      {/* We pass the correct, "world-class" prices to the client */}
       <JambPinClientPage utmeFee={utmeFee} deFee={deFee} />
     </div>
   );
