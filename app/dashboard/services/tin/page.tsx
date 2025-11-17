@@ -1,10 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import SafeImage from '@/components/SafeImage';
 
 // This is a Server Component.
 export default function TinHubPage() {
   
+  // The 4 TIN services you designed
   const tinServices = [
     {
       id: 'TIN_REG_PERSONAL',
@@ -39,7 +41,14 @@ export default function TinHubPage() {
         <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        <DocumentTextIcon className="h-8 w-8 text-gray-900" />
+        <SafeImage
+          src="/logos/tin.png"
+          alt="TIN Logo"
+          width={40}
+          height={40}
+          fallbackSrc="/logos/default.png"
+          className="rounded-full"
+        />
         <h1 className="text-2xl font-bold text-gray-900">JTB TIN Services</h1>
       </div>
 
