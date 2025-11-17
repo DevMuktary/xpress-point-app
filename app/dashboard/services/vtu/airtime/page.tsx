@@ -4,11 +4,8 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import AirtimeClientPage from '@/components/AirtimeClientPage'; // We will create this
+import AirtimeClientPage from '@/components/AirtimeClientPage'; // We will create this next
 import SafeImage from '@/components/SafeImage';
-
-// This forces the page to be dynamic, fixing the "stale price" bug
-export const dynamic = 'force-dynamic';
 
 // This is now a Server Component.
 export default async function AirtimePage() {
@@ -17,16 +14,17 @@ export default async function AirtimePage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get all Airtime prices from the database
+  // 1. Get all 4 Airtime services from the database
   const serviceIds = ['AIRTIME_MTN', 'AIRTIME_GLO', 'AIRTIME_AIRTEL', 'AIRTIME_9MOBILE'];
   const services = await prisma.service.findMany({
     where: { id: { in: serviceIds } },
-    select: { id: true, defaultAgentPrice: true }
+    select: { id: true, defaultAgentPrice: true, platformPrice: true }
   });
 
   // 2. Create the Price Map for the client
   const priceMap: { [key: string]: number } = {};
   services.forEach(service => {
+    // All users see the 'defaultAgentPrice'
     priceMap[service.id] = service.defaultAgentPrice.toNumber();
   });
 
@@ -44,7 +42,7 @@ export default async function AirtimePage() {
       </div>
       
       {/* 3. Pass the prices to the Client Component */}
-      <AirtimeClientPage priceMap={priceMap} />
+      <AirtimeClientPage prices={priceMap} />
     </div>
   );
 }
