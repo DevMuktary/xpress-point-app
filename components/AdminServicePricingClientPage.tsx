@@ -4,11 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { Service } from '@prisma/client';
 import { 
   MagnifyingGlassIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  PencilSquareIcon,
+  CheckIcon,
   XMarkIcon,
-  CurrencyDollarIcon
+  PencilIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -27,10 +25,10 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // --- Edit Modal State ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentService, setCurrentService] = useState<Service | null>(null);
-  const [newPrice, setNewPrice] = useState<string>('');
+  // --- Edit State ---
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [currentPlatformPrice, setCurrentPlatformPrice] = useState<string>('');
+  const [currentAgentPrice, setCurrentAgentPrice] = useState<string>('');
 
   // --- Filtering Logic ---
   const filteredServices = useMemo(() => {
@@ -49,25 +47,23 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
   }, [filteredServices]);
 
   // --- Edit Handlers ---
-  const handleEditClick = (service: Service) => {
-    setCurrentService(service);
-    setNewPrice(service.defaultAgentPrice.toString());
+  const handleEdit = (service: Service) => {
+    setEditingId(service.id);
+    // Set *both* prices for editing
+    setCurrentPlatformPrice(service.platformPrice.toString());
+    setCurrentAgentPrice(service.defaultAgentPrice.toString());
     setError(null);
     setSuccess(null);
-    setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setCurrentService(null);
-    setNewPrice('');
+  const handleCancel = () => {
+    setEditingId(null);
+    setCurrentPlatformPrice('');
+    setCurrentAgentPrice('');
   };
 
   // --- API Call to Save Price ---
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentService) return;
-    
+  const handleSave = async (serviceId: string) => {
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -77,8 +73,9 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          serviceId: currentService.id,
-          newPrice: newPrice,
+          serviceId: serviceId,
+          newPlatformPrice: currentPlatformPrice,
+          newAgentPrice: currentAgentPrice,
         }),
       });
 
@@ -89,11 +86,11 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
 
       // Update the price in our local state
       setServices(services.map(s => 
-        s.id === currentService.id ? data.updatedService : s
+        s.id === serviceId ? data.updatedService : s
       ));
       
       setSuccess('Price updated successfully!');
-      handleCloseModal();
+      handleCancel(); // Close the edit state
 
     } catch (err: any) {
       setError(err.message);
@@ -120,141 +117,123 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
         />
       </div>
       
-      {/* Global Success/Error Messages */}
-      {error && !isModalOpen && <div className="rounded-md bg-red-100 p-4 text-sm font-medium text-red-700">{error}</div>}
-      {success && !isModalOpen && <div className="rounded-md bg-green-100 p-4 text-sm font-medium text-green-700">{success}</div>}
+      {error && <div className="rounded-md bg-red-100 p-4 text-sm font-medium text-red-700">{error}</div>}
+      {success && <div className="rounded-md bg-green-100 p-4 text-sm font-medium text-green-700">{success}</div>}
 
-      {/* --- 2. The Grouped List --- */}
+      {/* --- 2. The Grouped Table List --- */}
       <div className="space-y-8">
         {Object.keys(servicesByCategory).map(category => (
-          <div key={category} className="rounded-2xl bg-white shadow-lg">
+          <div key={category} className="rounded-2xl bg-white shadow-lg overflow-hidden">
             {/* Category Header */}
-            <h3 className="text-xl font-bold text-gray-900 capitalize mb-4 border-b border-gray-200 p-4">
+            <h3 className="text-xl font-bold text-gray-900 capitalize p-4 bg-gray-50 border-b border-gray-200">
               {category.replace(/_/g, ' ').toLowerCase()}
             </h3>
             
-            {/* Service List */}
-            <div className="flow-root">
-              <ul className="divide-y divide-gray-200">
-                {servicesByCategory[category].map(service => (
-                  <li key={service.id} className="p-4 hover:bg-gray-50">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate">
-                          {service.name}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          ID: {service.id}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">Your Cost</p>
-                        <p className="text-sm font-medium text-gray-700">
-                          ₦{service.platformPrice.toString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">Agent Price</p>
-                        <p className="text-sm font-semibold text-blue-600">
-                          ₦{service.defaultAgentPrice.toString()}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <button
-                          onClick={() => handleEditClick(service)}
-                          className="p-2 text-blue-600 hover:text-blue-900 rounded-full hover:bg-blue-100"
-                        >
-                          <span className="sr-only">Edit</span>
-                          <PencilSquareIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Your Cost (Platform)</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent Price</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Profit</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {servicesByCategory[category].map(service => (
+                    <tr key={service.id} className="hover:bg-gray-50">
+                      {/* --- Service Name --- */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{service.name}</div>
+                        <div className="text-xs text-gray-500">{service.id}</div>
+                      </td>
+                      
+                      {/* --- Platform Price (Your Cost) --- */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {editingId === service.id ? (
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">₦</span>
+                            <input
+                              type="number"
+                              value={currentPlatformPrice}
+                              onChange={(e) => setCurrentPlatformPrice(e.target.value)}
+                              className="w-28 rounded-md border border-blue-500 p-2 pl-6 text-sm shadow-sm"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-800">
+                            ₦{service.platformPrice.toString()}
+                          </span>
+                        )}
+                      </td>
+                      
+                      {/* --- Agent Price --- */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {editingId === service.id ? (
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">₦</span>
+                            <input
+                              type="number"
+                              value={currentAgentPrice}
+                              onChange={(e) => setCurrentAgentPrice(e.target.value)}
+                              className="w-28 rounded-md border border-blue-500 p-2 pl-6 text-sm shadow-sm"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                            ₦{service.defaultAgentPrice.toString()}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* --- Est. Profit --- */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="text-sm font-medium text-gray-800">
+                          ₦{service.defaultAgentPrice.minus(service.platformPrice).toString()}
+                        </span>
+                      </td>
+
+                      {/* --- Action Buttons --- */}
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        {editingId === service.id ? (
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => handleSave(service.id)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Save"
+                            >
+                              <CheckIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={handleCancel}
+                              className="text-red-600 hover:text-red-900"
+                              title="Cancel"
+                            >
+                              <XMarkIcon className="h-5 w-5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleEdit(service)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Edit Prices"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         ))}
       </div>
 
-      {/* --- 3. Edit Price Modal --- */}
-      {isModalOpen && currentService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <form onSubmit={handleSave} className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Edit Price
-              </h2>
-              <button type="button" onClick={handleCloseModal}>
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            
-            {/* Modal Body */}
-            <div className="p-6 space-y-4">
-              {error && <div className="rounded-md bg-red-100 p-4 text-sm font-medium text-red-700">{error}</div>}
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-500">Service</label>
-                <p className="text-base font-semibold text-gray-900">{currentService.name}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="platformPrice" className="block text-sm font-medium text-gray-700">
-                    Your Cost (Platform Price)
-                  </label>
-                  <div className="relative mt-1">
-                    <input
-                      id="platformPrice"
-                      type="text"
-                      readOnly
-                      value={currentService.platformPrice.toString()}
-                      className="w-full rounded-lg border border-gray-300 p-3 bg-gray-100 text-gray-500 shadow-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="agentPrice" className="block text-sm font-medium text-gray-700">
-                    New Agent Price (₦)
-                  </label>
-                  <div className="relative mt-1">
-                    <CurrencyDollarIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      id="agentPrice"
-                      type="number"
-                      step="0.01"
-                      value={newPrice}
-                      onChange={(e) => setNewPrice(e.target.value)}
-                      required
-                      className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Modal Footer */}
-            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isLoading ? "Saving..." : "Save Price"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* --- The Modal (for small screens, not used yet but good for future) --- */}
+      {/* This modal logic is simplified as we are editing inline now */}
     </div>
   );
 }
