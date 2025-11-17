@@ -13,7 +13,7 @@ export default async function BvnRetrievalPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // --- THIS IS THE FIX ---
+  // --- THIS IS THE FIX (Part 1) ---
   // Fetch prices from the database
   const [phoneService, crmService] = await Promise.all([
     prisma.service.findUnique({ where: { id: 'BVN_RETRIEVAL_PHONE' } }),
@@ -24,9 +24,10 @@ export default async function BvnRetrievalPage() {
     throw new Error("BVN Retrieval services not found.");
   }
 
+  // Use the correct variables we fetched
   const priceMap = {
-    BVN_RETRIEVAL_PHONE: service.defaultAgentPrice.toNumber(),
-    BVN_RETRIEVAL_CRM: service.defaultAgentPrice.toNumber()
+    BVN_RETRIEVAL_PHONE: phoneService.defaultAgentPrice.toNumber(),
+    BVN_RETRIEVAL_CRM: crmService.defaultAgentPrice.toNumber()
   };
   // -----------------------
 
