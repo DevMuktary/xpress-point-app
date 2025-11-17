@@ -4,33 +4,28 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import BvnEnrollmentClientPage from '@/components/BvnEnrollmentClientPage'; // We will create this next
+import BvnEnrollmentClientPage from '@/components/BvnEnrollmentClientPage';
 import SafeImage from '@/components/SafeImage';
 
-// This is a Server Component.
 export default async function BvnEnrollmentPage() {
   const user = await getUserFromSession();
   if (!user) {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get the price for this service
   const service = await prisma.service.findUnique({
     where: { id: 'BVN_ENROLLMENT_ANDROID' },
   });
-
   if (!service) {
     throw new Error("BVN_ENROLLMENT_ANDROID service not found.");
   }
 
-  // 2. Determine the correct price
-  const serviceFee = user.role === 'AGGREGATOR' 
-    ? service.platformPrice.toNumber() 
-    : service.defaultAgentPrice.toNumber();
+  // --- THIS IS THE FIX ---
+  const serviceFee = service.defaultAgentPrice.toNumber();
+  // -----------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/services/bvn" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
@@ -47,8 +42,6 @@ export default async function BvnEnrollmentPage() {
           BVN Android Enrollment User
         </h1>
       </div>
-      
-      {/* 3. Pass the price to the Client Component */}
       <BvnEnrollmentClientPage fee={serviceFee} />
     </div>
   );
