@@ -87,10 +87,7 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
     exampleImage: '' 
   });
 
-  // --- THIS IS THE FIX ---
-  // The fee is now passed in as a prop
   const lookupFee = serviceFee;
-  // -----------------------
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,7 +325,23 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
   );
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
+            <ChevronLeftIcon className="h-6 w-6" />
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Verify by Phone</h1>
+        </div>
+        {verificationData && (
+          <button
+            onClick={resetSearch}
+            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+          >
+            + New Lookup
+          </button>
+        )}
+      </div>
       {error && (
         <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
           {error}
@@ -340,8 +353,6 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
         </div>
       )}
       {!verificationData ? renderSearchForm() : renderResults(verificationData)}
-      
-      {/* Confirmation Modal */}
       {modalState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
@@ -361,18 +372,6 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
               <div className="my-4 w-full h-48 relative border border-gray-200 rounded-lg overflow-hidden">
                 <Image
                   src={modalState.exampleImage}
-                  alt={`${modalState.slipType} Slip Example`}
-                  layout="fill"
-                  objectFit="contain"
-                  className="bg-gray-50"
-                />
-              </div>
-              <p className="text-center text-gray-600">
-                You will be charged{' '}
-                <strong className="text-2xl font-bold text-blue-600">
-                  ₦{modalState.price}
-                </strong>.
-              </img src={modalState.exampleImage}
                   alt={`${modalState.slipType} Slip Example`}
                   layout="fill"
                   objectFit="contain"
