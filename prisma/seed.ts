@@ -3,7 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 const prisma = new PrismaClient();
 
-// "Refurbished" list of ALL services with "world-class" pricing
+// This list contains all services
 const services = [
   // --- NIN Services ---
   { id: 'NIN_LOOKUP', name: 'NIN Verification Lookup', category: 'NIN', platformPrice: new Decimal(140.00), defaultAgentPrice: new Decimal(150.00), productCode: null },
@@ -304,7 +304,7 @@ const services = [
   { id: 'DATA_AIRTEL_SME_1_5GB_1D', name: 'Airtel SME 1.5GB (1 Day)', category: 'VTU_DATA_SME', platformPrice: new Decimal(425), defaultAgentPrice: new Decimal(435), productCode: 'airtel_1_5gb1_day' },
   { id: 'DATA_AIRTEL_SME_4GB_2D', name: 'Airtel SME 4GB (2 Days)', category: 'VTU_DATA_SME', platformPrice: new Decimal(880), defaultAgentPrice: new Decimal(900), productCode: 'airtel_4gb2_days' },
   { id: 'DATA_AIRTEL_SME_13GB_30D', name: 'Airtel SME 13GB (30 Days)', category: 'VTU_DATA_SME', platformPrice: new Decimal(5900), defaultAgentPrice: new Decimal(6000), productCode: 'airtel_13gb30_days' },
-  { id: 'DATA_AIRTEL_SME_8GB_30D', name: 'Airtel SME 8gb (30 Days)', category: 'VTU_DATA_SME', platformPrice: new Decimal(2150), defaultAgentPrice: new Decimal(2200), productCode: 'airtel_8gb30_days' },
+  { id: "DATA_AIRTEL_SME_8GB_30D", name: "Airtel SME 8gb (30 Days)", category: "VTU_DATA_SME", platformPrice: new Decimal(2150), defaultAgentPrice: new Decimal(2200), productCode: "airtel_8gb30_days" },
   { id: 'DATA_AIRTEL_SME_60GB_60D', name: 'Airtel SME 60gb (60 Days)', category: 'VTU_DATA_SME', platformPrice: new Decimal(10800), defaultAgentPrice: new Decimal(11000), productCode: 'airtel_60gb60_days' },
 
   // --- VTU Data: Glo Awoof ---
@@ -330,7 +330,7 @@ const services = [
   { id: 'DATA_MTN_AWOOF_6_75GB_30D', name: 'MTN Awoof 6.75GB XTRA (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(2940), defaultAgentPrice: new Decimal(2970), productCode: '6_75gb_xtra-special30_days' },
   { id: 'DATA_MTN_AWOOF_14_5GB_30D', name: 'MTN Awoof 14.5GB XTRA (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(4900), defaultAgentPrice: new Decimal(4950), productCode: '14_5gb_xtra-special30_days' },
   { id: 'DATA_MTN_AWOOF_1_5GB_2D', name: 'MTN Awoof 1.5GB (2 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(580), defaultAgentPrice: new Decimal(594), productCode: 'mtn_1_5gb2_days' },
-  { id: 'DATA_MTN_AWOOF_1_8GB_30D', name: 'MTN Awoof 1.8GB Thryve (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(1460), defaultAgentPrice: new Decimal(1485), productCode: '1_8gb_thryvedata30_days' },
+static  { id: 'DATA_MTN_AWOOF_1_8GB_30D', name: 'MTN Awoof 1.8GB Thryve (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(1460), defaultAgentPrice: new Decimal(1485), productCode: '1_8gb_thryvedata30_days' },
   { id: 'DATA_MTN_AWOOF_1_2GB_30D_S', name: 'MTN Awoof 1.2GB Social (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(435), defaultAgentPrice: new Decimal(445.5), productCode: 'mtn_1_2gb_all_social_30_days' },
   { id: 'DATA_MTN_AWOOF_20GB_7D', name: 'MTN Awoof 20GB (7 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(4900), defaultAgentPrice: new Decimal(4950), productCode: 'mtn_20gb7_days' },
   { id: 'DATA_MTN_AWOOF_500MB_1D', name: 'MTN Awoof 500MB (1 Day)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(340), defaultAgentPrice: new Decimal(346.5), productCode: 'mtn_500mb1_day' },
@@ -370,49 +370,56 @@ const services = [
   { id: 'ELEC_IBEDC_PRE', name: 'Ibadan PrePaid', category: 'VTU_ELEC', platformPrice: new Decimal(99), defaultAgentPrice: new Decimal(100), productCode: 'ibedc_prepaid_custom' },
   { id: 'ELEC_JEDC_POST', name: 'Jos PostPaid', category: 'VTU_ELEC', platformPrice: new Decimal(99), defaultAgentPrice: new Decimal(100), productCode: 'jedc_postpaid_custom' },
   { id: 'ELEC_JEDC_PRE', name: 'Jos PrePaid', category: 'VTU_ELEC', platformPrice: new Decimal(99), defaultAgentPrice: new Decimal(100), productCode: 'jedc_prepaid_custom' },
-
+  
   // --- System Services ---
   { id: 'AGGREGATOR_UPGRADE', name: 'Aggregator Upgrade Fee', category: 'SYSTEM', platformPrice: new Decimal(0.00), defaultAgentPrice: new Decimal(5000.00), productCode: null },
 
-  // --- NEW "WORLD-CLASS" BVN SERVICES ---
-  // 1. Verification (Automated) - We will build this last
-  { id: 'BVN_VERIFY_SLIP', name: 'BVN Verification Slip', category: 'BVN', platformPrice: new Decimal(100.00), defaultAgentPrice: new Decimal(150.00), productCode: 'bvn_verify_slip' }, // Placeholder
-  { id: 'BVN_VERIFY_PREMIUM', name: 'BVN Premium Slip', category: 'BVN', platformPrice: new Decimal(200.00), defaultAgentPrice: new Decimal(250.00), productCode: 'bvn_verify_premium' }, // Placeholder
-
-  // 2. Retrieval (Manual)
+  // --- BVN Services ---
+  { id: 'BVN_VERIFY_SLIP', name: 'BVN Verification Slip', category: 'BVN', platformPrice: new Decimal(100.00), defaultAgentPrice: new Decimal(150.00), productCode: 'bvn_verify_slip' },
+  { id: 'BVN_VERIFY_PREMIUM', name: 'BVN Premium Slip', category: 'BVN', platformPrice: new Decimal(200.00), defaultAgentPrice: new Decimal(250.00), productCode: 'bvn_verify_premium' },
   { id: 'BVN_RETRIEVAL_PHONE', name: 'BVN Retrieval (Phone)', category: 'BVN', platformPrice: new Decimal(1000.00), defaultAgentPrice: new Decimal(1200.00), productCode: null },
   { id: 'BVN_RETRIEVAL_CRM', name: 'BVN Retrieval (C.R.M)', category: 'BVN', platformPrice: new Decimal(2000.00), defaultAgentPrice: new Decimal(2200.00), productCode: null },
-  
-  // 3. Modification (Manual) - 6 types
   { id: 'BVN_MOD_NAME', name: 'BVN Modification (Name)', category: 'BVN', platformPrice: new Decimal(3000.00), defaultAgentPrice: new Decimal(3500.00), productCode: null },
   { id: 'BVN_MOD_DOB', name: 'BVN Modification (DOB)', category: 'BVN', platformPrice: new Decimal(3000.00), defaultAgentPrice: new Decimal(3500.00), productCode: null },
   { id: 'BVN_MOD_PHONE', name: 'BVN Modification (Phone)', category: 'BVN', platformPrice: new Decimal(3000.00), defaultAgentPrice: new Decimal(3500.00), productCode: null },
   { id: 'BVN_MOD_NAME_DOB', name: 'BVN Modification (Name & DOB)', category: 'BVN', platformPrice: new Decimal(5000.00), defaultAgentPrice: new Decimal(5500.00), productCode: null },
   { id: 'BVN_MOD_NAME_PHONE', name: 'BVN Modification (Name & Phone)', category: 'BVN', platformPrice: new Decimal(5000.00), defaultAgentPrice: new Decimal(5500.00), productCode: null },
   { id: 'BVN_MOD_DOB_PHONE', name: 'BVN Modification (DOB & Phone)', category: 'BVN', platformPrice: new Decimal(5000.00), defaultAgentPrice: new Decimal(5500.00), productCode: null },
-
-  // 4. Enrollment (Manual)
   { id: 'BVN_ENROLLMENT_ANDROID', name: 'BVN Android Enrollment', category: 'BVN', platformPrice: new Decimal(1000.00), defaultAgentPrice: new Decimal(1200.00), productCode: null },
-  
-  // 5. VNIN to NIBSS (Manual)
   { id: 'BVN_VNIN_TO_NIBSS', name: 'VNIN to NIBSS', category: 'BVN', platformPrice: new Decimal(1500.00), defaultAgentPrice: new Decimal(1600.00), productCode: null },
-  // ------------------------------------
 ];
 
 async function main() {
   console.log('Start seeding services...');
   
   for (const service of services) {
+    // Check if isActive is defined in the object, otherwise default to true
+    const isActive = (service as any).isActive !== undefined ? (service as any).isActive : true;
+
     await prisma.service.upsert({
       where: { id: service.id },
+      
+      // --- THIS IS THE FIX ---
+      // We ONLY update non-price information.
+      // Prices set in the admin dashboard will now be permanent.
       update: {
+        name: service.name,
+        category: service.category,
+        productCode: service.productCode,
+        isActive: isActive,
+      },
+      
+      // CREATE is only called if the service ID does not exist
+      // This block WILL set the prices, but only for new services.
+      create: {
+        id: service.id,
         name: service.name,
         category: service.category,
         platformPrice: service.platformPrice,
         defaultAgentPrice: service.defaultAgentPrice,
         productCode: service.productCode,
+        isActive: isActive,
       },
-      create: service,
     });
   }
   
