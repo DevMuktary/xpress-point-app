@@ -1,4 +1,4 @@
-"use client"; // This is an interactive component
+"use client"; 
 
 import React, { useState, useMemo } from 'react';
 import { 
@@ -12,6 +12,12 @@ import {
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
+
+// --- Type Definitions ---
+type Props = {
+  prices: { [key: string]: number }; // Expect a price map
+};
+type ServiceID = 'BVN_RETRIEVAL_PHONE' | 'BVN_RETRIEVAL_CRM';
 
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick }: {
@@ -34,7 +40,7 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- Reusable Input Component (THIS IS THE FIX) ---
+// --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
   id: string,
@@ -44,7 +50,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   type?: string,
   isRequired?: boolean,
   placeholder?: string,
-  maxLength?: number // <-- "Fixed" to accept maxLength
+  maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -60,12 +66,11 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
         placeholder={placeholder}
-        maxLength={maxLength} // <-- It is now correctly passed
+        maxLength={maxLength}
       />
     </div>
   </div>
 );
-// -----------------------------------------------------------
 
 // --- Reusable File Upload Component ---
 const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: {
@@ -102,11 +107,9 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
 );
 
 // --- The Main Component ---
-export default function BvnRetrievalClientPage() {
+export default function BvnRetrievalClientPage({ prices }: Props) {
   
-  type ServiceID = 'BVN_RETRIEVAL_PHONE' | 'BVN_RETRIEVAL_CRM';
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
-  
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -126,10 +129,10 @@ export default function BvnRetrievalClientPage() {
 
   // --- Dynamic Fee ---
   const fee = useMemo(() => {
-    if (serviceId === 'BVN_RETRIEVAL_PHONE') return 1200;
-    if (serviceId === 'BVN_RETRIEVAL_CRM') return 2200;
+    if (serviceId === 'BVN_RETRIEVAL_PHONE') return prices.BVN_RETRIEVAL_PHONE || 0;
+    if (serviceId === 'BVN_RETRIEVAL_CRM') return prices.BVN_RETRIEVAL_CRM || 0;
     return 0;
-  }, [serviceId]);
+  }, [serviceId, prices]);
 
   // --- File Upload Handler ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,7 +145,7 @@ export default function BvnRetrievalClientPage() {
 
     try {
       const formData = new FormData();
-      formData.append('attestation', file); // Use the API's expected key
+      formData.append('attestation', file); 
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -153,7 +156,7 @@ export default function BvnRetrievalClientPage() {
       if (!response.ok) {
         throw new Error(data.error || 'File upload failed.');
       }
-      setUploadUrl(data.url); // Save the permanent URL
+      setUploadUrl(data.url);
     } catch (err: any) {
       setUploadError(err.message);
       setUploadFile(null);
@@ -189,7 +192,7 @@ export default function BvnRetrievalClientPage() {
     if (serviceId === 'BVN_RETRIEVAL_PHONE') {
       formData = { phone, fullName };
     } else if (serviceId === 'BVN_RETRIEVAL_CRM') {
-      formData = { agentCode, bmsTicket: ticketId, ticketId }; // Send both ticket fields
+      formData = { agentCode, bmsTicket: ticketId, ticketId };
     }
 
     try {
@@ -199,7 +202,7 @@ export default function BvnRetrievalClientPage() {
         body: JSON.stringify({ 
           serviceId: serviceId, 
           formData, 
-          failedEnrollmentUrl: uploadUrl // Send the file URL
+          failedEnrollmentUrl: uploadUrl
         }),
       });
       
@@ -261,13 +264,13 @@ export default function BvnRetrievalClientPage() {
             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
               <ModTypeButton
                 title="With Phone Number"
-                description="Fee: ₦1200"
+                description={`Fee: ₦${prices.BVN_RETRIEVAL_PHONE || 0}`}
                 selected={serviceId === 'BVN_RETRIEVAL_PHONE'}
                 onClick={() => setServiceId('BVN_RETRIEVAL_PHONE')}
               />
               <ModTypeButton
                 title="With C.R.M"
-                description="Fee: ₦2200"
+                description={`Fee: ₦${prices.BVN_RETRIEVAL_CRM || 0}`}
                 selected={serviceId === 'BVN_RETRIEVAL_CRM'}
                 onClick={() => setServiceId('BVN_RETRIEVAL_CRM')}
               />
