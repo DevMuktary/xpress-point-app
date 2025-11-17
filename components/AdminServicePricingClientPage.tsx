@@ -6,30 +6,37 @@ import {
   MagnifyingGlassIcon,
   CheckIcon,
   XMarkIcon,
-  PencilIcon
+  PencilIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { Decimal } from '@prisma/client/runtime/library'; // Import Decimal
 
-// Define the props to receive the initial data from the server
-// We must re-map the initial services to ensure prices are Decimal objects
-type Props = {
-  initialServices: Service[];
+// --- THIS IS THE FIX (Part 1) ---
+// We need to define the type of the *serialized* service
+// that comes from the Server Component (where Decimals are strings)
+type SerializedService = Omit<Service, 'platformPrice' | 'defaultAgentPrice'> & {
+  platformPrice: string;
+  defaultAgentPrice: string;
 };
 
-// --- THIS IS THE FIX (Part 1) ---
-// Create a helper function to ensure prices are always Decimal
-const ensureDecimal = (service: Service): Service => ({
+// This helper function safely converts the serialized strings back into Decimal objects
+const hydrateService = (service: SerializedService | Service): Service => ({
   ...service,
   platformPrice: new Decimal(service.platformPrice),
   defaultAgentPrice: new Decimal(service.defaultAgentPrice),
 });
 // ---------------------------------
 
+type Props = {
+  initialServices: SerializedService[]; // Expect serialized data
+};
+
 export default function AdminServicePricingClientPage({ initialServices }: Props) {
   
   // --- State Management ---
-  const [services, setServices] = useState(initialServices.map(ensureDecimal)); // Fix state
+  // We hydrate the initial data to have real Decimal objects
+  const [services, setServices] = useState(initialServices.map(hydrateService));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -94,9 +101,8 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
       }
 
       // --- THIS IS THE FIX (Part 2) ---
-      // We must "re-hydrate" the service object with Decimal prices
-      // before saving it to the state.
-      const updatedServiceWithDecimals = ensureDecimal(data.updatedService);
+      // The API returns a serialized object, so we must hydrate it
+      const updatedServiceWithDecimals = hydrateService(data.updatedService);
       
       setServices(services.map(s => 
         s.id === serviceId ? updatedServiceWithDecimals : s
@@ -177,6 +183,7 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
                           </div>
                         ) : (
                           <span className="text-sm font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-800">
+                            {/* This .toString() is now safe */}
                             ₦{service.platformPrice.toString()}
                           </span>
                         )}
@@ -196,6 +203,7 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
                           </div>
                         ) : (
                           <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                            {/* This .toString() is now safe */}
                             ₦{service.defaultAgentPrice.toString()}
                           </span>
                         )}
@@ -246,8 +254,6 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
           </div>
         ))}
       </div>
-
-      {/* --- Edit Modal is no longer needed for this design --- */}
     </div>
   );
 }
