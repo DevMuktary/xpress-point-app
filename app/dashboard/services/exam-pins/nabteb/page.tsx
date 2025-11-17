@@ -4,29 +4,24 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import NabtebPinClientPage from '@/components/NabtebPinClientPage'; // We will create this next
+import NabtebPinClientPage from '@/components/NabtebPinClientPage';
 import SafeImage from '@/components/SafeImage';
 
-// This is now a "world-class" Server Component
 export default async function NabtebPinPage() {
   const user = await getUserFromSession();
   if (!user) {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
   const SERVICE_ID = "NABTEB_PIN";
   const service = await prisma.service.findUnique({ where: { id: SERVICE_ID } });
-
   if (!service) {
     throw new Error("NABTEB_PIN service not found.");
   }
 
-  // "Refurbished" to use the correct pricing logic
-  const serviceFee = user.role === 'AGGREGATOR' 
-    ? service.platformPrice.toNumber() 
-    : service.defaultAgentPrice.toNumber();
-  // ------------------------------------
+  // --- THIS IS THE FIX ---
+  const serviceFee = service.defaultAgentPrice.toNumber();
+  // -----------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -46,8 +41,6 @@ export default async function NabtebPinPage() {
           NABTEB Result Pin
         </h1>
       </div>
-      
-      {/* We pass the "world-class" price to the client */}
       <NabtebPinClientPage serviceId={SERVICE_ID} serviceFee={serviceFee} />
     </div>
   );
