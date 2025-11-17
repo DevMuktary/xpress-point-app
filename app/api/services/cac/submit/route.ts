@@ -23,17 +23,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Service ID and Form Data are required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet (THIS IS THE FIX) ---
+    // --- 1. Get Price & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // "World-class" pricing logic
     const price = user.role === 'AGGREGATOR' 
       ? service.platformPrice 
       : service.defaultAgentPrice;
-    // --------------------------------------------------
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
