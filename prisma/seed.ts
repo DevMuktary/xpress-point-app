@@ -330,7 +330,7 @@ const services = [
   { id: 'DATA_MTN_AWOOF_6_75GB_30D', name: 'MTN Awoof 6.75GB XTRA (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(2940), defaultAgentPrice: new Decimal(2970), productCode: '6_75gb_xtra-special30_days' },
   { id: 'DATA_MTN_AWOOF_14_5GB_30D', name: 'MTN Awoof 14.5GB XTRA (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(4900), defaultAgentPrice: new Decimal(4950), productCode: '14_5gb_xtra-special30_days' },
   { id: 'DATA_MTN_AWOOF_1_5GB_2D', name: 'MTN Awoof 1.5GB (2 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(580), defaultAgentPrice: new Decimal(594), productCode: 'mtn_1_5gb2_days' },
-static  { id: 'DATA_MTN_AWOOF_1_8GB_30D', name: 'MTN Awoof 1.8GB Thryve (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(1460), defaultAgentPrice: new Decimal(1485), productCode: '1_8gb_thryvedata30_days' },
+  { id: 'DATA_MTN_AWOOF_1_8GB_30D', name: 'MTN Awoof 1.8GB Thryve (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(1460), defaultAgentPrice: new Decimal(1485), productCode: '1_8gb_thryvedata30_days' },
   { id: 'DATA_MTN_AWOOF_1_2GB_30D_S', name: 'MTN Awoof 1.2GB Social (30 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(435), defaultAgentPrice: new Decimal(445.5), productCode: 'mtn_1_2gb_all_social_30_days' },
   { id: 'DATA_MTN_AWOOF_20GB_7D', name: 'MTN Awoof 20GB (7 Days)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(4900), defaultAgentPrice: new Decimal(4950), productCode: 'mtn_20gb7_days' },
   { id: 'DATA_MTN_AWOOF_500MB_1D', name: 'MTN Awoof 500MB (1 Day)', category: 'VTU_DATA_AWOOF', platformPrice: new Decimal(340), defaultAgentPrice: new Decimal(346.5), productCode: 'mtn_500mb1_day' },
