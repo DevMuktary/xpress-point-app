@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
+import { 
   CheckCircleIcon,
   XMarkIcon,
   InformationCircleIcon,
@@ -14,7 +14,7 @@ import {
   CalendarDaysIcon,
   ArrowUpTrayIcon,
   ArrowPathIcon,
-  IdentificationIcon
+  IdentificationIcon // <-- Added missing icon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 
@@ -24,6 +24,26 @@ type Props = {
   prices: { [key: string]: number };
 };
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
+
+// --- THIS IS THE FIX (Part 1) ---
+// --- "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick }: {
+  title: string,
+  description: string,
+  selected: boolean,
+  onClick: () => void
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`rounded-lg p-4 text-left transition-all border-2
+      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+  >
+    <p className="font-semibold text-gray-900">{title}</p>
+    <p className="text-sm text-blue-600 font-medium">{description}</p>
+  </button>
+);
+// ---------------------------------
 
 // --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true }: {
@@ -239,10 +259,13 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           <div>
             <label className="text-lg font-semibold text-gray-900">1. Select Modification Type</label>
             <div className="mt-2 grid grid-cols-2 gap-3">
+              {/* --- THIS IS THE FIX (Part 2) --- */}
+              {/* This component is now defined above */}
               <ModTypeButton title="Name" description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`} selected={serviceId === 'NIN_MOD_NAME'} onClick={() => setServiceId('NIN_MOD_NAME')} />
               <ModTypeButton title="Date of Birth" description={`Fee: ₦${prices.NIN_MOD_DOB || 0}+`} selected={serviceId === 'NIN_MOD_DOB'} onClick={() => setServiceId('NIN_MOD_DOB')} />
               <ModTypeButton title="Phone Number" description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`} selected={serviceId === 'NIN_MOD_PHONE'} onClick={() => setServiceId('NIN_MOD_PHONE')} />
               <ModTypeButton title="Address" description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`} selected={serviceId === 'NIN_MOD_ADDRESS'} onClick={() => setServiceId('NIN_MOD_ADDRESS')} />
+              {/* --------------------------------- */}
             </div>
           </div>
 
