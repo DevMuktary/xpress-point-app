@@ -10,7 +10,8 @@ import {
   PhoneIcon,
   HomeIcon,
   ArrowUpTrayIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  BriefcaseIcon // <-- THIS IS THE FIX
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
