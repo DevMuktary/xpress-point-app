@@ -1,6 +1,6 @@
 "use client"; // This is an interactive component
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CheckCircleIcon,
   PhoneIcon,
@@ -16,9 +16,8 @@ import { VtuRequest } from '@prisma/client';
 
 // --- Type Definitions ---
 type Props = {
-  priceMap: { [key: string]: number };
+  prices: { [key: string]: number }; // Expect a price map
 };
-type Network = 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE';
 
 // --- "Modern Button" Component ---
 const NetworkButton = ({ logo, title, selected, onClick }: {
@@ -43,7 +42,15 @@ const NetworkButton = ({ logo, title, selected, onClick }: {
 
 // --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
-  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string, maxLength?: number
+  label: string,
+  id: string,
+  value: string,
+  onChange: (value: string) => void,
+  Icon: React.ElementType,
+  type?: string,
+  isRequired?: boolean,
+  placeholder?: string,
+  maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -52,10 +59,14 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id} type={type} value={value}
+        id={id}
+        type={type}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired} placeholder={placeholder} maxLength={maxLength}
+        required={isRequired}
+        placeholder={placeholder}
+        maxLength={maxLength}
       />
     </div>
   </div>
@@ -70,8 +81,9 @@ const serviceIdMap: { [key: string]: string } = {
 };
 
 // --- The Main Component ---
-export default function AirtimeClientPage({ priceMap }: Props) {
+export default function AirtimeClientPage({ prices }: Props) {
   
+  type Network = 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE';
   const [network, setNetwork] = useState<Network | null>(null);
   
   // --- State Management ---
@@ -79,8 +91,13 @@ export default function AirtimeClientPage({ priceMap }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<any | null>(null);
+  const [receipt, setReceipt] = useState<any | null>(null); // For success modal
 
+  // --- THIS IS THE FIX ---
+  // The missing state definition
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  // -----------------------
+  
   // --- Form Data State ---
   const [phoneNumber, setPhoneNumber] = useState('');
   const [amount, setAmount] = useState('');
@@ -98,7 +115,7 @@ export default function AirtimeClientPage({ priceMap }: Props) {
       const data = await res.json();
       setRequests(data.requests);
     } catch (err: any) {
-      // Don't set error here, just fail silently on history
+      setSubmitError(err.message);
     } finally {
       setIsHistoryLoading(false);
     }
@@ -114,7 +131,7 @@ export default function AirtimeClientPage({ priceMap }: Props) {
       setSubmitError("Please select a network.");
       return;
     }
-    if (phoneNumber.length < 11 || !/^[0-9]+$/.test(phoneNumber)) {
+    if (phoneNumber.length !== 11 || !/^[0-9]+$/.test(phoneNumber)) {
       setSubmitError("Phone number must be exactly 11 digits.");
       return;
     }
@@ -158,7 +175,7 @@ export default function AirtimeClientPage({ priceMap }: Props) {
       
       setPhoneNumber('');
       setAmount('');
-      fetchHistory(); 
+      fetchHistory(); // Refresh the history list
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -167,16 +184,6 @@ export default function AirtimeClientPage({ priceMap }: Props) {
     }
   };
 
-  // --- THIS IS THE FIX ---
-  // The fee is now calculated based on the price map
-  const totalFee = useMemo(() => {
-    if (!network || !amount) return 0;
-    const pricePercent = priceMap[serviceIdMap[network!]] || 100;
-    const fee = (Number(amount) * (pricePercent / 100));
-    return fee;
-  }, [amount, network, priceMap]);
-  // -----------------------
-
   const closeReceiptModal = () => {
     setReceipt(null);
   };
@@ -184,7 +191,7 @@ export default function AirtimeClientPage({ priceMap }: Props) {
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
-      
+
       {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
@@ -194,13 +201,30 @@ export default function AirtimeClientPage({ priceMap }: Props) {
               1. Select Network
             </label>
             <div className="mt-2 grid grid-cols-4 gap-3">
-              <NetworkButton title="MTN" logo="/logos/mtn.png" selected={network === 'MTN'} onClick={() => setNetwork('MTN')} />
-              <NetworkButton title="Glo" logo="/logos/glo.png" selected={network === 'GLO'} onClick={() => setNetwork('GLO')} />
-              <NetworkButton title="Airtel" logo="/logos/airtel.png" selected={network === 'AIRTEL'} onClick={() => setNetwork('AIRTEL')} />
-              <NetworkButton title="9mobile" logo="/logos/9mobile.png" selected={network === '9MOBILE'} onClick={() => setNetwork('9MOBILE')} />
+              <NetworkButton
+                title="MTN" logo="/logos/mtn.png"
+                selected={network === 'MTN'}
+                onClick={() => setNetwork('MTN')}
+              />
+              <NetworkButton
+                title="Glo" logo="/logos/glo.png"
+                selected={network === 'GLO'}
+                onClick={() => setNetwork('GLO')}
+              />
+              <NetworkButton
+                title="Airtel" logo="/logos/airtel.png"
+                selected={network === 'AIRTEL'}
+                onClick={() => setNetwork('AIRTEL')}
+              />
+              <NetworkButton
+                title="9mobile" logo="/logos/9mobile.png"
+                selected={network === '9MOBILE'}
+                onClick={() => setNetwork('9MOBILE')}
+              />
             </div>
           </div>
 
+          {/* --- Form Fields --- */}
           {network && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Details</h3>
@@ -227,6 +251,7 @@ export default function AirtimeClientPage({ priceMap }: Props) {
             </div>
           )}
           
+          {/* --- Submit Button --- */}
           {network && (
             <div className="border-t border-gray-200 pt-6">
               {submitError && (
@@ -237,7 +262,7 @@ export default function AirtimeClientPage({ priceMap }: Props) {
                 disabled={isLoading}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isLoading ? 'Purchasing...' : `Purchase Airtime (Fee: ₦${totalFee.toFixed(2)})`}
+                {isLoading ? 'Purchasing...' : `Purchase Airtime`}
               </button>
             </div>
           )}
@@ -246,7 +271,44 @@ export default function AirtimeClientPage({ priceMap }: Props) {
 
       {/* --- 3. The "My Requests" History --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg mt-6">
-        {/* ... (history UI, unchanged) ... */}
+        <h3 className="text-lg font-semibold text-gray-900">My Airtime History</h3>
+        
+        {isHistoryLoading && (
+          <div className="py-8 text-center text-gray-500">
+            <ArrowPathIcon className="mx-auto h-8 w-8 animate-spin" />
+            <p>Loading history...</p>
+          </div>
+        )}
+        
+        {!isHistoryLoading && requests.length === 0 && (
+          <div className="py-8 text-center text-gray-500">
+            <DocumentMagnifyingGlassIcon className="mx-auto h-12 w-12" />
+            <p className="mt-2 font-semibold">No History Found</p>
+            <p className="text-sm">You have not purchased any airtime yet.</p>
+          </div>
+        )}
+        
+        <div className="mt-6 space-y-4">
+          {requests.map((request) => (
+            <div key={request.id} className="rounded-lg border border-gray-200 p-4">
+              <div className="flex justify-between items-center mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    ₦{request.amount.toString()} to {request.phoneNumber}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(request.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  request.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {request.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* --- Confirmation Modal --- */}
@@ -266,7 +328,7 @@ export default function AirtimeClientPage({ priceMap }: Props) {
                 Are you sure you want to send <strong className="text-gray-900">₦{amount}</strong> of {network} airtime to <strong className="text-gray-900">{phoneNumber}</strong>?
               </p>
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{totalFee.toFixed(2)}
+                Total Fee: ₦{Number(amount)}
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
@@ -286,11 +348,61 @@ export default function AirtimeClientPage({ priceMap }: Props) {
           </div>
         </div>
       )}
-
-      {/* --- Success Receipt Modal --- */}
+      
+      {/* --- Success Modal (Receipt) --- */}
       {receipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          {/* ... (receipt UI, unchanged) ... */}
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center">
+                <CheckCircleIcon className="h-16 w-16 text-green-500" />
+                <h2 className="mt-4 text-xl font-bold text-gray-900">
+                  Purchase Successful
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {receipt.message}
+                </p>
+                
+                <div className="w-full mt-6 space-y-2 rounded-lg border bg-gray-50 p-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Amount:</span>
+                    <span className="text-sm font-semibold text-gray-900">₦{receipt.amount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Network:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.network}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Phone:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.phone}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Status:</span>
+                    <span className="text-sm font-semibold text-green-600">{receipt.status}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">Trans. ID:</span>
+                    <span className="text-sm font-semibold text-gray-900">{receipt.transactionId}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <Link
+                href="/dashboard/services/vtu"
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+              >
+                Return to VTU
+              </Link>
+              <button
+                onClick={closeReceiptModal}
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Buy More
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
