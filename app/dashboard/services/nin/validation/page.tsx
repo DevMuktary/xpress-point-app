@@ -1,50 +1,42 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon } from '@heroicons/react/24/outline';
-import SafeImage from '@/components/SafeImage';
-
+import { ChevronLeftIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import ValidationClientPage from '@/components/ValidationClientPage'; // We will create this next
+import NinValidationClientPage from '@/components/NinValidationClientPage';
 
-// This is a Server Component. It fetches data on the server.
 export default async function NinValidationPage() {
   const user = await getUserFromSession();
   if (!user) {
-    redirect('/login');
+    redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get the user's existing requests from our database
-  const requests = await prisma.validationRequest.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' }, // Show newest first
+  const serviceIds = ['NIN_VALIDATION_47', 'NIN_VALIDATION_48', 'NIN_VALIDATION_49', 'NIN_VALIDATION_50'];
+  const services = await prisma.service.findMany({
+    where: { id: { in: serviceIds } },
+    select: { id: true, defaultAgentPrice: true }
   });
+
+  // --- THIS IS THE FIX ---
+  const priceMap: { [key: string]: number } = {};
+  services.forEach(service => {
+    priceMap[service.id] = service.defaultAgentPrice.toNumber();
+  });
+  // -----------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        <SafeImage
-          src="/logos/nin.png"
-          alt="NIN Logo"
-          width={40}
-          height={40}
-          fallbackSrc="/logos/default.png"
-          className="rounded-full"
-        />
+        <CheckBadgeIcon className="h-8 w-8 text-gray-900" />
         <h1 className="text-2xl font-bold text-gray-900">
-          NIN Validation
+          NIN Validation (S-Code)
         </h1>
       </div>
-      
-      {/* 2. Pass the requests (from the server) to the 
-           interactive Client Component, which will handle the rest.
-      */}
-      <ValidationClientPage initialRequests={requests} />
+      <NinValidationClientPage prices={priceMap} />
     </div>
   );
 }
