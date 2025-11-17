@@ -10,11 +10,12 @@ import {
   CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
-import { Decimal } from '@prisma/client/runtime/library'; // Import Decimal
+// --- THIS IS THE "WORLD-CLASS" FIX (Part 1) ---
+// We now import from the "client-safe" library, not the "rubbish" Prisma runtime
+import { Decimal } from 'decimal.js'; 
+// ---------------------------------------------
 
-// --- THIS IS THE FIX (Part 1) ---
-// We need to define the type of the *serialized* service
-// that comes from the Server Component (where Decimals are strings)
+// We must re-map the initial services to ensure prices are Decimal objects
 type SerializedService = Omit<Service, 'platformPrice' | 'defaultAgentPrice'> & {
   platformPrice: string;
   defaultAgentPrice: string;
@@ -26,7 +27,6 @@ const hydrateService = (service: SerializedService | Service): Service => ({
   platformPrice: new Decimal(service.platformPrice),
   defaultAgentPrice: new Decimal(service.defaultAgentPrice),
 });
-// ---------------------------------
 
 type Props = {
   initialServices: SerializedService[]; // Expect serialized data
@@ -100,8 +100,8 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
         throw new Error(data.error || 'Failed to update price.');
       }
 
-      // --- THIS IS THE FIX (Part 2) ---
-      // The API returns a serialized object, so we must hydrate it
+      // --- THIS IS THE "WORLD-CLASS" FIX (Part 2) ---
+      // We must "re-hydrate" the service object with Decimal prices
       const updatedServiceWithDecimals = hydrateService(data.updatedService);
       
       setServices(services.map(s => 
@@ -121,7 +121,7 @@ export default function AdminServicePricingClientPage({ initialServices }: Props
   
   return (
     <div className="space-y-6">
-      {isLoading && <Loading />}
+      {(isLoading) && <Loading />}
 
       {/* --- 1. Search Bar --- */}
       <div className="relative">
