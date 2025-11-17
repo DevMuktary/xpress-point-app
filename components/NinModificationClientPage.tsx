@@ -14,7 +14,7 @@ import {
   CalendarDaysIcon,
   ArrowUpTrayIcon,
   ArrowPathIcon,
-  IdentificationIcon // <-- Added missing icon
+  IdentificationIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 
@@ -25,7 +25,6 @@ type Props = {
 };
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
 
-// --- THIS IS THE FIX (Part 1) ---
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick }: {
   title: string,
@@ -43,7 +42,6 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
     <p className="text-sm text-blue-600 font-medium">{description}</p>
   </button>
 );
-// ---------------------------------
 
 // --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true }: {
@@ -57,7 +55,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
       </div>
       <input
         id={id} type={type} value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)} // Pass only the value
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
       />
@@ -107,7 +105,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
-  // Consent Modal State
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
 
   // Form Data State
@@ -129,10 +126,16 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // --- THIS IS THE FIX (Part 1) ---
+  // 1. Change handleInputChange to accept (id: string, value: string)
+  const handleInputChange = (id: string, value: string) => {
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
+  // ---------------------------------
+
   // Dynamic fee calculation
   const fee = useMemo(() => {
     if (!serviceId) return 0;
-    // DOB +5 years fee logic
     if (serviceId === 'NIN_MOD_DOB' && formData.oldDob && formData.newDob) {
       try {
         const oldDate = new Date(formData.oldDob);
@@ -146,11 +149,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     }
     return prices[serviceId] || 0;
   }, [serviceId, formData.oldDob, formData.newDob, prices]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -205,7 +203,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           serviceId, 
           formData,
           attestationUrl,
-          isDobGap: fee > (prices[serviceId!] || 0) // Check if extra fee was added
+          isDobGap: fee > (prices[serviceId!] || 0)
         }),
       });
       
@@ -225,7 +223,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
   };
 
   if (!hasAgreed) {
-    // Show Consent Modal
     return (
       <ConsentModal onAgree={() => setHasAgreed(true)} />
     );
@@ -259,13 +256,10 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           <div>
             <label className="text-lg font-semibold text-gray-900">1. Select Modification Type</label>
             <div className="mt-2 grid grid-cols-2 gap-3">
-              {/* --- THIS IS THE FIX (Part 2) --- */}
-              {/* This component is now defined above */}
               <ModTypeButton title="Name" description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`} selected={serviceId === 'NIN_MOD_NAME'} onClick={() => setServiceId('NIN_MOD_NAME')} />
               <ModTypeButton title="Date of Birth" description={`Fee: ₦${prices.NIN_MOD_DOB || 0}+`} selected={serviceId === 'NIN_MOD_DOB'} onClick={() => setServiceId('NIN_MOD_DOB')} />
               <ModTypeButton title="Phone Number" description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`} selected={serviceId === 'NIN_MOD_PHONE'} onClick={() => setServiceId('NIN_MOD_PHONE')} />
               <ModTypeButton title="Address" description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`} selected={serviceId === 'NIN_MOD_ADDRESS'} onClick={() => setServiceId('NIN_MOD_ADDRESS')} />
-              {/* --------------------------------- */}
             </div>
           </div>
 
@@ -273,18 +267,21 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           {serviceId && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Details</h3>
-              <DataInput label="NIN Number*" id="nin" value={formData.nin} onChange={handleInputChange} Icon={IdentificationIcon} />
+              
+              {/* --- THIS IS THE FIX (Part 2) --- */}
+              {/* 2. Update all DataInput calls to use the new handler */}
+              <DataInput label="NIN Number*" id="nin" value={formData.nin} onChange={(value) => handleInputChange('nin', value)} Icon={IdentificationIcon} />
               
               {serviceId === 'NIN_MOD_NAME' && (
                 <>
-                  <DataInput label="Old Full Name*" id="oldName" value={formData.oldName} onChange={handleInputChange} Icon={UserIcon} />
-                  <DataInput label="New Full Name*" id="newName" value={formData.newName} onChange={handleInputChange} Icon={UserIcon} />
+                  <DataInput label="Old Full Name*" id="oldName" value={formData.oldName} onChange={(value) => handleInputChange('oldName', value)} Icon={UserIcon} />
+                  <DataInput label="New Full Name*" id="newName" value={formData.newName} onChange={(value) => handleInputChange('newName', value)} Icon={UserIcon} />
                 </>
               )}
               {serviceId === 'NIN_MOD_DOB' && (
                 <>
-                  <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={handleInputChange} Icon={CalendarDaysIcon} type="date" />
-                  <DataInput label="New Date of Birth*" id="newDob" value={formData.newDob} onChange={handleInputChange} Icon={CalendarDaysIcon} type="date" />
+                  <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={(value) => handleInputChange('oldDob', value)} Icon={CalendarDaysIcon} type="date" />
+                  <DataInput label="New Date of Birth*" id="newDob" value={formData.newDob} onChange={(value) => handleInputChange('newDob', value)} Icon={CalendarDaysIcon} type="date" />
                   {fee > prices.NIN_MOD_DOB && (
                     <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
                       <p className="text-sm font-bold text-yellow-800">Note: An additional ₦2000 fee applies for DOB changes over 5 years.</p>
@@ -294,16 +291,17 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               )}
               {serviceId === 'NIN_MOD_PHONE' && (
                 <>
-                  <DataInput label="Old Phone Number*" id="oldPhone" value={formData.oldPhone} onChange={handleInputChange} Icon={PhoneIcon} type="tel" />
-                  <DataInput label="New Phone Number*" id="newPhone" value={formData.newPhone} onChange={handleInputChange} Icon={PhoneIcon} type="tel" />
+                  <DataInput label="Old Phone Number*" id="oldPhone" value={formData.oldPhone} onChange={(value) => handleInputChange('oldPhone', value)} Icon={PhoneIcon} type="tel" />
+                  <DataInput label="New Phone Number*" id="newPhone" value={formData.newPhone} onChange={(value) => handleInputChange('newPhone', value)} Icon={PhoneIcon} type="tel" />
                 </>
               )}
               {serviceId === 'NIN_MOD_ADDRESS' && (
                 <>
-                  <DataInput label="Old Address*" id="oldAddress" value={formData.oldAddress} onChange={handleInputChange} Icon={HomeIcon} />
-                  <DataInput label="New Address*" id="newAddress" value={formData.newAddress} onChange={handleInputChange} Icon={HomeIcon} />
+                  <DataInput label="Old Address*" id="oldAddress" value={formData.oldAddress} onChange={(value) => handleInputChange('oldAddress', value)} Icon={HomeIcon} />
+                  <DataInput label="New Address*" id="newAddress" value={formData.newAddress} onChange={(value) => handleInputChange('newAddress', value)} Icon={HomeIcon} />
                 </>
               )}
+              {/* --------------------------------- */}
 
               <h3 className="text-lg font-semibold text-gray-900 pt-4">3. Upload Document</h3>
               <FileUpload 
