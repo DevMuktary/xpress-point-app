@@ -26,15 +26,12 @@ type Props = {
   hasAlreadyAgreed: boolean;
   prices: { [key: string]: number };
 };
-// --- THIS IS THE FIX (Part 1) ---
-// Re-adding the missing type definition
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
-// ---------------------------------
 
 // --- Consent Modal (with updated text) ---
 const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter(); // Added missing import
+  const router = useRouter();
 
   const handleAgree = async () => {
     setIsLoading(true);
@@ -192,13 +189,14 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
   
   // --- State Management ---
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
-  const [serviceId, setServiceId] = useState<ServiceID | null>(null); // <-- Use ServiceID type
+  const [serviceId, setServiceId] = useState<ServiceID | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
-  // --- Form Data State ---
+  // --- THIS IS THE FIX (Part 1) ---
+  // Form Data State (Restored all fields)
   const [formData, setFormData] = useState({
     nin: '',
     phone: '',
@@ -207,13 +205,19 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     firstName: '',
     lastName: '',
     middleName: '',
+    oldName: '',   // This was missing
+    newName: '',   // This was missing
     newPhone: '',
     address: '',
     state: '',
     lga: '',
+    oldAddress: '', // This was missing
+    newAddress: '', // This was missing
     oldDob: '',
     newDob: '',
+    oldPhone: '',  // This was missing
   });
+  // ---------------------------------
 
   // Attestation (File Upload) State
   const [attestation, setAttestation] = useState<File | null>(null);
@@ -303,6 +307,8 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     setIsConfirmModalOpen(false);
     setIsSubmitting(true);
     
+    // --- THIS IS THE FIX (Part 2) ---
+    // We now have all the fields from your original code
     let payloadFormData = {
       nin: formData.nin,
       phone: formData.phone,
@@ -323,6 +329,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       setIsSubmitting(false);
       return;
     }
+    // ---------------------------------
 
     try {
       const response = await fetch('/api/services/nin/modification-submit', {
@@ -343,7 +350,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       
       setSuccess(data.message);
       // Reset the form
-      setFormData({ nin: '', phone: '', email: '', password: '', firstName: '', lastName: '', middleName: '', newPhone: '', address: '', state: '', lga: '', oldDob: '', newDob: '' });
+      setFormData({ nin: '', phone: '', email: '', password: '', firstName: '', lastName: '', middleName: '', newPhone: '', address: '', state: '', lga: '', oldDob: '', newDob: '', oldName: '', newName: '', oldPhone: '', oldAddress: '', newAddress: '' });
       setAttestation(null); setAttestationUrl(null);
       setServiceId(null);
 
@@ -412,10 +419,8 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               </h3>
               <div className="mt-2 text-sm text-green-700">
                 <p>
-                  Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
-                  <Link href="/dashboard/history/modification" className="font-semibold underline hover:text-green-600">
-                    NIN Modification History
-                  </Link> page.
+                  Your request is now <strong className="font-semibold">PENDING</strong>. 
+                  You can monitor its status on the <Link href="/dashboard/history/modification" className="font-semibold underline hover:text-green-600">NIN Modification History</Link> page.
                 </p>
               </div>
             </div>
@@ -468,21 +473,28 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               {/* --- Conditional Fields --- */}
               {serviceId === 'NIN_MOD_NAME' && (
                 <>
+                  {/* --- THIS IS THE FIX (Part 3) --- */}
+                  <DataInput label="Old Full Name*" id="oldName" value={formData.oldName} onChange={(v) => handleInputChange('oldName', v)} Icon={UserIcon} />
                   <DataInput label="New First Name*" id="firstName" value={formData.firstName} onChange={(v) => handleInputChange('firstName', v)} Icon={UserIcon} />
                   <DataInput label="New Last Name*" id="lastName" value={formData.lastName} onChange={(v) => handleInputChange('lastName', v)} Icon={UserIcon} />
                   <DataInput label="New Middle Name (Optional)" id="middleName" value={formData.middleName} onChange={(v) => handleInputChange('middleName', v)} Icon={UserIcon} isRequired={false} />
                 </>
               )}
               {serviceId === 'NIN_MOD_PHONE' && (
-                <DataInput label="New Phone Number*" id="newPhone" value={formData.newPhone} onChange={(v) => handleInputChange('newPhone', v)} Icon={PhoneIcon} type="tel" maxLength={11} />
+                <>
+                  <DataInput label="Old Phone Number*" id="oldPhone" value={formData.oldPhone} onChange={(v) => handleInputChange('oldPhone', v)} Icon={PhoneIcon} type="tel" maxLength={11} />
+                  <DataInput label="New Phone Number*" id="newPhone" value={formData.newPhone} onChange={(v) => handleInputChange('newPhone', v)} Icon={PhoneIcon} type="tel" maxLength={11} />
+                </>
               )}
               {serviceId === 'NIN_MOD_ADDRESS' && (
                 <>
+                  <DataInput label="Old Address*" id="oldAddress" value={formData.oldAddress} onChange={(v) => handleInputChange('oldAddress', v)} Icon={HomeIcon} />
                   <DataInput label="New Address*" id="address" value={formData.address} onChange={(v) => handleInputChange('address', v)} Icon={HomeIcon} />
                   <DataInput label="State*" id="state" value={formData.state} onChange={(v) => handleInputChange('state', v)} Icon={MapPinIcon} />
                   <DataInput label="LGA*" id="lga" value={formData.lga} onChange={(v) => handleInputChange('lga', v)} Icon={MapPinIcon} />
                 </>
               )}
+              {/* --------------------------------- */}
               {serviceId === 'NIN_MOD_DOB' && (
                 <>
                   <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={(v) => handleInputChange('oldDob', v)} Icon={CalendarDaysIcon} type="date" />
