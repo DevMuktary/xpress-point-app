@@ -96,7 +96,7 @@ const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   );
 };
 
-// --- "Note" Modal (shows every time) ---
+// --- Note Modal (shows every time) ---
 const NoteModal = ({ onClose }: { onClose: () => void }) => (
   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -208,7 +208,7 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
                    file:text-sm file:font-semibold
                    file:bg-blue-50 file:text-blue-700
                    hover:file:bg-blue-100"
-        accept="image/png, image/jpeg" // Only allow images for passport
+        accept="image/png, image/jpeg, application/pdf"
         required
       />
       {isUploading && <ArrowPathIcon className="h-5 w-5 animate-spin text-blue-600" />}
@@ -223,16 +223,15 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
 export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: Props) {
   const router = useRouter();
   
-  // --- State Management ---
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState(hasAlreadyAgreed);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(hasAlreadyAgreed); 
 
-  // --- Form Data State ---
+  // Form Data State
   const [formData, setFormData] = useState({
     nin: '',
     phone: '',
@@ -260,7 +259,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // --- Dynamic Pricing Logic ---
   const isDobGap = useMemo(() => {
     if (serviceId !== 'NIN_MOD_DOB' || !formData.oldDob || !formData.newDob) return false;
     try {
@@ -283,12 +281,10 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     return baseFee;
   };
 
-  // --- Input Change Handler ---
   const handleInputChange = (id: string, value: string) => {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  // --- File Upload Handler ---
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -299,7 +295,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     
     try {
       const formData = new FormData();
-      formData.append('attestation', file); // API expects 'attestation'
+      formData.append('attestation', file);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -319,7 +315,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     }
   };
 
-  // --- Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -330,16 +325,16 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       return;
     }
     if (!attestationUrl) {
-      // --- THIS IS THE FIX ---
-      setError("Please upload your clear passport picture before submitting.");
-      // -----------------------
+      // --- THIS IS THE FIX (Part 1) ---
+      // Updated the error message
+      setSubmitError("Please wait for the Passport Picture to finish uploading.");
       return;
     }
+    // ---------------------------------
     
     setIsConfirmModalOpen(true);
   };
   
-  // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsSubmitting(true);
@@ -373,7 +368,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           serviceId, 
           formData: payloadFormData, 
           isDobGap,
-          attestationUrl // This is now the passport URL
+          attestationUrl
         }),
       });
       
@@ -387,6 +382,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       setFormData({ nin: '', phone: '', email: '', password: '', firstName: '', lastName: '', middleName: '', newPhone: '', address: '', state: '', lga: '', oldDob: '', newDob: '', oldName: '', newName: '', oldPhone: '', oldAddress: '', newAddress: '' });
       setAttestation(null); setAttestationUrl(null);
       setServiceId(null);
+      setIsNoteModalOpen(true); // Show the note modal again
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -395,21 +391,21 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     }
   };
   
-  // --- 1. Show Consent Form ---
+  // 1. Show Consent Form
   if (!hasAgreed) {
     return (
       <ConsentModal onAgree={() => setHasAgreed(true)} />
     );
   }
   
-  // --- 2. Show "Note" Modal (Your New Logic) ---
+  // 2. Show "Note" Modal (Your New Logic)
   if (isNoteModalOpen) {
     return (
       <NoteModal onClose={() => setIsNoteModalOpen(false)} />
     );
   }
 
-  // --- 3. Show Main Page ---
+  // 3. Show Main Page
   return (
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
@@ -427,7 +423,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           </div>
         </div>
       </div>
-      {/* --- End of New Instructions --- */}
       
       {success && (
         <div className="rounded-lg bg-green-100 p-4 border border-green-200">
@@ -541,7 +536,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               <DataInput label="New Valid Fresh Email*" id="email" value={formData.email} onChange={(v) => handleInputChange('email', v)} Icon={EnvelopeIcon} type="email" />
               <DataInput label="Email Password*" id="password" value={formData.password} onChange={(v) => handleInputChange('password', v)} Icon={LockClosedIcon} type="password" />
 
-              {/* --- THIS IS THE FIX --- */}
+              {/* --- THIS IS THE FIX (Part 2) --- */}
               <h3 className="text-lg font-semibold text-gray-900 pt-4">3. Upload Document</h3>
               <FileUpload 
                 label="Upload a clear passport picture of yours with a clear background*" 
@@ -552,8 +547,8 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
                 error={uploadError}
                 onChange={handleFileChange} 
               />
-              {/* Removed the "Get one from us" link */}
-              {/* ----------------------- */}
+              {/* Removed the "get one from us" link */}
+              {/* ---------------------------------- */}
             </div>
           )}
           
