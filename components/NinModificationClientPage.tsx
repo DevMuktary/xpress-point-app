@@ -1,29 +1,99 @@
-"use client";
+"use client"; // This is an interactive component
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
-  CheckCircleIcon,
-  XMarkIcon,
-  InformationCircleIcon,
-  ExclamationTriangleIcon,
+  ExclamationTriangleIcon, 
+  IdentificationIcon,
   UserIcon,
   PhoneIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
   HomeIcon,
-  CalendarDaysIcon,
+  MapPinIcon,
+  CheckCircleIcon,
   ArrowUpTrayIcon,
   ArrowPathIcon,
-  IdentificationIcon
+  CalendarDaysIcon,
+  XMarkIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
+import Link from 'next/link';
 
 // --- Types ---
 type Props = {
   hasAlreadyAgreed: boolean;
   prices: { [key: string]: number };
 };
-type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
+type ModType = 'NAME' | 'PHONE' | 'ADDRESS' | 'DOB';
+
+// --- Consent Modal (with updated text) ---
+const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleAgree = async () => {
+    setIsLoading(true);
+    try {
+      await fetch('/api/user/agree-to-terms', { method: 'POST' });
+      onAgree();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 p-4">
+          <h2 className="text-lg font-bold text-red-800 flex items-center gap-2">
+            <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
+            Modification Terms & Conditions
+          </h2>
+        </div>
+        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3 text-sm text-gray-700">
+          <p>Before you proceed, you must read and agree to the following terms. This is a one-time agreement.</p>
+          <h4 className="font-bold text-gray-900">1. Authorization to Act on Your Behalf</h4>
+          <p>I, the user, authorize Xpress Point and its trusted agents to access and use my personal data, including my NIN, to process the modification requested. I understand that Xpress Point is an independent agent and is <span className="font-bold">not</span> affiliated with NIMC.</p>
+          <h4 className="font-bold text-gray-900">2. Your Voluntary Consent</h4>
+          <p>NIMC recommends that NIN modifications be done personally. By agreeing, I confirm that due to technical difficulty, illiteracy, or convenience, I <span className="font-bold">voluntarily authorize</span> Xpress Point to perform this modification on my behalf. This applies whether I am the NIN owner or an agent acting with the full consent of the owner.</p>
+          <h4 className="font-bold text-gray-900">3. Service Fees & No-Refund Policy</h4>
+          <p>I agree to pay the non-refundable service fee. I understand that wallet funds are <span className="font-bold">non-withdrawable</span>. If a service fails due to an Admin or provider error (as specified in our auto-refund logic), the fee will be credited to my wallet, but it cannot be withdrawn. <span className="font-bold">A ₦500 charge for wrong submissions will be deducted from any refund.</span></p>
+          <h4 className="font-bold text-gray-900">4. Your Responsibilities</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li>I confirm all information I provide (like "New First Name" or "New Address") is 100% correct.</li>
+            <li>I will <span className="font-bold">not</span> submit the same request on another platform while it is <span className="font-bold">PROCESSING</span> here. Doing so will forfeit my payment.</li>
+            <li>If submitting for someone else, I confirm I have the NIN owner's full legal authorization.</li>
+          </ul>
+          <h4 className="font-bold text-gray-900">5. Provider Delays & Service Terms</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li><span className="font-bold">Bank/SIM Updates:</span> I understand that modifications reflect immediately on the NIMC portal, but banks and SIM providers may take a long time to sync. If I need this for an urgent bank transaction, I will not proceed.</li>
+            <li><span className="font-bold">NIMC Delays:</span> If NIMC's network is down, I agree to wait patiently and will not submit duplicate requests.</li>
+            <li><span className="font-bold">Alias Emails:</span> I understand that this platform uses secure, platform-owned "alias emails" to process all modifications.</li>
+          </ul>
+          <p>I have read, understood, and agreed to all the terms above. I authorize Xpress Point to proceed with my NIN modification.</p>
+        </div>
+        <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+          <Link
+            href="/dashboard/services/nin"
+            className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+          >
+            Go Back
+          </Link>
+          <button
+            onClick={handleAgree}
+            disabled={isLoading}
+            className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isLoading ? "Saving..." : "I Understand & Agree"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick }: {
@@ -36,7 +106,10 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
     type="button"
     onClick={onClick}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+      ${selected
+        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+        : 'border-gray-300 bg-white hover:border-gray-400'
+      }`}
   >
     <p className="font-semibold text-gray-900">{title}</p>
     <p className="text-sm text-blue-600 font-medium">{description}</p>
@@ -44,8 +117,16 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
 );
 
 // --- Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true }: {
-  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
+  label: string,
+  id: string,
+  value: string,
+  onChange: (value: string) => void,
+  Icon: React.ElementType,
+  type?: string,
+  isRequired?: boolean,
+  placeholder?: string,
+  maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -54,10 +135,14 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id} type={type} value={value}
-        onChange={(e) => onChange(e.target.value)} // Pass only the value
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired}
+        placeholder={placeholder}
+        maxLength={maxLength}
       />
     </div>
   </div>
@@ -97,67 +182,78 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
   </div>
 );
 
-// --- Main Component ---
+// --- The Main Component ---
 export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: Props) {
-  const [serviceId, setServiceId] = useState<ServiceID | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  
+  // --- State Management ---
+  const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
+  const [modType, setModType] = useState<ModType | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
-  const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
-
-  // Form Data State
+  // --- Form Data State (Restored all fields) ---
   const [formData, setFormData] = useState({
     nin: '',
-    oldName: '',
-    newName: '',
+    phone: '',
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    middleName: '',
+    newPhone: '',
+    address: '',
+    state: '',
+    lga: '',
     oldDob: '',
     newDob: '',
-    oldPhone: '',
-    newPhone: '',
-    oldAddress: '',
-    newAddress: '',
   });
 
   // Attestation (File Upload) State
-  const [attestationFile, setAttestationFile] = useState<File | null>(null);
+  const [attestation, setAttestation] = useState<File | null>(null);
   const [attestationUrl, setAttestationUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // --- THIS IS THE FIX (Part 1) ---
-  // 1. Change handleInputChange to accept (id: string, value: string)
+  // --- Dynamic Pricing Logic ---
+  const isDobGap = useMemo(() => {
+    if (modType !== 'DOB' || !formData.oldDob || !formData.newDob) return false;
+    try {
+      const oldDate = new Date(formData.oldDob);
+      const newDate = new Date(formData.newDob);
+      const diffTime = Math.abs(newDate.getTime() - newDate.getTime());
+      const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+      return diffYears > 5;
+    } catch {
+      return false;
+    }
+  }, [formData.oldDob, formData.newDob, modType]);
+  
+  const getFee = () => {
+    if (!modType) return 0;
+    const baseFee = prices[modType === 'DOB' ? 'NIN_MOD_DOB' : (modType === 'NAME' ? 'NIN_MOD_NAME' : (modType === 'PHONE' ? 'NIN_MOD_PHONE' : 'NIN_MOD_ADDRESS'))] || 0;
+    if (modType === 'DOB' && isDobGap) {
+      return baseFee + 2000; // Your ₦2000 fee for DOB gap
+    }
+    return baseFee;
+  };
+
+  // --- Input Change Handler ---
   const handleInputChange = (id: string, value: string) => {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
-  // ---------------------------------
 
-  // Dynamic fee calculation
-  const fee = useMemo(() => {
-    if (!serviceId) return 0;
-    if (serviceId === 'NIN_MOD_DOB' && formData.oldDob && formData.newDob) {
-      try {
-        const oldDate = new Date(formData.oldDob);
-        const newDate = new Date(formData.newDob);
-        const diffTime = Math.abs(newDate.getTime() - oldDate.getTime());
-        const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
-        if (diffYears > 5) {
-          return (prices['NIN_MOD_DOB'] || 0) + 2000;
-        }
-      } catch {}
-    }
-    return prices[serviceId] || 0;
-  }, [serviceId, formData.oldDob, formData.newDob, prices]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // --- File Upload Handler ---
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    setAttestationFile(file);
+    setAttestation(file);
     setIsUploading(true);
-    setUploadError(null);
-    setAttestationUrl(null);
-
+    setSubmitError(null);
+    setAttestationUrl(null); 
+    
     try {
       const formData = new FormData();
       formData.append('attestation', file);
@@ -168,32 +264,66 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'File upload failed.');
+      if (!response.ok) {
+        throw new Error(data.error || 'File upload failed.');
+      }
       setAttestationUrl(data.url);
     } catch (err: any) {
-      setUploadError(err.message);
-      setAttestationFile(null);
+      setSubmitError(err.message);
+      setAttestation(null);
     } finally {
       setIsUploading(false);
     }
   };
 
+  // --- Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setSubmitError(null);
     setSuccess(null);
-    
+
+    if (!modType) {
+      setSubmitError("Please select a modification type.");
+      return;
+    }
     if (!attestationUrl) {
-      setError("Please upload the attestation/affidavit before submitting.");
+      setSubmitError("Please wait for the Attestation Document to finish uploading.");
       return;
     }
     
     setIsConfirmModalOpen(true);
   };
-
+  
+  // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
-    setIsLoading(true);
+    setIsSubmitting(true);
+    
+    let serviceId: ServiceID;
+    let payloadFormData = {
+      nin: formData.nin,
+      phone: formData.phone,
+      email: formData.email,
+      password: formData.password,
+    };
+  
+    if (modType === 'NAME') {
+      serviceId = 'NIN_MOD_NAME';
+      Object.assign(payloadFormData, { firstName: formData.firstName, lastName: formData.lastName, middleName: formData.middleName });
+    } else if (modType === 'PHONE') {
+      serviceId = 'NIN_MOD_PHONE';
+      Object.assign(payloadFormData, { newPhone: formData.newPhone });
+    } else if (modType === 'ADDRESS') {
+      serviceId = 'NIN_MOD_ADDRESS';
+      Object.assign(payloadFormData, { address: formData.address, state: formData.state, lga: formData.lga });
+    } else if (modType === 'DOB') {
+      serviceId = 'NIN_MOD_DOB';
+      Object.assign(payloadFormData, { oldDob: formData.oldDob, newDob: formData.newDob });
+    } else {
+      setSubmitError("Invalid service type selected.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/services/nin/modification-submit', {
@@ -201,155 +331,238 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           serviceId, 
-          formData,
-          attestationUrl,
-          isDobGap: fee > (prices[serviceId!] || 0)
+          formData: payloadFormData, 
+          isDobGap,
+          attestationUrl
         }),
       });
       
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Submission failed.');
+      if (!response.ok) {
+        throw new Error(data.error || 'Submission failed.');
+      }
       
       setSuccess(data.message);
-      setServiceId(null);
-      setFormData({ nin: '', oldName: '', newName: '', oldDob: '', newDob: '', oldPhone: '', newPhone: '', oldAddress: '', newAddress: '' });
-      setAttestationFile(null);
-      setAttestationUrl(null);
+      // Reset the form
+      setFormData({ nin: '', phone: '', email: '', password: '', firstName: '', lastName: '', middleName: '', newPhone: '', address: '', state: '', lga: '', oldDob: '', newDob: '' });
+      setAttestation(null); setAttestationUrl(null);
+      setModType(null);
+
     } catch (err: any) {
-      setError(err.message);
+      setSubmitError(err.message);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
-
+  
+  // --- 1. Show Consent Form ---
   if (!hasAgreed) {
     return (
       <ConsentModal onAgree={() => setHasAgreed(true)} />
     );
   }
 
-  // Show Main Page
+  // --- 2. Show Main Page ---
   return (
     <div className="space-y-6">
-      {isLoading && <Loading />}
+      {(isSubmitting) && <Loading />}
+      
+      {/* --- Your New Instructions --- */}
+      <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <InformationCircleIcon className="h-5 w-5 text-blue-500" />
+          </div>
+          <div className="ml-3 space-y-2 text-sm text-blue-800">
+            <p><span className="font-bold">NOTE:</span> Modification will be processed and submitted on self service in 2 to 7 days. Approval and validation is up to NIMC.</p>
+            <ul className="list-disc list-outside pl-5">
+              <li>Our work is for Agents that know the process involved.</li>
+              <li>Our only job is to Submit and get you the enrollment slip with a new Tracking ID.</li>
+              <li>Approval and Validation is up to NIMC.</li>
+              <li>Submit only Fresh Modification. Contact admin for any Modification that is not fresh.</li>
+            </ul>
+            <p><span className="font-bold">Please Take Note:</span> All Funds on the website can only be used for services on the website.</p>
+            <p>Make sure you submit a <span className="font-bold">New Valid Fresh Email Address & its Password</span> when requesting the Modification.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-bold text-red-800">
+              Submit only Fresh Modification, we charge ₦500 for Invalid Modification. You cannot submit the same modification request to another platform while we process it. Violating this policy will result in no refund, as we incur costs for the modifications.
+            </p>
+          </div>
+        </div>
+      </div>
+      {/* --- End of New Instructions --- */}
       
       {success && (
-        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+        <div className="rounded-lg bg-green-100 p-4 border border-green-200">
           <div className="flex">
             <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-blue-500" />
+              <CheckCircleIcon className="h-5 w-5 text-green-500" />
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-bold text-blue-800">Request Submitted!</h3>
-              <p className="mt-2 text-sm text-blue-700">
-                Your request is now <strong className="font-semibold">PENDING</strong>. 
-                You can monitor its status on the <Link href="/dashboard/history/modification" className="font-semibold underline hover:text-blue-600">NIN Modification History</Link> page.
-              </p>
+              <h3 className="text-sm font-bold text-green-800">
+                Request Submitted Successfully!
+              </h3>
+              <div className="mt-2 text-sm text-green-700">
+                <p>
+                  Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
+                  <Link href="/dashboard/history/modification" className="font-semibold underline hover:text-green-600">
+                    NIN Modification History
+                  </Link> page.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
-          {/* 1. Select Service Type */}
+          
           <div>
-            <label className="text-lg font-semibold text-gray-900">1. Select Modification Type</label>
-            <div className="mt-2 grid grid-cols-2 gap-3">
-              <ModTypeButton title="Name" description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`} selected={serviceId === 'NIN_MOD_NAME'} onClick={() => setServiceId('NIN_MOD_NAME')} />
-              <ModTypeButton title="Date of Birth" description={`Fee: ₦${prices.NIN_MOD_DOB || 0}+`} selected={serviceId === 'NIN_MOD_DOB'} onClick={() => setServiceId('NIN_MOD_DOB')} />
-              <ModTypeButton title="Phone Number" description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`} selected={serviceId === 'NIN_MOD_PHONE'} onClick={() => setServiceId('NIN_MOD_PHONE')} />
-              <ModTypeButton title="Address" description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`} selected={serviceId === 'NIN_MOD_ADDRESS'} onClick={() => setServiceId('NIN_MOD_ADDRESS')} />
+            <label className="text-lg font-semibold text-gray-900">
+              1. Select Modification Type
+            </label>
+            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <ModTypeButton
+                title="Change of Name"
+                description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`}
+                selected={modType === 'NAME'}
+                onClick={() => setModType('NAME')}
+              />
+              <ModTypeButton
+                title="Change of Phone"
+                description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`}
+                selected={modType === 'PHONE'}
+                onClick={() => setModType('PHONE')}
+              />
+              <ModTypeButton
+                title="Change of Address"
+                description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`}
+                selected={modType === 'ADDRESS'}
+                onClick={() => setModType('ADDRESS')}
+              />
+              <ModTypeButton
+                title="Change of Date of Birth"
+                description={`Fee: ₦${prices.NIN_MOD_DOB || 0} (Base)`}
+                selected={modType === 'DOB'}
+                onClick={() => setModType('DOB')}
+              />
             </div>
           </div>
 
-          {/* 2. Show Form based on selection */}
-          {serviceId && (
+          {/* --- Common Fields --- */}
+          {modType && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">2. Enter Details</h3>
-              
-              {/* --- THIS IS THE FIX (Part 2) --- */}
-              {/* 2. Update all DataInput calls to use the new handler */}
-              <DataInput label="NIN Number*" id="nin" value={formData.nin} onChange={(value) => handleInputChange('nin', value)} Icon={IdentificationIcon} />
-              
-              {serviceId === 'NIN_MOD_NAME' && (
+              <h3 className="text-lg font-semibold text-gray-900">2. Enter Required Details</h3>
+              <DataInput label="NIN Number*" id="nin" value={formData.nin} onChange={(v) => handleInputChange('nin', v)} Icon={IdentificationIcon} type="tel" maxLength={11} />
+
+              {/* --- Conditional Fields --- */}
+              {modType === 'NAME' && (
                 <>
-                  <DataInput label="Old Full Name*" id="oldName" value={formData.oldName} onChange={(value) => handleInputChange('oldName', value)} Icon={UserIcon} />
-                  <DataInput label="New Full Name*" id="newName" value={formData.newName} onChange={(value) => handleInputChange('newName', value)} Icon={UserIcon} />
+                  <DataInput label="New First Name*" id="firstName" value={formData.firstName} onChange={(v) => handleInputChange('firstName', v)} Icon={UserIcon} />
+                  <DataInput label="New Last Name*" id="lastName" value={formData.lastName} onChange={(v) => handleInputChange('lastName', v)} Icon={UserIcon} />
+                  <DataInput label="New Middle Name (Optional)" id="middleName" value={formData.middleName} onChange={(v) => handleInputChange('middleName', v)} Icon={UserIcon} isRequired={false} />
                 </>
               )}
-              {serviceId === 'NIN_MOD_DOB' && (
+              {modType === 'PHONE' && (
+                <DataInput label="New Phone Number*" id="newPhone" value={formData.newPhone} onChange={(v) => handleInputChange('newPhone', v)} Icon={PhoneIcon} type="tel" maxLength={11} />
+              )}
+              {modType === 'ADDRESS' && (
                 <>
-                  <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={(value) => handleInputChange('oldDob', value)} Icon={CalendarDaysIcon} type="date" />
-                  <DataInput label="New Date of Birth*" id="newDob" value={formData.newDob} onChange={(value) => handleInputChange('newDob', value)} Icon={CalendarDaysIcon} type="date" />
-                  {fee > prices.NIN_MOD_DOB && (
-                    <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
-                      <p className="text-sm font-bold text-yellow-800">Note: An additional ₦2000 fee applies for DOB changes over 5 years.</p>
+                  <DataInput label="New Address*" id="address" value={formData.address} onChange={(v) => handleInputChange('address', v)} Icon={HomeIcon} />
+                  <DataInput label="State*" id="state" value={formData.state} onChange={(v) => handleInputChange('state', v)} Icon={MapPinIcon} />
+                  <DataInput label="LGA*" id="lga" value={formData.lga} onChange={(v) => handleInputChange('lga', v)} Icon={MapPinIcon} />
+                </>
+              )}
+              {modType === 'DOB' && (
+                <>
+                  <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={(v) => handleInputChange('oldDob', v)} Icon={CalendarDaysIcon} type="date" />
+                  <DataInput label="New Date of Birth*" id="newDob" value={formData.newDob} onChange={(v) => handleInputChange('newDob', v)} Icon={CalendarDaysIcon} type="date" />
+                  
+                  {isDobGap && (
+                    <div className="rounded-md bg-yellow-50 p-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-bold text-yellow-800">Additional Fee</h3>
+                          <p className="text-sm text-yellow-700">The gap between DOBs is over 5 years. An additional ₦2,000 fee will be applied.</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
               )}
-              {serviceId === 'NIN_MOD_PHONE' && (
-                <>
-                  <DataInput label="Old Phone Number*" id="oldPhone" value={formData.oldPhone} onChange={(value) => handleInputChange('oldPhone', value)} Icon={PhoneIcon} type="tel" />
-                  <DataInput label="New Phone Number*" id="newPhone" value={formData.newPhone} onChange={(value) => handleInputChange('newPhone', value)} Icon={PhoneIcon} type="tel" />
-                </>
-              )}
-              {serviceId === 'NIN_MOD_ADDRESS' && (
-                <>
-                  <DataInput label="Old Address*" id="oldAddress" value={formData.oldAddress} onChange={(value) => handleInputChange('oldAddress', value)} Icon={HomeIcon} />
-                  <DataInput label="New Address*" id="newAddress" value={formData.newAddress} onChange={(value) => handleInputChange('newAddress', value)} Icon={HomeIcon} />
-                </>
-              )}
-              {/* --------------------------------- */}
+
+              {/* --- Common Fields --- */}
+              <DataInput label="Your Current Phone Number*" id="phone" value={formData.phone} onChange={(v) => handleInputChange('phone', v)} Icon={PhoneIcon} type="tel" maxLength={11} />
+              <DataInput label="New Valid Fresh Email*" id="email" value={formData.email} onChange={(v) => handleInputChange('email', v)} Icon={EnvelopeIcon} type="email" />
+              <DataInput label="Email Password*" id="password" value={formData.password} onChange={(v) => handleInputChange('password', v)} Icon={LockClosedIcon} type="password" />
 
               <h3 className="text-lg font-semibold text-gray-900 pt-4">3. Upload Document</h3>
               <FileUpload 
                 label="Attestation Letter / Court Affidavit*" 
                 id="attestation" 
-                file={attestationFile} 
+                file={attestation} 
                 fileUrl={attestationUrl} 
                 isUploading={isUploading} 
                 error={uploadError}
-                onChange={handleFileUpload} 
+                onChange={handleFileChange} 
               />
+              <p className="text-xs text-blue-600 font-medium -mt-2">
+                Don't have an attestation letter? <Link href="/dashboard/services/nin/attestation" className="underline hover:text-blue-800">Get one from us</Link>
+              </p>
             </div>
           )}
-
-          {/* 3. Submit Button */}
-          {serviceId && (
+          
+          {/* --- Submit Button --- */}
+          {modType && (
             <div className="border-t border-gray-200 pt-6">
-              {error && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{error}</p>
+              {submitError && (
+                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
               )}
               <button
                 type="submit"
-                disabled={isLoading || isUploading || !attestationUrl}
+                disabled={isSubmitting || isUploading || !attestationUrl}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
+                {isSubmitting ? 'Submitting...' : `Submit Modification (Fee: ₦${getFee()})`}
               </button>
             </div>
           )}
         </form>
       </div>
 
-      {/* Confirmation Modal */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Please Confirm
+              </h2>
               <button onClick={() => setIsConfirmModalOpen(false)}>
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
             <div className="p-6">
               <p className="text-center text-gray-600">
-                You are about to submit this modification request. This action is irreversible.
+                Please confirm you have filled in the right details. This action
+                is non-refundable as per the terms you agreed to.
               </p>
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{fee}
+                Total Fee: ₦{getFee()}
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
@@ -372,57 +585,3 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     </div>
   );
 }
-
-// --- Consent Modal Component ---
-const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-
-  const handleAgree = async () => {
-    setIsLoading(true);
-    try {
-      await fetch('/api/user/agree-to-terms', { method: 'POST' });
-      onAgree();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-200 p-4">
-          <h2 className="text-lg font-bold text-red-800 flex items-center gap-2">
-            <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-            Modification Terms & Conditions
-          </h2>
-        </div>
-        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
-          <p className="font-semibold">Please read the following terms carefully before proceeding:</p>
-          <p>1. Ensure your NIN slip is <span className="font-bold">valid and clear</span>. We are not responsible for errors from unclear slips.</p>
-          <p>2. You must provide a <span className="font-bold">court affidavit</span> and a <span className="font-bold">valid attestation letter</span> for all modifications.</p>
-          <p>3. <span className="font-bold text-red-700">NO REFUNDS</span> will be given if your request is rejected by NIMC due to incorrect documents, existing modifications, or any other issue from your end.</p>
-          <p>4. This service is for <span className="font-bold">NAME, DOB, PHONE, and ADDRESS</span> modifications only.</p>
-          <p>5. By clicking "I Agree", you confirm that you have read, understood, and agreed to these terms.</p>
-        </div>
-        <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-          <Link
-            href="/dashboard/services/nin"
-            className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
-          >
-            Go Back
-          </Link>
-          <button
-            onClick={handleAgree}
-            disabled={isLoading}
-            className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isLoading ? "Saving..." : "I Understand & Agree"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
