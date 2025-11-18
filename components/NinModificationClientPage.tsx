@@ -1,6 +1,6 @@
-"use client"; // This is an interactive component
+"use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ExclamationTriangleIcon, 
@@ -12,11 +12,12 @@ import {
   HomeIcon,
   MapPinIcon,
   CheckCircleIcon,
-  ArrowUpTrayIcon,
   ArrowPathIcon,
   CalendarDaysIcon,
   XMarkIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  PhotoIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -28,10 +29,9 @@ type Props = {
 };
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
 
-// --- Consent Modal (with updated text) ---
+// --- Consent Modal ---
 const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleAgree = async () => {
     setIsLoading(true);
@@ -96,7 +96,7 @@ const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   );
 };
 
-// --- Note Modal (shows every time) ---
+// --- Note Modal ---
 const NoteModal = ({ onClose }: { onClose: () => void }) => (
   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -135,12 +135,8 @@ const NoteModal = ({ onClose }: { onClose: () => void }) => (
   </div>
 );
 
-// --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick }: {
-  title: string,
-  description: string,
-  selected: boolean,
-  onClick: () => void
+  title: string, description: string, selected: boolean, onClick: () => void
 }) => (
   <button
     type="button"
@@ -153,17 +149,8 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
-  label: string,
-  id: string,
-  value: string,
-  onChange: (value: string) => void,
-  Icon: React.ElementType,
-  type?: string,
-  isRequired?: boolean,
-  placeholder?: string,
-  maxLength?: number
+  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string, maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -185,15 +172,8 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
-// --- Reusable File Upload Component ---
 const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: {
-  label: string,
-  id: string,
-  file: File | null,
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
-  fileUrl: string | null,
-  isUploading: boolean,
-  error: string | null
+  label: string, id: string, file: File | null, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, fileUrl: string | null, isUploading: boolean, error: string | null
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -202,12 +182,7 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
         id={id}
         type="file"
         onChange={onChange}
-        className="flex-1 w-full text-sm text-gray-500
-                   file:mr-4 file:py-2 file:px-4
-                   file:rounded-lg file:border-0
-                   file:text-sm file:font-semibold
-                   file:bg-blue-50 file:text-blue-700
-                   hover:file:bg-blue-100"
+        className="flex-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         accept="image/png, image/jpeg, application/pdf"
         required
       />
@@ -219,7 +194,6 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
   </div>
 );
 
-// --- Main Component ---
 export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: Props) {
   const router = useRouter();
   
@@ -233,85 +207,67 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
 
   // Form Data State
   const [formData, setFormData] = useState({
-    nin: '',
-    phone: '',
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    middleName: '',
-    oldName: '',   
-    newName: '',   
-    newPhone: '',
-    address: '',
-    state: '',
-    lga: '',
-    oldAddress: '', 
-    newAddress: '', 
-    oldDob: '',
-    newDob: '',
-    oldPhone: '',  
+    nin: '', phone: '', email: '', password: '', firstName: '', lastName: '', middleName: '', oldName: '', newName: '', newPhone: '', address: '', state: '', lga: '', oldAddress: '', newAddress: '', oldDob: '', newDob: '', oldPhone: '',
   });
 
-  // Attestation (File Upload) State
-  const [attestation, setAttestation] = useState<File | null>(null);
-  const [attestationUrl, setAttestationUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  // --- File Upload States ---
+  // 1. Passport Photograph (Required for ALL)
+  const [passportFile, setPassportFile] = useState<File | null>(null);
+  const [passportUrl, setPassportUrl] = useState<string | null>(null);
+  const [isUploadingPassport, setIsUploadingPassport] = useState(false);
+  const [passportError, setPassportError] = useState<string | null>(null);
 
-  const isDobGap = useMemo(() => {
-    if (serviceId !== 'NIN_MOD_DOB' || !formData.oldDob || !formData.newDob) return false;
-    try {
-      const oldDate = new Date(formData.oldDob);
-      const newDate = new Date(formData.newDob);
-      const diffTime = Math.abs(newDate.getTime() - oldDate.getTime());
-      const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
-      return diffYears > 5;
-    } catch {
-      return false;
+  // 2. Attestation (Required ONLY for DOB)
+  const [attestationFile, setAttestationFile] = useState<File | null>(null);
+  const [attestationUrl, setAttestationUrl] = useState<string | null>(null);
+  const [isUploadingAttestation, setIsUploadingAttestation] = useState(false);
+  const [attestationError, setAttestationError] = useState<string | null>(null);
+
+  // --- Pricing Logic ---
+  const { fee, dobFeeText } = useMemo(() => {
+    if (!serviceId) return { fee: 0, dobFeeText: null };
+    
+    let calculatedFee = prices[serviceId] || 0;
+    let additionalText = null;
+
+    if (serviceId === 'NIN_MOD_DOB' && formData.oldDob && formData.newDob) {
+      try {
+        const oldDate = new Date(formData.oldDob);
+        const newDate = new Date(formData.newDob);
+        const diffTime = Math.abs(newDate.getTime() - oldDate.getTime());
+        const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+
+        if (diffYears > 5 && diffYears <= 10) {
+          calculatedFee += 35000;
+          additionalText = "An additional ₦35,000 fee applies for DOB changes between 6-10 years.";
+        } else if (diffYears > 10) {
+          calculatedFee += 45000;
+          additionalText = "An additional ₦45,000 fee applies for DOB changes over 10 years.";
+        }
+      } catch {}
     }
-  }, [formData.oldDob, formData.newDob, serviceId]);
-  
-  const getFee = () => {
-    if (!serviceId) return 0;
-    const baseFee = prices[serviceId] || 0;
-    if (serviceId === 'NIN_MOD_DOB' && isDobGap) {
-      return baseFee + 2000;
-    }
-    return baseFee;
-  };
+    return { fee: calculatedFee, dobFeeText: additionalText };
+  }, [serviceId, formData.oldDob, formData.newDob, prices]);
 
   const handleInputChange = (id: string, value: string) => {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    setAttestation(file);
-    setIsUploading(true);
-    setSubmitError(null);
-    setAttestationUrl(null); 
-    
+  // Generic File Upload Handler
+  const uploadFile = async (file: File, setUrl: (url: string) => void, setError: (err: string) => void, setUploading: (val: boolean) => void) => {
+    setUploading(true);
+    setError('');
     try {
       const formData = new FormData();
       formData.append('attestation', file);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
+      const response = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'File upload failed.');
-      }
-      setAttestationUrl(data.url);
+      if (!response.ok) throw new Error(data.error || 'File upload failed.');
+      setUrl(data.url);
     } catch (err: any) {
-      setSubmitError(err.message);
-      setAttestation(null);
+      setError(err.message);
     } finally {
-      setIsUploading(false);
+      setUploading(false);
     }
   };
 
@@ -324,13 +280,18 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       setSubmitError("Please select a modification type.");
       return;
     }
-    if (!attestationUrl) {
-      // --- THIS IS THE FIX (Part 1) ---
-      // Updated the error message
-      setSubmitError("Please wait for the Passport Picture to finish uploading.");
+    
+    // Check Passport (Required for ALL)
+    if (!passportUrl) {
+      setSubmitError("Please upload your Passport Photograph.");
       return;
     }
-    // ---------------------------------
+
+    // Check Attestation (Required for DOB only)
+    if (serviceId === 'NIN_MOD_DOB' && !attestationUrl) {
+      setSubmitError("Please upload the Attestation Letter.");
+      return;
+    }
     
     setIsConfirmModalOpen(true);
   };
@@ -367,8 +328,8 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
         body: JSON.stringify({ 
           serviceId, 
           formData: payloadFormData, 
-          isDobGap,
-          attestationUrl
+          passportUrl,     // Send Passport URL
+          attestationUrl,  // Send Attestation URL
         }),
       });
       
@@ -378,11 +339,11 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       }
       
       setSuccess(data.message);
-      // Reset the form
       setFormData({ nin: '', phone: '', email: '', password: '', firstName: '', lastName: '', middleName: '', newPhone: '', address: '', state: '', lga: '', oldDob: '', newDob: '', oldName: '', newName: '', oldPhone: '', oldAddress: '', newAddress: '' });
-      setAttestation(null); setAttestationUrl(null);
+      setPassportFile(null); setPassportUrl(null);
+      setAttestationFile(null); setAttestationUrl(null);
       setServiceId(null);
-      setIsNoteModalOpen(true); // Show the note modal again
+      setIsNoteModalOpen(true);
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -391,26 +352,13 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     }
   };
   
-  // 1. Show Consent Form
-  if (!hasAgreed) {
-    return (
-      <ConsentModal onAgree={() => setHasAgreed(true)} />
-    );
-  }
-  
-  // 2. Show "Note" Modal (Your New Logic)
-  if (isNoteModalOpen) {
-    return (
-      <NoteModal onClose={() => setIsNoteModalOpen(false)} />
-    );
-  }
+  if (!hasAgreed) return <ConsentModal onAgree={() => setHasAgreed(true)} />;
+  if (isNoteModalOpen) return <NoteModal onClose={() => setIsNoteModalOpen(false)} />;
 
-  // 3. Show Main Page
   return (
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
       
-      {/* --- Your New Instruction Box --- */}
       <div className="rounded-lg bg-red-50 p-4 border border-red-200">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -418,7 +366,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           </div>
           <div className="ml-3">
             <p className="text-sm font-bold text-red-800">
-              Submit only Fresh Modification, we charge ₦500 for Invalid Modification. You cannot submit the same modification request to another platform while we process it. Violating this policy will result in no refund, as we incur costs for the modifications.
+              Submit only Fresh Modification, we charge ₦500 for Invalid Modification. You cannot submit the same modification request to another platform while we process it. Violating this policy will result in no refund.
             </p>
           </div>
         </div>
@@ -427,13 +375,9 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       {success && (
         <div className="rounded-lg bg-green-100 p-4 border border-green-200">
           <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            </div>
+            <div className="flex-shrink-0"><CheckCircleIcon className="h-5 w-5 text-green-500" /></div>
             <div className="ml-3">
-              <h3 className="text-sm font-bold text-green-800">
-                Request Submitted Successfully!
-              </h3>
+              <h3 className="text-sm font-bold text-green-800">Request Submitted Successfully!</h3>
               <div className="mt-2 text-sm text-green-700">
                 <p>
                   Your request is now <strong className="font-semibold">PENDING</strong>. 
@@ -445,49 +389,24 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
         </div>
       )}
 
-      {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
           <div>
-            <label className="text-lg font-semibold text-gray-900">
-              1. Select Modification Type
-            </label>
-            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <ModTypeButton
-                title="Change of Name"
-                description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`}
-                selected={serviceId === 'NIN_MOD_NAME'}
-                onClick={() => setServiceId('NIN_MOD_NAME')}
-              />
-              <ModTypeButton
-                title="Change of Phone"
-                description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`}
-                selected={serviceId === 'NIN_MOD_PHONE'}
-                onClick={() => setServiceId('NIN_MOD_PHONE')}
-              />
-              <ModTypeButton
-                title="Change of Address"
-                description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`}
-                selected={serviceId === 'NIN_MOD_ADDRESS'}
-                onClick={() => setServiceId('NIN_MOD_ADDRESS')}
-              />
-              <ModTypeButton
-                title="Change of Date of Birth"
-                description={`Fee: ₦${prices.NIN_MOD_DOB || 0} (Base)`}
-                selected={serviceId === 'NIN_MOD_DOB'}
-                onClick={() => setServiceId('NIN_MOD_DOB')}
-              />
+            <label className="text-lg font-semibold text-gray-900">1. Select Modification Type</label>
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <ModTypeButton title="Change of Name" description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`} selected={serviceId === 'NIN_MOD_NAME'} onClick={() => setServiceId('NIN_MOD_NAME')} />
+              <ModTypeButton title="Change of Phone" description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`} selected={serviceId === 'NIN_MOD_PHONE'} onClick={() => setServiceId('NIN_MOD_PHONE')} />
+              <ModTypeButton title="Change of Address" description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`} selected={serviceId === 'NIN_MOD_ADDRESS'} onClick={() => setServiceId('NIN_MOD_ADDRESS')} />
+              <ModTypeButton title="Change of Date of Birth" description={`Fee: ₦${prices.NIN_MOD_DOB || 0} (Base)`} selected={serviceId === 'NIN_MOD_DOB'} onClick={() => setServiceId('NIN_MOD_DOB')} />
             </div>
           </div>
 
-          {/* --- Common Fields --- */}
           {serviceId && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Required Details</h3>
               <DataInput label="NIN Number*" id="nin" value={formData.nin} onChange={(v) => handleInputChange('nin', v)} Icon={IdentificationIcon} type="tel" maxLength={11} />
 
-              {/* --- Conditional Fields --- */}
               {serviceId === 'NIN_MOD_NAME' && (
                 <>
                   <DataInput label="Old Full Name*" id="oldName" value={formData.oldName} onChange={(v) => handleInputChange('oldName', v)} Icon={UserIcon} />
@@ -515,17 +434,9 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
                   <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={(v) => handleInputChange('oldDob', v)} Icon={CalendarDaysIcon} type="date" />
                   <DataInput label="New Date of Birth*" id="newDob" value={formData.newDob} onChange={(v) => handleInputChange('newDob', v)} Icon={CalendarDaysIcon} type="date" />
                   
-                  {isDobGap && (
-                    <div className="rounded-md bg-yellow-50 p-4">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-bold text-yellow-800">Additional Fee</h3>
-                          <p className="text-sm text-yellow-700">The gap between DOBs is over 5 years. An additional ₦2,000 fee will be applied.</p>
-                        </div>
-                      </div>
+                  {dobFeeText && (
+                    <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
+                      <p className="text-sm font-bold text-yellow-800">{dobFeeText}</p>
                     </div>
                   )}
                 </>
@@ -536,23 +447,49 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               <DataInput label="New Valid Fresh Email*" id="email" value={formData.email} onChange={(v) => handleInputChange('email', v)} Icon={EnvelopeIcon} type="email" />
               <DataInput label="Email Password*" id="password" value={formData.password} onChange={(v) => handleInputChange('password', v)} Icon={LockClosedIcon} type="password" />
 
-              {/* --- THIS IS THE FIX (Part 2) --- */}
-              <h3 className="text-lg font-semibold text-gray-900 pt-4">3. Upload Document</h3>
+              <h3 className="text-lg font-semibold text-gray-900 pt-4">3. Upload Documents</h3>
+              
+              {/* --- Passport (Always) --- */}
               <FileUpload 
-                label="Upload a clear passport picture of yours with a clear background*" 
-                id="attestation" 
-                file={attestation} 
-                fileUrl={attestationUrl} 
-                isUploading={isUploading} 
-                error={uploadError}
-                onChange={handleFileChange} 
+                label="Passport Photograph (Clear Background)*" 
+                id="passport" 
+                file={passportFile} 
+                fileUrl={passportUrl} 
+                isUploading={isUploadingPassport} 
+                error={passportError}
+                onChange={(e) => { 
+                   if (e.target.files && e.target.files[0]) {
+                     setPassportFile(e.target.files[0]);
+                     uploadFile(e.target.files[0], setPassportUrl, setPassportError, setIsUploadingPassport);
+                   }
+                }}
               />
-              {/* Removed the "get one from us" link */}
-              {/* ---------------------------------- */}
+
+              {/* --- Attestation (Only for DOB) --- */}
+              {serviceId === 'NIN_MOD_DOB' && (
+                <div className="mt-4">
+                  <FileUpload 
+                    label="Attestation Letter*" 
+                    id="attestation" 
+                    file={attestationFile} 
+                    fileUrl={attestationUrl} 
+                    isUploading={isUploadingAttestation} 
+                    error={attestationError}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setAttestationFile(e.target.files[0]);
+                        uploadFile(e.target.files[0], setAttestationUrl, setAttestationError, setIsUploadingAttestation);
+                      }
+                    }}
+                  />
+                  <p className="text-xs text-blue-600 font-medium -mt-2">
+                    Don't have an attestation letter? <Link href="/dashboard/services/nin/attestation" className="underline hover:text-blue-800">Get one from us</Link>
+                  </p>
+                </div>
+              )}
             </div>
           )}
           
-          {/* --- Submit Button --- */}
           {serviceId && (
             <div className="border-t border-gray-200 pt-6">
               {submitError && (
@@ -560,35 +497,31 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               )}
               <button
                 type="submit"
-                disabled={isSubmitting || isUploading || !attestationUrl}
+                disabled={isSubmitting || isUploadingPassport || isUploadingAttestation || !passportUrl || (serviceId === 'NIN_MOD_DOB' && !attestationUrl)}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSubmitting ? 'Submitting...' : `Submit Modification (Fee: ₦${getFee()})`}
+                {isSubmitting ? 'Submitting...' : `Submit Modification (Fee: ₦${fee})`}
               </button>
             </div>
           )}
         </form>
       </div>
 
-      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Please Confirm
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
               <button onClick={() => setIsConfirmModalOpen(false)}>
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
             <div className="p-6">
               <p className="text-center text-gray-600">
-                Please confirm you have filled in the right details. This action
-                is non-refundable as per the terms you agreed to.
+                Please confirm you have filled in the right details. This action is irreversible.
               </p>
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{getFee()}
+                Total Fee: ₦{fee}
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
