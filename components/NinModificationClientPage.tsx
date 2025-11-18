@@ -26,11 +26,15 @@ type Props = {
   hasAlreadyAgreed: boolean;
   prices: { [key: string]: number };
 };
-type ModType = 'NAME' | 'PHONE' | 'ADDRESS' | 'DOB';
+// --- THIS IS THE FIX (Part 1) ---
+// Re-adding the missing type definition
+type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
+// ---------------------------------
 
 // --- Consent Modal (with updated text) ---
 const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter(); // Added missing import
 
   const handleAgree = async () => {
     setIsLoading(true);
@@ -182,19 +186,19 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
   </div>
 );
 
-// --- The Main Component ---
+// --- Main Component ---
 export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: Props) {
   const router = useRouter();
   
   // --- State Management ---
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
-  const [modType, setModType] = useState<ModType | null>(null);
+  const [serviceId, setServiceId] = useState<ServiceID | null>(null); // <-- Use ServiceID type
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
-  // --- Form Data State (Restored all fields) ---
+  // --- Form Data State ---
   const [formData, setFormData] = useState({
     nin: '',
     phone: '',
@@ -219,23 +223,23 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
 
   // --- Dynamic Pricing Logic ---
   const isDobGap = useMemo(() => {
-    if (modType !== 'DOB' || !formData.oldDob || !formData.newDob) return false;
+    if (serviceId !== 'NIN_MOD_DOB' || !formData.oldDob || !formData.newDob) return false;
     try {
       const oldDate = new Date(formData.oldDob);
       const newDate = new Date(formData.newDob);
-      const diffTime = Math.abs(newDate.getTime() - newDate.getTime());
+      const diffTime = Math.abs(newDate.getTime() - oldDate.getTime());
       const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
       return diffYears > 5;
     } catch {
       return false;
     }
-  }, [formData.oldDob, formData.newDob, modType]);
+  }, [formData.oldDob, formData.newDob, serviceId]);
   
   const getFee = () => {
-    if (!modType) return 0;
-    const baseFee = prices[modType === 'DOB' ? 'NIN_MOD_DOB' : (modType === 'NAME' ? 'NIN_MOD_NAME' : (modType === 'PHONE' ? 'NIN_MOD_PHONE' : 'NIN_MOD_ADDRESS'))] || 0;
-    if (modType === 'DOB' && isDobGap) {
-      return baseFee + 2000; // Your ₦2000 fee for DOB gap
+    if (!serviceId) return 0;
+    const baseFee = prices[serviceId] || 0;
+    if (serviceId === 'NIN_MOD_DOB' && isDobGap) {
+      return baseFee + 2000;
     }
     return baseFee;
   };
@@ -282,7 +286,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     setSubmitError(null);
     setSuccess(null);
 
-    if (!modType) {
+    if (!serviceId) {
       setSubmitError("Please select a modification type.");
       return;
     }
@@ -299,7 +303,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     setIsConfirmModalOpen(false);
     setIsSubmitting(true);
     
-    let serviceId: ServiceID;
     let payloadFormData = {
       nin: formData.nin,
       phone: formData.phone,
@@ -307,17 +310,13 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       password: formData.password,
     };
   
-    if (modType === 'NAME') {
-      serviceId = 'NIN_MOD_NAME';
-      Object.assign(payloadFormData, { firstName: formData.firstName, lastName: formData.lastName, middleName: formData.middleName });
-    } else if (modType === 'PHONE') {
-      serviceId = 'NIN_MOD_PHONE';
-      Object.assign(payloadFormData, { newPhone: formData.newPhone });
-    } else if (modType === 'ADDRESS') {
-      serviceId = 'NIN_MOD_ADDRESS';
-      Object.assign(payloadFormData, { address: formData.address, state: formData.state, lga: formData.lga });
-    } else if (modType === 'DOB') {
-      serviceId = 'NIN_MOD_DOB';
+    if (serviceId === 'NIN_MOD_NAME') {
+      Object.assign(payloadFormData, { oldName: formData.oldName, newName: formData.newName, firstName: formData.firstName, lastName: formData.lastName, middleName: formData.middleName });
+    } else if (serviceId === 'NIN_MOD_PHONE') {
+      Object.assign(payloadFormData, { oldPhone: formData.oldPhone, newPhone: formData.newPhone });
+    } else if (serviceId === 'NIN_MOD_ADDRESS') {
+      Object.assign(payloadFormData, { oldAddress: formData.oldAddress, newAddress: formData.address, state: formData.state, lga: formData.lga });
+    } else if (serviceId === 'NIN_MOD_DOB') {
       Object.assign(payloadFormData, { oldDob: formData.oldDob, newDob: formData.newDob });
     } else {
       setSubmitError("Invalid service type selected.");
@@ -346,7 +345,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       // Reset the form
       setFormData({ nin: '', phone: '', email: '', password: '', firstName: '', lastName: '', middleName: '', newPhone: '', address: '', state: '', lga: '', oldDob: '', newDob: '' });
       setAttestation(null); setAttestationUrl(null);
-      setModType(null);
+      setServiceId(null);
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -436,55 +435,55 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               <ModTypeButton
                 title="Change of Name"
                 description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`}
-                selected={modType === 'NAME'}
-                onClick={() => setModType('NAME')}
+                selected={serviceId === 'NIN_MOD_NAME'}
+                onClick={() => setServiceId('NIN_MOD_NAME')}
               />
               <ModTypeButton
                 title="Change of Phone"
                 description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`}
-                selected={modType === 'PHONE'}
-                onClick={() => setModType('PHONE')}
+                selected={serviceId === 'NIN_MOD_PHONE'}
+                onClick={() => setServiceId('NIN_MOD_PHONE')}
               />
               <ModTypeButton
                 title="Change of Address"
                 description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`}
-                selected={modType === 'ADDRESS'}
-                onClick={() => setModType('ADDRESS')}
+                selected={serviceId === 'NIN_MOD_ADDRESS'}
+                onClick={() => setServiceId('NIN_MOD_ADDRESS')}
               />
               <ModTypeButton
                 title="Change of Date of Birth"
                 description={`Fee: ₦${prices.NIN_MOD_DOB || 0} (Base)`}
-                selected={modType === 'DOB'}
-                onClick={() => setModType('DOB')}
+                selected={serviceId === 'NIN_MOD_DOB'}
+                onClick={() => setServiceId('NIN_MOD_DOB')}
               />
             </div>
           </div>
 
           {/* --- Common Fields --- */}
-          {modType && (
+          {serviceId && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Required Details</h3>
               <DataInput label="NIN Number*" id="nin" value={formData.nin} onChange={(v) => handleInputChange('nin', v)} Icon={IdentificationIcon} type="tel" maxLength={11} />
 
               {/* --- Conditional Fields --- */}
-              {modType === 'NAME' && (
+              {serviceId === 'NIN_MOD_NAME' && (
                 <>
                   <DataInput label="New First Name*" id="firstName" value={formData.firstName} onChange={(v) => handleInputChange('firstName', v)} Icon={UserIcon} />
                   <DataInput label="New Last Name*" id="lastName" value={formData.lastName} onChange={(v) => handleInputChange('lastName', v)} Icon={UserIcon} />
                   <DataInput label="New Middle Name (Optional)" id="middleName" value={formData.middleName} onChange={(v) => handleInputChange('middleName', v)} Icon={UserIcon} isRequired={false} />
                 </>
               )}
-              {modType === 'PHONE' && (
+              {serviceId === 'NIN_MOD_PHONE' && (
                 <DataInput label="New Phone Number*" id="newPhone" value={formData.newPhone} onChange={(v) => handleInputChange('newPhone', v)} Icon={PhoneIcon} type="tel" maxLength={11} />
               )}
-              {modType === 'ADDRESS' && (
+              {serviceId === 'NIN_MOD_ADDRESS' && (
                 <>
                   <DataInput label="New Address*" id="address" value={formData.address} onChange={(v) => handleInputChange('address', v)} Icon={HomeIcon} />
                   <DataInput label="State*" id="state" value={formData.state} onChange={(v) => handleInputChange('state', v)} Icon={MapPinIcon} />
                   <DataInput label="LGA*" id="lga" value={formData.lga} onChange={(v) => handleInputChange('lga', v)} Icon={MapPinIcon} />
                 </>
               )}
-              {modType === 'DOB' && (
+              {serviceId === 'NIN_MOD_DOB' && (
                 <>
                   <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={(v) => handleInputChange('oldDob', v)} Icon={CalendarDaysIcon} type="date" />
                   <DataInput label="New Date of Birth*" id="newDob" value={formData.newDob} onChange={(v) => handleInputChange('newDob', v)} Icon={CalendarDaysIcon} type="date" />
@@ -527,7 +526,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           )}
           
           {/* --- Submit Button --- */}
-          {modType && (
+          {serviceId && (
             <div className="border-t border-gray-200 pt-6">
               {submitError && (
                 <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
