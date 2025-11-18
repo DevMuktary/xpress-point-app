@@ -1,6 +1,6 @@
 "use client"; // This is an interactive component
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ExclamationTriangleIcon, 
@@ -28,7 +28,7 @@ type Props = {
 };
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
 
-// --- Consent Modal (with updated text) ---
+// --- Consent Modal (The big, one-time modal) ---
 const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -96,6 +96,47 @@ const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   );
 };
 
+// --- THIS IS THE FIX (Part 1) ---
+// --- Your new "Note" Modal (shows every time) ---
+const NoteModal = ({ onClose }: { onClose: () => void }) => (
+  <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+      <div className="flex items-center justify-between border-b border-gray-200 p-4">
+        <h2 className="text-lg font-bold text-blue-800 flex items-center gap-2">
+          <InformationCircleIcon className="h-6 w-6 text-blue-500" />
+          Please Note
+        </h2>
+      </div>
+      <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
+        <p><span className="font-bold">NOTE:</span> Modification will be processed and submitted on self service in 2 to 7 days. Approval and validation is up to NIMC.</p>
+        <ul className="list-disc list-outside pl-5 space-y-2">
+          <li>Our work is for Agents that know the process involved.</li>
+          <li>Our only job is to Submit and get you the enrollment slip with a new Tracking ID.</li>
+          <li>Approval and Validation is up to NIMC.</li>
+          <li>Submit only Fresh Modification. Contact admin for any Modification that is not fresh.</li>
+        </ul>
+        <p><span className="font-bold">Please Take Note:</span> All Funds on the website can only be used for services on the website.</p>
+        <p>Make sure you submit a <span className="font-bold">New Valid Fresh Email Address & its Password</span> when requesting the Modification.</p>
+      </div>
+      <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+        <Link
+          href="/dashboard/services/nin"
+          className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+        >
+          Go Back
+        </Link>
+        <button
+          onClick={onClose}
+          className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+        >
+          I Understand
+        </button>
+      </div>
+    </div>
+  </div>
+);
+// ------------------------------------
+
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick }: {
   title: string,
@@ -107,10 +148,7 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
     type="button"
     onClick={onClick}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
-      }`}
+      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
   >
     <p className="font-semibold text-gray-900">{title}</p>
     <p className="text-sm text-blue-600 font-medium">{description}</p>
@@ -195,8 +233,13 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   
-  // --- THIS IS THE FIX (Part 1) ---
-  // Form Data State (Restored all fields)
+  // --- THIS IS THE FIX (Part 2) ---
+  // We add a new state for your "Note" modal
+  // It starts as 'true' *if* they have already agreed to the main terms
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(hasAlreadyAgreed);
+  // ---------------------------------
+
+  // --- Form Data State (Restored all fields) ---
   const [formData, setFormData] = useState({
     nin: '',
     phone: '',
@@ -205,19 +248,18 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     firstName: '',
     lastName: '',
     middleName: '',
-    oldName: '',   // This was missing
-    newName: '',   // This was missing
+    oldName: '',   
+    newName: '',   
     newPhone: '',
     address: '',
     state: '',
     lga: '',
-    oldAddress: '', // This was missing
-    newAddress: '', // This was missing
+    oldAddress: '', 
+    newAddress: '', 
     oldDob: '',
     newDob: '',
-    oldPhone: '',  // This was missing
+    oldPhone: '',  
   });
-  // ---------------------------------
 
   // Attestation (File Upload) State
   const [attestation, setAttestation] = useState<File | null>(null);
@@ -307,8 +349,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     setIsConfirmModalOpen(false);
     setIsSubmitting(true);
     
-    // --- THIS IS THE FIX (Part 2) ---
-    // We now have all the fields from your original code
     let payloadFormData = {
       nin: formData.nin,
       phone: formData.phone,
@@ -329,7 +369,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       setIsSubmitting(false);
       return;
     }
-    // ---------------------------------
 
     try {
       const response = await fetch('/api/services/nin/modification-submit', {
@@ -367,32 +406,20 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       <ConsentModal onAgree={() => setHasAgreed(true)} />
     );
   }
+  
+  // --- 2. Show "Note" Modal (Your New Logic) ---
+  if (isNoteModalOpen) {
+    return (
+      <NoteModal onClose={() => setIsNoteModalOpen(false)} />
+    );
+  }
 
-  // --- 2. Show Main Page ---
+  // --- 3. Show Main Page ---
   return (
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
       
-      {/* --- Your New Instructions --- */}
-      <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <InformationCircleIcon className="h-5 w-5 text-blue-500" />
-          </div>
-          <div className="ml-3 space-y-2 text-sm text-blue-800">
-            <p><span className="font-bold">NOTE:</span> Modification will be processed and submitted on self service in 2 to 7 days. Approval and validation is up to NIMC.</p>
-            <ul className="list-disc list-outside pl-5">
-              <li>Our work is for Agents that know the process involved.</li>
-              <li>Our only job is to Submit and get you the enrollment slip with a new Tracking ID.</li>
-              <li>Approval and Validation is up to NIMC.</li>
-              <li>Submit only Fresh Modification. Contact admin for any Modification that is not fresh.</li>
-            </ul>
-            <p><span className="font-bold">Please Take Note:</span> All Funds on the website can only be used for services on the website.</p>
-            <p>Make sure you submit a <span className="font-bold">New Valid Fresh Email Address & its Password</span> when requesting the Modification.</p>
-          </div>
-        </div>
-      </div>
-      
+      {/* --- Your New Instruction Box --- */}
       <div className="rounded-lg bg-red-50 p-4 border border-red-200">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -405,7 +432,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
           </div>
         </div>
       </div>
-      {/* --- End of New Instructions --- */}
       
       {success && (
         <div className="rounded-lg bg-green-100 p-4 border border-green-200">
@@ -473,7 +499,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
               {/* --- Conditional Fields --- */}
               {serviceId === 'NIN_MOD_NAME' && (
                 <>
-                  {/* --- THIS IS THE FIX (Part 3) --- */}
                   <DataInput label="Old Full Name*" id="oldName" value={formData.oldName} onChange={(v) => handleInputChange('oldName', v)} Icon={UserIcon} />
                   <DataInput label="New First Name*" id="firstName" value={formData.firstName} onChange={(v) => handleInputChange('firstName', v)} Icon={UserIcon} />
                   <DataInput label="New Last Name*" id="lastName" value={formData.lastName} onChange={(v) => handleInputChange('lastName', v)} Icon={UserIcon} />
@@ -494,7 +519,6 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
                   <DataInput label="LGA*" id="lga" value={formData.lga} onChange={(v) => handleInputChange('lga', v)} Icon={MapPinIcon} />
                 </>
               )}
-              {/* --------------------------------- */}
               {serviceId === 'NIN_MOD_DOB' && (
                 <>
                   <DataInput label="Old Date of Birth*" id="oldDob" value={formData.oldDob} onChange={(v) => handleInputChange('oldDob', v)} Icon={CalendarDaysIcon} type="date" />
