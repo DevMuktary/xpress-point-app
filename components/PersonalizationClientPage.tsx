@@ -8,11 +8,12 @@ import {
   DocumentMagnifyingGlassIcon,
   ClockIcon,
   XCircleIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  XMarkIcon // <-- THIS IS THE FIX: Added missing import
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { PersonalizationRequest, RequestStatus } from '@prisma/client';
-import CopyButton from '@/components/CopyButton'; // Ensure you have this component created
+import CopyButton from '@/components/CopyButton'; 
 
 type Props = {
   initialRequests: PersonalizationRequest[];
