@@ -4,25 +4,11 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// Get API credentials
 const ROBOSTTECH_API_KEY = process.env.ROBOSTTECH_API_KEY;
 const SUBMIT_ENDPOINT = 'https://robosttech.com/api/personalization';
 
 if (!ROBOSTTECH_API_KEY) {
   console.error("CRITICAL: ROBOSTTECH_API_KEY is not set.");
-}
-
-function parseApiError(error: any): string {
-  if (error.code === 'ECONNABORTED') {
-    return 'The service timed out. Please try again.';
-  }
-  if (error.response && error.response.data && error.response.data.message) {
-    return error.response.data.message;
-  }
-  if (error.message) {
-    return error.message;
-  }
-  return 'An internal server error occurred.';
 }
 
 export async function POST(request: Request) {
@@ -43,24 +29,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tracking ID is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
+    // 1. Get Price
     const service = await prisma.service.findUnique({ where: { id: 'NIN_PERSONALIZATION' } });
-    if (!service || !service.isActive) {
-      return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
+    if (!service) {
+      return NextResponse.json({ error: 'Service not found.' }, { status: 503 });
     }
     
-    // "World-class" pricing logic
-    const price = user.role === 'AGGREGATOR' 
+    const rawPrice = user.role === 'AGGREGATOR' 
       ? service.platformPrice 
       : service.defaultAgentPrice;
-    // --------------------------------------------------
+    const price = new Decimal(rawPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: 'Insufficient funds for this service.' }, { status: 402 });
     }
 
-    // --- 2. Check if this request already exists ---
+    // 2. Check Duplicates
     const existingRequest = await prisma.personalizationRequest.findFirst({
       where: { userId: user.id, trackingId: trackingId }
     });
@@ -68,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You have already submitted this Tracking ID.' }, { status: 409 });
     }
 
-    // --- 3. Call External API (Robosttech) ---
+    // 3. Call Provider
     const response = await axios.post(SUBMIT_ENDPOINT, 
       { tracking_id: trackingId },
       {
@@ -81,49 +66,53 @@ export async function POST(request: Request) {
     );
 
     const data = response.data;
-    
-    // --- 4. Handle Robosttech Response ---
     if (data.success !== true) {
       throw new Error(data.message || "Submission failed. Please check the Tracking ID.");
     }
 
-    // --- 5. Charge User & Save as PROCESSING ---
-    await prisma.$transaction([
-      prisma.wallet.update({
+    // 4. Database Transaction
+    const priceAsString = price.toString();
+    const negatedPriceAsString = price.negated().toString();
+
+    const newRequest = await prisma.$transaction(async (tx) => {
+      await tx.wallet.update({
         where: { userId: user.id },
-        data: { balance: { decrement: price } },
-      }),
-      prisma.personalizationRequest.create({
+        data: { balance: { decrement: priceAsString } },
+      });
+      const req = await tx.personalizationRequest.create({
         data: {
           userId: user.id,
           trackingId: trackingId,
           status: 'PROCESSING',
           statusMessage: 'Submitted. Awaiting completion.'
         },
-      }),
-      prisma.transaction.create({
+      });
+      await tx.transaction.create({
         data: {
           userId: user.id,
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: price.negated(),
+          amount: negatedPriceAsString,
           description: `NIN Personalization (${trackingId})`,
           reference: `NIN-PERS-${Date.now()}`,
           status: 'COMPLETED',
         },
-      }),
-    ]);
+      });
+      return req;
+    });
 
     return NextResponse.json(
-      { message: 'Request submitted successfully! You can check the status shortly.' },
+      { 
+        message: 'Request submitted successfully! You can check the status shortly.',
+        newRequest 
+      },
       { status: 200 }
     );
 
   } catch (error: any) {
-    const errorMessage = parseApiError(error);
-    console.error(`NIN Personalization (Submit) Error:`, errorMessage);
+    console.error(`NIN Personalization (Submit) Error:`, error.message);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: error.message || "An internal server error occurred." },
       { status: 400 }
     );
   }
