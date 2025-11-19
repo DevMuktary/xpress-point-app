@@ -9,7 +9,7 @@ import {
   ClockIcon,
   XCircleIcon,
   InformationCircleIcon,
-  XMarkIcon // <-- THIS IS THE FIX: Added missing import
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { PersonalizationRequest, RequestStatus } from '@prisma/client';
@@ -55,7 +55,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
   const refreshHistory = async () => {
     setIsRefreshing(true);
     try {
-      // We reload the page to get the latest server data (simplest way to sync)
+      // Reload to get updated status/reasons from server
       window.location.reload();
     } catch (error) {
       console.error("Failed to refresh");
@@ -98,7 +98,6 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
         status: "PROCESSING"
       });
       
-      // Add the new request to the top of the list locally
       setRequests([data.newRequest, ...requests]); 
       setTrackingId('');
 
@@ -132,7 +131,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- New Instructions / Note --- */}
+      {/* --- Instructions / Note --- */}
       <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -145,7 +144,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
               There might be a slight delay on weekends.
             </p>
             <p className="mt-1">
-              You can keep clicking the <strong>"Check Status"</strong> button below to update the status of your personalization.
+              You can keep clicking the <strong>"Check Status"</strong> button below to see if your result is ready.
             </p>
           </div>
         </div>
@@ -203,9 +202,8 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
         <div className="mt-6 space-y-4">
           {requests.map((request) => {
             const statusInfo = getStatusInfo(request.status);
-            // Check if result data exists in the JSON
             const requestData = request.data as any;
-            const resultNin = requestData?.nin || requestData?.newNin; // Adjust key based on what admin saves
+            const resultNin = requestData?.nin || requestData?.newNin;
 
             return (
               <div key={request.id} className="rounded-lg border border-gray-200 p-4">
@@ -226,20 +224,44 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
                   </span>
                 </div>
                 
-                <p className="text-sm text-gray-700">{request.statusMessage}</p>
+                {/* --- THIS IS THE FIX --- */}
+                {/* Display Logic based on Status */}
                 
-                {/* --- Display Result if Completed --- */}
-                {request.status === 'COMPLETED' && resultNin && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-500 mb-1">New NIN:</p>
-                    <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-md">
-                      <span className="font-mono text-lg font-bold text-gray-900 tracking-wider">
-                        {resultNin}
-                      </span>
-                      <CopyButton textToCopy={resultNin} />
-                    </div>
+                {request.status === 'FAILED' && (
+                  <div className="mt-2 rounded-md bg-red-50 p-3 border border-red-100">
+                    <p className="text-xs font-bold text-red-800 uppercase mb-1">Failure Reason:</p>
+                    <p className="text-sm text-red-700">
+                      {request.statusMessage || "Provider returned an error without a specific message."}
+                    </p>
                   </div>
                 )}
+
+                {request.status === 'PROCESSING' && (
+                   <p className="text-sm text-blue-600 italic mt-1">
+                     {request.statusMessage || "Processing..."}
+                   </p>
+                )}
+
+                {request.status === 'COMPLETED' && (
+                   <div className="space-y-2">
+                     <p className="text-sm text-green-700">
+                       {request.statusMessage || "Successfully Personalized."}
+                     </p>
+                     {resultNin && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <p className="text-xs text-gray-500 mb-1">New NIN:</p>
+                          <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-md">
+                            <span className="font-mono text-lg font-bold text-gray-900 tracking-wider">
+                              {resultNin}
+                            </span>
+                            <CopyButton textToCopy={resultNin} />
+                          </div>
+                        </div>
+                     )}
+                   </div>
+                )}
+                {/* ----------------------- */}
+
               </div>
             );
           })}
