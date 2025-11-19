@@ -9,6 +9,7 @@ import {
   ClockIcon,
   XCircleIcon,
   InformationCircleIcon,
+  ExclamationTriangleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
@@ -132,20 +133,37 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
       {(isLoading) && <Loading />}
       
       {/* --- Instructions / Note --- */}
-      <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <InformationCircleIcon className="h-5 w-5 text-blue-500" />
+      <div className="space-y-4">
+        {/* Info Box */}
+        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <InformationCircleIcon className="h-5 w-5 text-blue-500" />
+            </div>
+            <div className="ml-3 text-sm text-blue-800">
+              <p className="font-bold mb-1">IMPORTANT NOTE:</p>
+              <p>
+                This service will be processed within <strong>1 to 24 hours</strong>. 
+                There might be a slight delay on weekends.
+              </p>
+              <p className="mt-1">
+                Please use the <strong>"Check Status"</strong> button below to refresh the history and see if your result is ready.
+              </p>
+            </div>
           </div>
-          <div className="ml-3 text-sm text-blue-800">
-            <p className="font-bold mb-1">IMPORTANT NOTE:</p>
-            <p>
-              This service will be processed within <strong>30 minutes to 1 hour</strong>. 
-              There might be a slight delay on weekends.
-            </p>
-            <p className="mt-1">
-              You can keep clicking the <strong>"Check Status"</strong> button below to see if your result is ready.
-            </p>
+        </div>
+
+        {/* No Refund Warning */}
+        <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-bold text-red-800">
+                Strict No Refund Policy: Once submitted, this service cannot be cancelled. Please ensure the Tracking ID is correct before proceeding.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -181,13 +199,15 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
       <div className="rounded-2xl bg-white p-6 shadow-lg mt-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">My Personalization History</h3>
+          
+          {/* Visible "Check Status" Button */}
           <button 
             onClick={refreshHistory}
             disabled={isRefreshing}
-            className="text-sm flex items-center gap-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
           >
             <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Check Status
+            {isRefreshing ? 'Refreshing...' : 'Check Status'}
           </button>
         </div>
         
@@ -224,8 +244,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
                   </span>
                 </div>
                 
-                {/* --- THIS IS THE FIX --- */}
-                {/* Display Logic based on Status */}
+                {/* --- Display Logic based on Status --- */}
                 
                 {request.status === 'FAILED' && (
                   <div className="mt-2 rounded-md bg-red-50 p-3 border border-red-100">
