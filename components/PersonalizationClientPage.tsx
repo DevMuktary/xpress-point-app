@@ -1,26 +1,23 @@
-"use client"; // This is an interactive component
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   CheckCircleIcon,
-  XMarkIcon,
   IdentificationIcon,
   ArrowPathIcon,
   DocumentMagnifyingGlassIcon,
   ClockIcon,
-  XCircleIcon
+  XCircleIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
-import Link from 'next/link';
 import { PersonalizationRequest, RequestStatus } from '@prisma/client';
+import CopyButton from '@/components/CopyButton'; // Ensure you have this component created
 
-// --- THIS IS THE FIX (Part 1) ---
-// Define the props to receive the serviceFee and requests
 type Props = {
   initialRequests: PersonalizationRequest[];
   serviceFee: number;
 };
-// ---------------------------------
 
 // --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
@@ -42,22 +39,28 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
-// --- THIS IS THE FIX (Part 2) ---
-// The component now accepts the props
 export default function PersonalizationClientPage({ initialRequests, serviceFee }: Props) {
-// ---------------------------------
-
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<any | null>(null); // For success modal
+  const [receipt, setReceipt] = useState<any | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [trackingId, setTrackingId] = useState('');
 
-  // --- THIS IS THE FIX (Part 3) ---
-  // The fee is now read from the prop, not hardcoded
   const fee = serviceFee;
-  // ---------------------------------
+
+  // --- Function to Refresh History ---
+  const refreshHistory = async () => {
+    setIsRefreshing(true);
+    try {
+      // We reload the page to get the latest server data (simplest way to sync)
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to refresh");
+      setIsRefreshing(false);
+    }
+  };
 
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +96,9 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
         serviceName: "NIN Personalization",
         status: "PROCESSING"
       });
-      setRequests([data.newRequest, ...requests]); // Add new request to history
+      
+      // Add the new request to the top of the list locally
+      setRequests([data.newRequest, ...requests]); 
       setTrackingId('');
 
     } catch (err: any) {
@@ -126,10 +131,28 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- The "Submit New Request" Form --- */}
+      {/* --- New Instructions / Note --- */}
+      <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <InformationCircleIcon className="h-5 w-5 text-blue-500" />
+          </div>
+          <div className="ml-3 text-sm text-blue-800">
+            <p className="font-bold mb-1">IMPORTANT NOTE:</p>
+            <p>
+              This service will be processed within <strong>30 minutes to 1 hour</strong>. 
+              There might be a slight delay on weekends.
+            </p>
+            <p className="mt-1">
+              You can keep clicking the <strong>"Check Status"</strong> button below to update the status of your personalization.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* --- Submit Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-4">
-          
           <DataInput 
             label="Tracking ID*" 
             id="trackingId" 
@@ -154,9 +177,19 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
         </form>
       </div>
 
-      {/* --- 2. The "My Requests" History --- */}
+      {/* --- History Section --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg mt-6">
-        <h3 className="text-lg font-semibold text-gray-900">My Personalization History</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">My Personalization History</h3>
+          <button 
+            onClick={refreshHistory}
+            disabled={isRefreshing}
+            className="text-sm flex items-center gap-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Check Status
+          </button>
+        </div>
         
         {requests.length === 0 && (
           <div className="py-8 text-center text-gray-500">
@@ -169,6 +202,10 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
         <div className="mt-6 space-y-4">
           {requests.map((request) => {
             const statusInfo = getStatusInfo(request.status);
+            // Check if result data exists in the JSON
+            const requestData = request.data as any;
+            const resultNin = requestData?.nin || requestData?.newNin; // Adjust key based on what admin saves
+
             return (
               <div key={request.id} className="rounded-lg border border-gray-200 p-4">
                 <div className="flex justify-between items-start mb-2">
@@ -187,14 +224,28 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
                     {statusInfo.text}
                   </span>
                 </div>
+                
                 <p className="text-sm text-gray-700">{request.statusMessage}</p>
+                
+                {/* --- Display Result if Completed --- */}
+                {request.status === 'COMPLETED' && resultNin && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">New NIN:</p>
+                    <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-md">
+                      <span className="font-mono text-lg font-bold text-gray-900 tracking-wider">
+                        {resultNin}
+                      </span>
+                      <CopyButton textToCopy={resultNin} />
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* --- Your Confirmation Modal --- */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
