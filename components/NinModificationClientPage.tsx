@@ -110,7 +110,7 @@ const NoteModal = ({ onClose }: { onClose: () => void }) => (
         <p><span className="font-bold">NOTE:</span> Modification will be processed and submitted on self service in 2 to 7 days. Approval and validation is up to NIMC.</p>
         <ul className="list-disc list-outside pl-5 space-y-2">
           <li>Our work is for Agents that know the process involved.</li>
-          <li>Our only job is to Submit and get you the enrollment slip with a new Tracking ID.</li>
+          <li>Our only job is to Submit and get you the enrollment slip with a new Tracking ID, Approval and Validation is upto NIMC</li>
           <li>Approval and Validation is up to NIMC.</li>
           <li>Submit only Fresh Modification. Contact admin for any Modification that is not fresh.</li>
         </ul>
