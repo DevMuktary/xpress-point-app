@@ -44,7 +44,10 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
 export default function PersonalizationClientPage({ initialRequests, serviceFee }: Props) {
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // We use a map to track which *specific* card is loading
+  const [checkingIds, setCheckingIds] = useState<{[key: string]: boolean}>({});
+  
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -52,15 +55,33 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
 
   const fee = serviceFee;
 
-  // --- Function to Refresh History ---
-  const refreshHistory = async () => {
-    setIsRefreshing(true);
+  // --- INDIVIDUAL CHECK STATUS FUNCTION ---
+  const handleCheckStatus = async (trackingId: string) => {
+    setCheckingIds(prev => ({ ...prev, [trackingId]: true })); // Start loading for this card
+    
     try {
-      // Reload to get updated status/reasons from server
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to refresh");
-      setIsRefreshing(false);
+      const response = await fetch('/api/services/nin/personalization-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackingId }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Check failed.');
+      }
+
+      // Update the list with the new data for this specific request
+      if (data.updatedRequest) {
+        setRequests(prev => prev.map(req => 
+          req.trackingId === trackingId ? data.updatedRequest : req
+        ));
+      }
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingIds(prev => ({ ...prev, [trackingId]: false })); // Stop loading
     }
   };
 
@@ -143,11 +164,11 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
             <div className="ml-3 text-sm text-blue-800">
               <p className="font-bold mb-1">IMPORTANT NOTE:</p>
               <p>
-                This service will be processed within <strong>1 to 24 hours</strong>. 
+                This service will be processed within <strong>30 minutes to 1 hour</strong>. 
                 There might be a slight delay on weekends.
               </p>
               <p className="mt-1">
-                Please use the <strong>"Check Status"</strong> button below to refresh the history and see if your result is ready.
+                Click the <strong>"Check Status"</strong> button on your history card to see if your result is ready.
               </p>
             </div>
           </div>
@@ -197,19 +218,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
 
       {/* --- History Section --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">My Personalization History</h3>
-          
-          {/* Visible "Check Status" Button */}
-          <button 
-            onClick={refreshHistory}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-          >
-            <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Check Status'}
-          </button>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">My Personalization History</h3>
         
         {requests.length === 0 && (
           <div className="py-8 text-center text-gray-500">
@@ -224,6 +233,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
             const statusInfo = getStatusInfo(request.status);
             const requestData = request.data as any;
             const resultNin = requestData?.nin || requestData?.newNin;
+            const isChecking = checkingIds[request.trackingId]; // Check if this specific card is loading
 
             return (
               <div key={request.id} className="rounded-lg border border-gray-200 p-4">
@@ -236,21 +246,37 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
                       {new Date(request.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <span 
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusInfo.color}`}
-                  >
-                    <statusInfo.icon className={`h-4 w-4 ${request.status === 'PROCESSING' ? 'animate-spin' : ''}`} />
-                    {statusInfo.text}
-                  </span>
+                  
+                  <div className="flex flex-col items-end gap-2">
+                    <span 
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusInfo.color}`}
+                    >
+                      <statusInfo.icon className={`h-4 w-4 ${request.status === 'PROCESSING' ? 'animate-spin' : ''}`} />
+                      {statusInfo.text}
+                    </span>
+                    
+                    {/* --- INDIVIDUAL CHECK BUTTON --- */}
+                    {request.status === 'PROCESSING' && (
+                      <button 
+                        onClick={() => handleCheckStatus(request.trackingId)}
+                        disabled={isChecking}
+                        className="text-xs flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
+                      >
+                        <ArrowPathIcon className={`h-3 w-3 ${isChecking ? 'animate-spin' : ''}`} />
+                        {isChecking ? 'Checking...' : 'Check Status'}
+                      </button>
+                    )}
+                    {/* ------------------------------- */}
+                  </div>
                 </div>
                 
-                {/* --- Display Logic based on Status --- */}
+                {/* --- Display Logic --- */}
                 
                 {request.status === 'FAILED' && (
                   <div className="mt-2 rounded-md bg-red-50 p-3 border border-red-100">
                     <p className="text-xs font-bold text-red-800 uppercase mb-1">Failure Reason:</p>
                     <p className="text-sm text-red-700">
-                      {request.statusMessage || "Provider returned an error without a specific message."}
+                      {request.statusMessage || "Provider returned an error."}
                     </p>
                   </div>
                 )}
@@ -279,7 +305,6 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
                      )}
                    </div>
                 )}
-                {/* ----------------------- */}
 
               </div>
             );
