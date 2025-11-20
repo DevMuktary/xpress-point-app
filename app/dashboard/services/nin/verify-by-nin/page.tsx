@@ -1,10 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon, IdentificationIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import VerifyByNinClientPage from '@/components/VerifyByNinClientPage'; // We will create this
+import VerifyByNinClientPage from '@/components/VerifyByNinClientPage';
 import SafeImage from '@/components/SafeImage';
 
 export default async function VerifyByNinPage() {
@@ -24,13 +24,20 @@ export default async function VerifyByNinPage() {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
-            <ChevronLeftIcon className="h-6 w-6" />
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Verify by NIN</h1>
-        </div>
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
+          <ChevronLeftIcon className="h-6 w-6" />
+        </Link>
+        {/* Added the Logo for consistency */}
+        <SafeImage
+          src="/logos/nin.png"
+          alt="NIN Logo"
+          width={40}
+          height={40}
+          fallbackSrc="/logos/default.png"
+          className="rounded-full"
+        />
+        <h1 className="text-2xl font-bold text-gray-900">Verify by NIN</h1>
       </div>
       
       {/* 3. Pass the price to the Client Component */}
