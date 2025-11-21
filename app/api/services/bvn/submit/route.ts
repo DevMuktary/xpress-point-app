@@ -14,68 +14,105 @@ export async function POST(request: Request) {
     const { 
       serviceId, 
       formData,
-      // --- THIS IS THE FIX (Part 1) ---
-      // We now accept all possible file uploads
+      // File URLs
       failedEnrollmentUrl,
       vninSlipUrl,
       newspaperUrl
-      // ---------------------------------
     } = body; 
 
     if (!serviceId || !formData) {
       return NextResponse.json({ error: 'Service ID and Form Data are required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // 1. Get Service
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    const price = user.role === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice;
+    // --- PRICING LOGIC FIX ---
+    // Base price is ALWAYS defaultAgentPrice
+    const price = new Decimal(service.defaultAgentPrice);
+    // -------------------------
     
+    // 2. Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
-      return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
+      return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price.toString()}.` }, { status: 402 });
     }
 
-    // --- 2. Charge User & Save as PENDING ---
-    await prisma.$transaction([
-      // a) Charge wallet
-      prisma.wallet.update({
+    // --- COMMISSION LOGIC ---
+    let commissionAmount = new Decimal(0);
+    let aggregatorWalletId = null;
+
+    // If user is an Agent under an Aggregator, calculate commission
+    if (user.role === 'AGENT' && user.aggregatorId) {
+      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
+        where: {
+          aggregatorId_serviceId: {
+            aggregatorId: user.aggregatorId,
+            serviceId: serviceId
+          }
+        }
+      });
+
+      if (aggregatorPrice) {
+        commissionAmount = new Decimal(aggregatorPrice.commission);
+        // Set the aggregator ID to credit
+        aggregatorWalletId = user.aggregatorId;
+      }
+    }
+    // ------------------------
+
+    // 3. Execute Transaction
+    const priceAsString = price.toString();
+    const negatedPriceAsString = price.negated().toString();
+    const commissionAsString = commissionAmount.toString();
+
+    await prisma.$transaction(async (tx) => {
+      // a) Charge User Wallet
+      await tx.wallet.update({
         where: { userId: user.id },
-        data: { balance: { decrement: price } },
-      }),
-      // b) Create the new request
-      prisma.bvnRequest.create({
+        data: { balance: { decrement: priceAsString } }, // FIX: Use string
+      });
+
+      // b) Credit Aggregator Commission (if applicable)
+      if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
+        await tx.wallet.update({
+          where: { userId: aggregatorWalletId },
+          data: { commissionBalance: { increment: commissionAsString } } // FIX: Use string
+        });
+      }
+
+      // c) Create the new request
+      await tx.bvnRequest.create({
         data: {
           userId: user.id,
           serviceId: serviceId,
           status: 'PENDING',
           statusMessage: 'Request submitted. Awaiting admin review.',
           formData: formData as any,
-          // --- THIS IS THE FIX (Part 2) ---
+          
+          // File mappings
           failedEnrollmentUrl: failedEnrollmentUrl || null,
           vninSlipUrl: vninSlipUrl || null,
-          newspaperUrl: newspaperUrl || null // Save the new field
-          // ---------------------------------
+          newspaperUrl: newspaperUrl || null
         },
-      }),
-      // c) Log the transaction
-      prisma.transaction.create({
+      });
+
+      // d) Log the transaction
+      await tx.transaction.create({
         data: {
           userId: user.id,
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: price.negated(),
+          amount: negatedPriceAsString, // FIX: Use string
           description: `${service.name}`,
           reference: `BVN-MANUAL-${Date.now()}`,
           status: 'COMPLETED',
         },
-      }),
-    ]);
+      });
+    });
 
     return NextResponse.json(
       { message: 'Request submitted! Please go to the BVN History page to monitor your status.' },
