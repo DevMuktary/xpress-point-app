@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { IdentificationIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { IdentificationIcon, InformationCircleIcon, ChevronLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import SafeImage from '@/components/SafeImage';
 
