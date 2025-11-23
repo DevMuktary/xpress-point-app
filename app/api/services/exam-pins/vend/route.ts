@@ -5,7 +5,7 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 const VEND_ENDPOINT = 'https://cheapdatasales.com/autobiz_vending_index.php';
-const API_KEY = process.env.CHEAPDATASALES_API_KEY; // 'Bearer YOUR_KEY'
+const API_KEY = process.env.CHEAPDATASALES_API_KEY; 
 
 if (!API_KEY) {
   console.error("CRITICAL: CHEAPDATASALES_API_KEY is not set.");
@@ -45,6 +45,10 @@ export async function POST(request: Request) {
   let totalPrice: Decimal = new Decimal(0);
   let userReference: string = `XPS-FAILED-${Date.now()}`;
 
+  // Variables for Commission
+  let totalCommission: Decimal = new Decimal(0);
+  let aggregatorWalletId: string | null = null;
+
   try {
     const body = await request.json();
     const { serviceId, phoneNumber, quantity } = body; 
@@ -59,17 +63,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // --- THIS IS THE "WORLD-CLASS" FIX ---
-    // We now use the "refurbished" price fields
-    const pricePerPin = user.role === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice;
+    // --- PRICE FIX: Use Default Agent Price for Everyone ---
+    const pricePerPin = new Decimal(service.defaultAgentPrice);
     totalPrice = pricePerPin.mul(quantity);
-    // ------------------------------------
     
+    // Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(totalPrice)) {
       return NextResponse.json({ error: `Insufficient funds. This purchase costs ₦${totalPrice}.` }, { status: 402 });
+    }
+
+    // --- COMMISSION CALCULATION ---
+    // We calculate it here, but we only PAY it if the API call succeeds later.
+    if (user.role === 'AGENT' && user.aggregatorId) {
+      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
+        where: {
+          aggregatorId_serviceId: {
+            aggregatorId: user.aggregatorId,
+            serviceId: serviceId
+          }
+        }
+      });
+
+      if (aggregatorPrice) {
+        const commissionPerItem = new Decimal(aggregatorPrice.commission);
+        totalCommission = commissionPerItem.mul(quantity); // Multiply by quantity!
+        aggregatorWalletId = user.aggregatorId;
+      }
     }
 
     // --- 2. Charge User *before* API call ---
@@ -88,7 +108,7 @@ export async function POST(request: Request) {
           amount: totalPrice.negated(),
           description: `${service.name} (x${quantity}) for ${phoneNumber}`,
           reference: userReference,
-          status: 'PENDING', // Pending until API call succeeds
+          status: 'PENDING', 
         },
       }),
     ]);
@@ -104,27 +124,29 @@ export async function POST(request: Request) {
       },
       {
         headers: { 
-          'Authorization': API_KEY, // API key includes "Bearer"
+          'Authorization': API_KEY,
           'Content-Type': 'application/json' 
         },
-        timeout: 45000, // 45 seconds for VTU
+        timeout: 45000, 
       }
     );
 
     const data = response.data;
     
-    // --- 4. Handle "World-Class" Response ---
+    // --- 4. Handle Response ---
     if (data.status === true && data.text_status === 'COMPLETED' && data.data?.true_response) {
       // --- SUCCESS! ---
-      const pins = JSON.parse(data.data.true_response); // Parse the PINs
-      
-      // Update transaction and save pins
-      await prisma.$transaction([
-        prisma.transaction.update({
+      const pins = JSON.parse(data.data.true_response); 
+
+      await prisma.$transaction(async (tx) => {
+        // a) Complete Transaction
+        await tx.transaction.update({
           where: { reference: userReference },
           data: { status: 'COMPLETED' },
-        }),
-        prisma.examPinRequest.create({
+        });
+
+        // b) Save Pins
+        await tx.examPinRequest.create({
           data: {
             userId: user.id,
             serviceId: service.id,
@@ -135,8 +157,16 @@ export async function POST(request: Request) {
             apiResponse: data as any,
             pins: pins as any,
           }
-        })
-      ]);
+        });
+
+        // c) Credit Aggregator Commission (Only happens on success)
+        if (aggregatorWalletId && totalCommission.greaterThan(0)) {
+           await tx.wallet.update({
+             where: { userId: aggregatorWalletId },
+             data: { commissionBalance: { increment: totalCommission } }
+           });
+        }
+      });
 
       return NextResponse.json({
         message: data.server_message,
@@ -144,7 +174,7 @@ export async function POST(request: Request) {
       });
 
     } else {
-      // --- FAILED! "World-Class" Auto-Refund ---
+      // --- FAILED! Auto-Refund ---
       const errorMessage = data.server_message || data.data?.true_response || "Purchase failed.";
       
       await prisma.$transaction([
@@ -179,7 +209,7 @@ export async function POST(request: Request) {
     const errorMessage = parseApiError(error);
     console.error(`Exam Pin (Vend) Error:`, errorMessage);
     
-    // --- "WORLD-CLASS" CRASH-RECOVERY REFUND ---
+    // --- CRASH-RECOVERY REFUND ---
     if (totalPrice.greaterThan(0)) {
       console.log("CRITICAL ERROR: Refunding user due to server crash.");
       await prisma.$transaction([
@@ -199,4 +229,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+}/.,mnszzaaqqaa
