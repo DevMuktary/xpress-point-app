@@ -46,17 +46,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Phone number is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
+    // --- 1. Get Price & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // "World-class" pricing logic
-    const price = user.role === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice;
-    // --------------------------------------------------
+    // --- PRICE CHANGE ONLY (No Commission) ---
+    // Using defaultAgentPrice for everyone
+    const price = new Decimal(service.defaultAgentPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
@@ -64,7 +62,7 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // Using your "world-class" +234 logic
+    // Call API *before* charging (Safe for lookups)
     const phoneToSend = phone.startsWith('0') ? `+234${phone.substring(1)}` : phone;
 
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
@@ -82,12 +80,12 @@ export async function POST(request: Request) {
     
     const data = response.data;
     
-    // --- 3. Handle ConfirmIdent Response (Your "world-class" logic) ---
+    // --- 3. Handle ConfirmIdent Response ---
     if (data.data) {
       
       const responseData = data.data;
 
-      // --- 4. "World-Class" Data Mapping (Your "world-class" logic) ---
+      // --- 4. Data Mapping ---
       const mappedData = {
         photo: responseData.photo,
         firstname: responseData.firstname, 
@@ -135,21 +133,19 @@ export async function POST(request: Request) {
         }),
       ]);
 
-      // --- 6. Return Success Data to Frontend (THIS IS THE "WORLD-CLASS" FIX) ---
+      // --- 6. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
         where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { 
           id: true, 
-          defaultAgentPrice: true, // Refurbished
-          platformPrice: true      // Refurbished
+          defaultAgentPrice: true, 
         }
       });
       
       const getPrice = (id: string) => {
         const s = slipPrices.find(sp => sp.id === id);
-        if (!s) return 0;
-        // Refurbished
-        return user.role === 'AGGREGATOR' ? s.platformPrice : s.defaultAgentPrice;
+        // We now display defaultAgentPrice to everyone because that is what they will be charged
+        return s ? s.defaultAgentPrice : 0;
       };
 
       return NextResponse.json({
