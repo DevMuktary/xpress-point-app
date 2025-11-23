@@ -1,34 +1,47 @@
-"use client"; // This is an interactive component
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   CheckCircleIcon,
-  XMarkIcon,
   UserIcon,
   IdentificationIcon,
-  EnvelopeIcon,
   PhoneIcon,
+  EnvelopeIcon,
   HomeIcon,
-  ArrowUpTrayIcon,
+  MapPinIcon,
   ArrowPathIcon,
-  BuildingOfficeIcon,
   BriefcaseIcon,
-  CalendarDaysIcon // <-- THIS IS THE FIX
+  BuildingOfficeIcon,
+  XMarkIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
-// --- Type Definitions ---
+// --- Props Definition ---
 type Props = {
-  serviceId: string;
-  serviceName: string;
-  serviceFee: number;
+  prices: Record<string, number>; // Received from server
 };
 
-// --- Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
-  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
+// --- Helper Components ---
+const ModTypeButton = ({ title, description, selected, onClick }: {
+  title: string, description: string, selected: boolean, onClick: () => void
 }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`rounded-lg p-4 text-left transition-all border-2 w-full
+      ${selected
+        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+        : 'border-gray-300 bg-white hover:border-gray-400'
+      }`}
+  >
+    <p className="font-semibold text-gray-900">{title}</p>
+    <p className="text-sm text-blue-600 font-medium">{description}</p>
+  </button>
+);
+
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
     <div className="relative mt-1">
@@ -36,60 +49,139 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id} type={type} value={value}
+        id={id} type={type} value={value} required={isRequired} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired} placeholder={placeholder}
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
       />
     </div>
   </div>
 );
 
-// --- The Main Component ---
-export default function TinClientPage({ serviceId, serviceName, serviceFee }: Props) {
+const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: any) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="mt-1 flex items-center gap-4">
+      <input
+        id={id} type="file" onChange={onChange} accept="image/png, image/jpeg, application/pdf" required
+        className="flex-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+      />
+      {isUploading && <ArrowPathIcon className="h-5 w-5 animate-spin text-blue-600" />}
+      {fileUrl && <CheckCircleIcon className="h-6 w-6 text-green-600" />}
+    </div>
+    {file && <p className="text-xs text-gray-500 mt-1">{file.name}</p>}
+    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+  </div>
+);
+
+// --- MAIN COMPONENT ---
+export default function TinClientPage({ prices }: Props) {
   
   // --- State Management ---
-  const [isLoading, setIsLoading] = useState(false);
+  const [serviceType, setServiceType] = useState<'REG' | 'RETRIEVAL' | null>(null);
+  const [subType, setSubType] = useState<'PERSONAL' | 'BUSINESS' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<any | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-  // --- Form Data State ---
-  const [companyName, setCompanyName] = useState('');
-  const [rcNumber, setRcNumber] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [ownerPhone, setOwnerPhone] = useState('');
-  const [ownerEmail, setOwnerEmail] = useState('');
-  const [commencementDate, setCommencementDate] = useState('');
+  // --- Form Data States ---
+  const [bvn, setBvn] = useState('');
+  const [nin, setNin] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [address, setAddress] = useState('');
+  const [state, setState] = useState('');
+  const [lga, setLga] = useState('');
+  const [bizName, setBizName] = useState('');
+  const [bizNumber, setBizNumber] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [dob, setDob] = useState('');
+  const [incorpDate, setIncorpDate] = useState('');
 
-  // --- Handle Open Confirmation Modal ---
+  // --- File Upload State ---
+  const [statusReportFile, setStatusReportFile] = useState<File | null>(null);
+  const [statusReportUrl, setStatusReportUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // --- Dynamic Fee Calculation ---
+  const { serviceId, fee } = useMemo(() => {
+    let id = '';
+    if (serviceType === 'REG' && subType === 'PERSONAL') id = 'TIN_REG_PERSONAL';
+    else if (serviceType === 'REG' && subType === 'BUSINESS') id = 'TIN_REG_BUSINESS';
+    else if (serviceType === 'RETRIEVAL' && subType === 'PERSONAL') id = 'TIN_RETRIEVAL_PERSONAL';
+    else if (serviceType === 'RETRIEVAL' && subType === 'BUSINESS') id = 'TIN_RETRIEVAL_BUSINESS';
+    
+    return { serviceId: id, fee: prices[id] || 0 };
+  }, [serviceType, subType, prices]);
+
+  // --- Reset Sub-forms ---
+  const handleServiceTypeChange = (type: 'REG' | 'RETRIEVAL') => {
+    setServiceType(type);
+    setSubType(null); 
+  };
+
+  // --- File Upload Handler ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    
+    setStatusReportFile(file);
+    setIsUploading(true);
+    setUploadError(null);
+    setStatusReportUrl(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('attestation', file); 
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setStatusReportUrl(data.url);
+    } catch (err: any) {
+      setUploadError(err.message);
+      setStatusReportFile(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // --- Step 1: Open Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    setReceipt(null);
+    setSuccess(null);
+
+    if (!serviceId) {
+      setSubmitError("Please select a service type and sub-type.");
+      return;
+    }
+    if (serviceType === 'REG' && subType === 'BUSINESS' && !statusReportUrl) {
+      setSubmitError("Please wait for the Status Report to finish uploading.");
+      return;
+    }
+    
     setIsConfirmModalOpen(true);
   };
   
-  // --- This is the *final* submit ---
+  // --- Step 2: Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
-    setIsLoading(true);
+    setIsSubmitting(true);
     
-    // Consolidate all form data
-    const formData: any = {
-      ownerName,
-      ownerPhone,
-      ownerEmail,
-    };
+    let formData: any = {};
 
-    if (serviceId.includes('REG')) {
-      formData.companyName = companyName;
-      formData.rcNumber = rcNumber || 'N/A';
-      formData.commencementDate = commencementDate;
-    } else {
-      // For Retrieval
-      formData.companyName = companyName;
-      formData.rcNumber = rcNumber;
+    if (serviceType === 'REG' && subType === 'PERSONAL') {
+      formData = { bvn, nin, email, phone, firstName, lastName, middleName, address, state, lga };
+    } else if (serviceType === 'REG' && subType === 'BUSINESS') {
+      formData = { bizName, bizNumber };
+    } else if (serviceType === 'RETRIEVAL' && subType === 'PERSONAL') {
+      formData = { bvnOrNin: bvn, fullName, dob }; // Re-using 'bvn' state for input
+    } else if (serviceType === 'RETRIEVAL' && subType === 'BUSINESS') {
+      formData = { bizName, bizNumber, incorpDate };
     }
 
     try {
@@ -97,169 +189,199 @@ export default function TinClientPage({ serviceId, serviceName, serviceFee }: Pr
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          serviceId: serviceId, 
+          serviceId, 
           formData, 
+          statusReportUrl: statusReportUrl || null
         }),
       });
       
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Submission failed.');
-      }
+      if (!response.ok) throw new Error(data.error);
       
-      setReceipt({
-        message: data.message,
-        serviceName: serviceName,
-        status: "PENDING",
-      });
-      
-      // Reset the form
-      setCompanyName(''); setRcNumber(''); setOwnerName('');
-      setOwnerPhone(''); setOwnerEmail(''); setCommencementDate('');
+      setSuccess(data.message);
+      window.scrollTo(0, 0);
+
+      // Reset Form
+      setServiceType(null); setSubType(null);
+      setBvn(''); setNin(''); setEmail(''); setPhone(''); setFirstName(''); setLastName(''); setMiddleName(''); setAddress(''); setState(''); setLga('');
+      setBizName(''); setBizNumber(''); setTin(''); setFullName(''); setDob(''); setIncorpDate('');
+      setStatusReportFile(null); setStatusReportUrl(null);
 
     } catch (err: any) {
       setSubmitError(err.message);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
-
-  const closeReceiptModal = () => {
-    setReceipt(null);
   };
   
   return (
     <div className="space-y-6">
-      {(isLoading) && <Loading />}
+      {(isSubmitting) && <Loading />}
       
-      {/* --- The "Submit New Request" Form --- */}
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
-        <form onSubmit={handleOpenConfirmModal} className="space-y-6">
-          
-          <h3 className="text-lg font-semibold text-gray-900">Enter Request Details</h3>
-          
-          {/* Conditional Fields */}
-          <div className="space-y-4">
-            <DataInput label="Company / Business Name*" id="companyName" value={companyName} onChange={setCompanyName} Icon={BriefcaseIcon} />
-            <DataInput 
-              label={serviceId.includes('REG') ? "RC/BN Number (if available)" : "RC/BN Number*"}
-              id="rcNumber" 
-              value={rcNumber} 
-              onChange={setRcNumber} 
-              Icon={IdentificationIcon} 
-              isRequired={!serviceId.includes('REG')} 
-            />
-            {serviceId.includes('REG') && (
-              <DataInput label="Business Commencement Date*" id="commencementDate" value={commencementDate} onChange={setCommencementDate} Icon={CalendarDaysIcon} type="date" />
-            )}
-          </div>
-          
-          <fieldset className="rounded-lg border border-gray-300 p-4">
-            <legend className="text-sm font-medium text-gray-700 px-2">Owner/Proprietor Details</legend>
-            <div className="space-y-4">
-              <DataInput label="Owner's Full Name*" id="ownerName" value={ownerName} onChange={setOwnerName} Icon={UserIcon} />
-              <DataInput label="Owner's Phone Number*" id="ownerPhone" value={ownerPhone} onChange={setOwnerPhone} Icon={PhoneIcon} type="tel" />
-              <DataInput label="Owner's Email*" id="ownerEmail" value={ownerEmail} onChange={setOwnerEmail} Icon={EnvelopeIcon} type="email" />
-            </div>
-          </fieldset>
-          
-          {/* --- Submit Button --- */}
-          <div className="border-t border-gray-200 pt-6">
-            {submitError && (
-              <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
-            )}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${serviceFee})`}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* --- Confirmation Modal --- */}
-      {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Please Confirm
-              </h2>
-              <button onClick={() => setIsConfirmModalOpen(false)}>
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-center text-gray-600">
-                Please confirm you have filled in the right details. This action is irreversible.
-              </p>
-              <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{serviceFee}
-              </p>
-            </div>
-            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <button
-                onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
-              >
-                CANCEL
-              </button>
-              <button
-                onClick={handleFinalSubmit}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                YES, SUBMIT
-              </button>
-            </div>
+      {success && (
+        <div className="rounded-lg bg-green-50 p-4 border border-green-200 flex gap-3">
+          <CheckCircleIcon className="h-5 w-5 text-green-600" />
+          <div>
+            <h3 className="text-sm font-bold text-green-800">Success!</h3>
+            <p className="text-sm text-green-700 mt-1">{success}</p>
+            <Link href="/dashboard/history/tin" className="text-sm font-semibold underline text-green-800 mt-2 block">
+              View History
+            </Link>
           </div>
         </div>
       )}
 
-      {/* --- Success Modal (Receipt) --- */}
-      {receipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-            <div className="p-6">
-              <div className="flex flex-col items-center justify-center">
-                <CheckCircleIcon className="h-16 w-16 text-green-500" />
-                <h2 className="mt-4 text-xl font-bold text-gray-900">
-                  Request Submitted
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  {receipt.message}
-                </p>
-                
-                <div className="w-full mt-6 space-y-2 rounded-lg border bg-gray-50 p-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-500">Service:</span>
-                    <span className="text-sm font-semibold text-gray-900">{receipt.serviceName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-500">Status:</span>
-                    <span className="text-sm font-semibold text-yellow-600">{receipt.status}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-500">Amount:</span>
-                    <span className="text-sm font-semibold text-gray-900">₦{serviceFee}</span>
-                  </div>
-                </div>
+      <div className="rounded-2xl bg-white p-6 shadow-lg">
+        <form onSubmit={handleOpenConfirmModal} className="space-y-8">
+          
+          {/* 1. Service Type */}
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">1. Select Service Type</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ModTypeButton
+                title="JTB-TIN Registration"
+                description="Register a new TIN"
+                selected={serviceType === 'REG'}
+                onClick={() => handleServiceTypeChange('REG')}
+              />
+              <ModTypeButton
+                title="JTB-TIN Retrieval"
+                description="Retrieve existing certificate"
+                selected={serviceType === 'RETRIEVAL'}
+                onClick={() => handleServiceTypeChange('RETRIEVAL')}
+              />
+            </div>
+          </div>
+
+          {/* 2. Sub-Type */}
+          {serviceType && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">2. Select Category</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ModTypeButton
+                  title="Personal"
+                  description={`Fee: ₦${prices[`TIN_${serviceType}_PERSONAL`]?.toLocaleString() || '...'}`}
+                  selected={subType === 'PERSONAL'}
+                  onClick={() => setSubType('PERSONAL')}
+                />
+                <ModTypeButton
+                  title="Business"
+                  description={`Fee: ₦${prices[`TIN_${serviceType}_BUSINESS`]?.toLocaleString() || '...'}`}
+                  selected={subType === 'BUSINESS'}
+                  onClick={() => setSubType('BUSINESS')}
+                />
               </div>
             </div>
-            
-            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <Link
-                href="/dashboard/history/tin" // We will create this history page later
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
-              >
-                Check History
-              </Link>
+          )}
+
+          {/* 3. Conditional Fields */}
+          {subType && (
+            <div className="animate-in fade-in slide-in-from-top-4 duration-300 border-t border-gray-100 pt-6 space-y-6">
+              <h3 className="text-lg font-bold text-gray-900">3. Enter Details</h3>
+              
+              {/* === REGISTRATION - PERSONAL === */}
+              {serviceType === 'REG' && subType === 'PERSONAL' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DataInput label="BVN Number*" id="bvn" value={bvn} onChange={setBvn} Icon={IdentificationIcon} type="tel" />
+                  <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} type="tel" />
+                  <DataInput label="Email*" id="email" value={email} onChange={setEmail} Icon={EnvelopeIcon} type="email" />
+                  <DataInput label="Phone Number*" id="phone" value={phone} onChange={setPhone} Icon={PhoneIcon} type="tel" />
+                  <DataInput label="First Name*" id="fname" value={firstName} onChange={setFirstName} Icon={UserIcon} />
+                  <DataInput label="Last Name*" id="lname" value={lastName} onChange={setLastName} Icon={UserIcon} />
+                  <DataInput label="Middle Name" id="mname" value={middleName} onChange={setMiddleName} Icon={UserIcon} isRequired={false} />
+                  <div className="md:col-span-2">
+                    <DataInput label="Full Address*" id="address" value={address} onChange={setAddress} Icon={HomeIcon} />
+                  </div>
+                  <DataInput label="State*" id="state" value={state} onChange={setState} Icon={MapPinIcon} />
+                  <DataInput label="LGA*" id="lga" value={lga} onChange={setLga} Icon={MapPinIcon} />
+                </div>
+              )}
+
+              {/* === REGISTRATION - BUSINESS === */}
+              {serviceType === 'REG' && subType === 'BUSINESS' && (
+                <div className="space-y-4">
+                  <DataInput label="Business Name*" id="bizName" value={bizName} onChange={setBizName} Icon={BriefcaseIcon} />
+                  <DataInput label="BN/RC Number*" id="bizNumber" value={bizNumber} onChange={setBizNumber} Icon={BuildingOfficeIcon} />
+                  <FileUpload 
+                    label="Upload Status Report*" id="statusReport" 
+                    file={statusReportFile} fileUrl={statusReportUrl} 
+                    isUploading={isUploading} error={uploadError}
+                    onChange={handleFileUpload} 
+                  />
+                </div>
+              )}
+
+              {/* === RETRIEVAL - PERSONAL === */}
+              {serviceType === 'RETRIEVAL' && subType === 'PERSONAL' && (
+                <div className="space-y-4">
+                  <DataInput label="BVN or TIN Number*" id="bvnOrNin" value={bvn} onChange={setBvn} Icon={IdentificationIcon} />
+                  <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />
+                  <DataInput label="Date of Birth*" id="dob" value={dob} onChange={setDob} Icon={CalendarDaysIcon} type="date" />
+                </div>
+              )}
+
+              {/* === RETRIEVAL - BUSINESS === */}
+              {serviceType === 'RETRIEVAL' && subType === 'BUSINESS' && (
+                <div className="space-y-4">
+                  <DataInput label="Business Name*" id="bizName" value={bizName} onChange={setBizName} Icon={BriefcaseIcon} />
+                  <DataInput label="CAC BN/RC Number*" id="bizNumber" value={bizNumber} onChange={setBizNumber} Icon={BuildingOfficeIcon} />
+                  <DataInput label="Date of Incorporation*" id="incorpDate" value={incorpDate} onChange={setIncorpDate} Icon={CalendarDaysIcon} type="date" />
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* 4. Submit Button */}
+          {subType && (
+            <div className="pt-6 border-t border-gray-100">
+              <p className="text-sm font-medium text-red-600 text-center mb-4 bg-red-50 p-2 rounded">
+                Please confirm details are correct. This action is irreversible.
+              </p>
+
+              {submitError && (
+                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+              )}
               <button
-                onClick={closeReceiptModal}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                type="submit"
+                disabled={isSubmitting || isUploading}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                Submit Another
+                {isSubmitting ? 'Submitting...' : `Submit Request (₦${fee.toLocaleString()})`}
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
+
+      {/* Confirmation Modal */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-4">
+                <CheckCircleIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Confirm Submission</h3>
+              <p className="text-gray-500 mt-2 text-sm">
+                Please verify all details.
+              </p>
+              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                <p className="text-sm text-blue-600 font-medium">Total Charge</p>
+                <p className="text-2xl font-bold text-blue-700">₦{fee.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 border-t border-gray-100">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="p-4 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFinalSubmit}
+                className="p-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                Yes, Submit
               </button>
             </div>
           </div>
