@@ -179,7 +179,7 @@ export default function TinClientPage({ prices }: Props) {
     } else if (serviceType === 'REG' && subType === 'BUSINESS') {
       formData = { bizName, bizNumber };
     } else if (serviceType === 'RETRIEVAL' && subType === 'PERSONAL') {
-      formData = { bvnOrNin: bvn, fullName, dob }; // Re-using 'bvn' state for input
+      formData = { bvnOrNin: bvn, fullName, dob }; 
     } else if (serviceType === 'RETRIEVAL' && subType === 'BUSINESS') {
       formData = { bizName, bizNumber, incorpDate };
     }
@@ -204,7 +204,7 @@ export default function TinClientPage({ prices }: Props) {
       // Reset Form
       setServiceType(null); setSubType(null);
       setBvn(''); setNin(''); setEmail(''); setPhone(''); setFirstName(''); setLastName(''); setMiddleName(''); setAddress(''); setState(''); setLga('');
-      setBizName(''); setBizNumber(''); setTin(''); setFullName(''); setDob(''); setIncorpDate('');
+      setBizName(''); setBizNumber(''); setFullName(''); setDob(''); setIncorpDate('');
       setStatusReportFile(null); setStatusReportUrl(null);
 
     } catch (err: any) {
