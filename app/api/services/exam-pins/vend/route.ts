@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
-  // --- We must get these from the transaction ---
+  // --- Initialize Variables ---
   let service: any = null;
   let totalPrice: Decimal = new Decimal(0);
   let userReference: string = `XPS-FAILED-${Date.now()}`;
@@ -70,11 +70,10 @@ export async function POST(request: Request) {
     // Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(totalPrice)) {
-      return NextResponse.json({ error: `Insufficient funds. This purchase costs ₦${totalPrice}.` }, { status: 402 });
+      return NextResponse.json({ error: `Insufficient funds. This purchase costs ₦${totalPrice.toString()}.` }, { status: 402 });
     }
 
     // --- COMMISSION CALCULATION ---
-    // We calculate it here, but we only PAY it if the API call succeeds later.
     if (user.role === 'AGENT' && user.aggregatorId) {
       const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
         where: {
@@ -87,18 +86,19 @@ export async function POST(request: Request) {
 
       if (aggregatorPrice) {
         const commissionPerItem = new Decimal(aggregatorPrice.commission);
-        totalCommission = commissionPerItem.mul(quantity); // Multiply by quantity!
+        totalCommission = commissionPerItem.mul(quantity); 
         aggregatorWalletId = user.aggregatorId;
       }
     }
 
     // --- 2. Charge User *before* API call ---
     userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
+    const totalPriceString = totalPrice.toString(); // Convert to string for Prisma
     
     await prisma.$transaction([
       prisma.wallet.update({
         where: { userId: user.id },
-        data: { balance: { decrement: totalPrice } },
+        data: { balance: { decrement: totalPriceString } },
       }),
       prisma.transaction.create({
         data: {
@@ -137,6 +137,7 @@ export async function POST(request: Request) {
     if (data.status === true && data.text_status === 'COMPLETED' && data.data?.true_response) {
       // --- SUCCESS! ---
       const pins = JSON.parse(data.data.true_response); 
+      const totalCommissionString = totalCommission.toString();
 
       await prisma.$transaction(async (tx) => {
         // a) Complete Transaction
@@ -146,10 +147,11 @@ export async function POST(request: Request) {
         });
 
         // b) Save Pins
+        // Use 'service.id' safely here because we are in the success block implies service exists
         await tx.examPinRequest.create({
           data: {
             userId: user.id,
-            serviceId: service.id,
+            serviceId: service.id, 
             userReference: userReference,
             phoneNumber: phoneNumber,
             quantity: quantity,
@@ -163,7 +165,7 @@ export async function POST(request: Request) {
         if (aggregatorWalletId && totalCommission.greaterThan(0)) {
            await tx.wallet.update({
              where: { userId: aggregatorWalletId },
-             data: { commissionBalance: { increment: totalCommission } }
+             data: { commissionBalance: { increment: totalCommissionString } }
            });
         }
       });
@@ -176,12 +178,13 @@ export async function POST(request: Request) {
     } else {
       // --- FAILED! Auto-Refund ---
       const errorMessage = data.server_message || data.data?.true_response || "Purchase failed.";
-      
+      const totalPriceString = totalPrice.toString();
+
       await prisma.$transaction([
         // a) Refund the wallet
         prisma.wallet.update({
           where: { userId: user.id },
-          data: { balance: { increment: totalPrice } },
+          data: { balance: { increment: totalPriceString } },
         }),
         // b) Mark transaction as FAILED
         prisma.transaction.update({
@@ -210,17 +213,32 @@ export async function POST(request: Request) {
     console.error(`Exam Pin (Vend) Error:`, errorMessage);
     
     // --- CRASH-RECOVERY REFUND ---
-    if (totalPrice.greaterThan(0)) {
+    // Only refund if we have a valid Service and Price (meaning step 1 passed)
+    if (service && totalPrice.greaterThan(0)) {
       console.log("CRITICAL ERROR: Refunding user due to server crash.");
+      const totalPriceString = totalPrice.toString();
+      
       await prisma.$transaction([
         prisma.wallet.update({
           where: { userId: user!.id },
-          data: { balance: { increment: totalPrice } },
+          data: { balance: { increment: totalPriceString } },
         }),
         prisma.transaction.update({
           where: { reference: userReference },
           data: { status: 'FAILED' },
         }),
+        // Only try to log the pin request if we have the service ID
+        prisma.examPinRequest.create({
+          data: {
+            userId: user!.id,
+            serviceId: service.id,
+            userReference: userReference,
+            phoneNumber: (request as any).phoneNumber || "Unknown", // Safe fallback
+            quantity: 1, // Fallback
+            status: 'FAILED',
+            apiResponse: { error: errorMessage } as any,
+          }
+        })
       ]);
     }
     
@@ -229,4 +247,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}/.,mnszzaaqqaa
+}
