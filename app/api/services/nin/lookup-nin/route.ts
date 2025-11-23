@@ -49,17 +49,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'NIN is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
+    // --- 1. Get Service & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // "World-class" pricing logic
-    const price = user.role === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice;
-    // --------------------------------------------------
+    // --- PRICE CHANGE ONLY (No Commission) ---
+    // Using defaultAgentPrice for everyone
+    const price = new Decimal(service.defaultAgentPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
@@ -67,6 +65,7 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
+    // We call API *before* charging to prevent charging for failed lookups (safe for lookups)
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
       { 
         nin: nin,
@@ -91,10 +90,10 @@ export async function POST(request: Request) {
     
     const responseData = data.data;
 
-    // --- 4. "World-Class" Data Mapping ---
+    // --- 4. Data Mapping ---
     const mappedData = {
       photo: responseData.photo,
-      firstname: responseData.firs_tname, // Handling their typo
+      firstname: responseData.firs_tname, 
       surname: responseData.last_name,
       middlename: responseData.middlename,
       birthdate: responseData.birthdate.replace(/-/g, '-'),
@@ -139,23 +138,22 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // --- 6. Return Success Data to Frontend (THIS IS THE "WORLD-CLASS" FIX) ---
+    // --- 6. Return Success Data to Frontend ---
     const slipPrices = await prisma.service.findMany({
       where: {
         id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
       },
       select: {
         id: true,
-        defaultAgentPrice: true, // Refurbished
-        platformPrice: true     // Refurbished
+        defaultAgentPrice: true, 
       }
     });
     
     const getPrice = (id: string) => {
       const s = slipPrices.find(sp => sp.id === id);
-      if (!s) return 0;
-      // Refurbished
-      return user.role === 'AGGREGATOR' ? s.platformPrice : s.defaultAgentPrice;
+      // We now display defaultAgentPrice to everyone because that is what they will be charged
+      // when they try to print the slip (based on the previous file we updated).
+      return s ? s.defaultAgentPrice : 0;
     };
 
     return NextResponse.json({
