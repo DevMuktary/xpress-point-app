@@ -13,24 +13,24 @@ export default async function CacServicesPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // --- 1. Fetch Real Prices from DB ---
+  // --- 1. Fetch Services from DB ---
   const serviceIds = ['CAC_REG_BN', 'CAC_DOC_RETRIEVAL'];
   const services = await prisma.service.findMany({
     where: { id: { in: serviceIds } }
   });
 
-  // --- 2. Create a Price Map based on User Role ---
-  // This ensures the frontend shows exactly what the backend will charge
+  // --- 2. Create Price Map ---
   const prices: Record<string, number> = {};
   
   serviceIds.forEach(id => {
     const service = services.find(s => s.id === id);
     if (service) {
-      prices[id] = user.role === 'AGGREGATOR' 
-        ? Number(service.platformPrice) 
-        : Number(service.defaultAgentPrice);
+      // --- FIX: Always display Default Agent Price ---
+      // This matches your backend logic: Everyone is charged Agent Price, 
+      // and Aggregators get their commission credited separately.
+      prices[id] = Number(service.defaultAgentPrice); 
     } else {
-      prices[id] = 0; // Fallback
+      prices[id] = 0; 
     }
   });
 
@@ -60,4 +60,3 @@ export default async function CacServicesPage() {
     </div>
   );
 }
- 
