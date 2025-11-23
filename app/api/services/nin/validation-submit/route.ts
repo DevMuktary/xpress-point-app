@@ -46,24 +46,22 @@ export async function POST(request: Request) {
     
     const serviceId = `NIN_VALIDATION_${scode}`;
 
-    // --- 1. Get Price & Check Wallet (THIS IS THE "WORLD-CLASS" FIX) ---
+    // --- 1. Get Service & Price (Standardized) ---
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // "World-class" pricing logic
-    const price = user.role === 'AGGREGATOR' 
-      ? service.platformPrice 
-      : service.defaultAgentPrice;
-    // --------------------------------------------------
+    // PRICE FIX: Use Default Agent Price for everyone
+    const price = new Decimal(service.defaultAgentPrice);
 
+    // Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
     }
 
-    // --- 2. Check if this request already exists ---
+    // --- 2. Check for Duplicates ---
     const existingRequest = await prisma.validationRequest.findFirst({
       where: { userId: user.id, nin: nin, scode: scode }
     });
@@ -71,7 +69,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You have already submitted this validation request.' }, { status: 409 });
     }
 
-    // --- 3. Call External API (Raudah) ---
+    // --- 3. Calculate Commission (Prep) ---
+    // We calculate this now, but only pay it if the API call succeeds later.
+    let commissionAmount = new Decimal(0);
+    let aggregatorWalletId = null;
+
+    if (user.role === 'AGENT' && user.aggregatorId) {
+      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
+        where: {
+          aggregatorId_serviceId: {
+            aggregatorId: user.aggregatorId,
+            serviceId: serviceId
+          }
+        }
+      });
+
+      if (aggregatorPrice) {
+        commissionAmount = new Decimal(aggregatorPrice.commission);
+        aggregatorWalletId = user.aggregatorId;
+      }
+    }
+
+    // --- 4. Call External API (Raudah) ---
+    // API Call happens BEFORE charging to support Auto-Refund logic safely
     const response = await axios.post(SUBMIT_ENDPOINT, 
       { 
         nin: nin,
@@ -89,7 +109,7 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 4. "World-Class" Auto-Refund Logic ---
+    // --- 5. Auto-Refund Logic ---
     if (data.response_code && REFUND_CODES.includes(data.response_code)) {
       console.log(`NIN Validation Auto-Refund: ${data.message}`);
       return NextResponse.json({ error: `Sorry 😞 ${data.message}` }, { status: 400 });
@@ -99,13 +119,27 @@ export async function POST(request: Request) {
       throw new Error(data.message || "Submission failed. Please check the NIN and Reason.");
     }
 
-    // --- 5. Charge User & Save as PROCESSING ---
-    await prisma.$transaction([
-      prisma.wallet.update({
+    // --- 6. Execute Transaction ---
+    const priceAsString = price.toString();
+    const commissionAsString = commissionAmount.toString();
+
+    await prisma.$transaction(async (tx) => {
+      // a) Charge User Wallet
+      await tx.wallet.update({
         where: { userId: user.id },
-        data: { balance: { decrement: price } },
-      }),
-      prisma.validationRequest.upsert({
+        data: { balance: { decrement: priceAsString } },
+      });
+
+      // b) Credit Aggregator (The new logic)
+      if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
+        await tx.wallet.update({
+          where: { userId: aggregatorWalletId },
+          data: { commissionBalance: { increment: commissionAsString } }
+        });
+      }
+
+      // c) Upsert Request
+      await tx.validationRequest.upsert({
         where: {
           userId_nin_scode: {
             userId: user.id,
@@ -124,8 +158,10 @@ export async function POST(request: Request) {
           status: 'PROCESSING',
           statusMessage: 'Submitted. Awaiting completion.'
         },
-      }),
-      prisma.transaction.create({
+      });
+
+      // d) Log Transaction
+      await tx.transaction.create({
         data: {
           userId: user.id,
           serviceId: service.id,
@@ -135,8 +171,8 @@ export async function POST(request: Request) {
           reference: data.transactionReference || `NIN-VAL-${Date.now()}`,
           status: 'COMPLETED',
         },
-      }),
-    ]);
+      });
+    });
 
     return NextResponse.json(
       { message: 'Request submitted successfully! You can check the status shortly.' },
