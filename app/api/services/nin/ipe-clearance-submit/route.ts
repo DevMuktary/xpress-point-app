@@ -7,7 +7,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 // Get API credentials
 const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
 const SUBMIT_ENDPOINT = 'https://raudah.com.ng/api/nin/ipe-clearance';
-const REFUND_CODES = ["404", "405", "406", "407", "409"]; // Your "auto-refund" codes
+const REFUND_CODES = ["404", "405", "406", "407", "409"]; 
 
 if (!RAUDAH_API_KEY) {
   console.error("CRITICAL: RAUDAH_API_KEY is not set.");
@@ -44,19 +44,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tracking ID is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
-    const service = await prisma.service.findUnique({ where: { id: 'NIN_IPE_CLEARANCE' } });
+    // --- 1. Get Service & Price (Standardized) ---
+    // Hardcoded ID for IPE Clearance
+    const serviceId = 'NIN_IPE_CLEARANCE';
+    const service = await prisma.service.findUnique({ where: { id: serviceId } });
+    
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
-    const price = user.role === 'AGGREGATOR' ? service.platformPrice : service.defaultAgentPrice;
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    
+    // PRICE FIX: Use Default Agent Price for everyone
+    const price = new Decimal(service.defaultAgentPrice);
 
+    // Check Wallet
+    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
-      return NextResponse.json({ error: 'Insufficient funds for this service.' }, { status: 402 });
+      return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
     }
 
-    // --- 2. Check if this request already exists ---
+    // --- 2. Check for Duplicates ---
     const existingRequest = await prisma.ipeRequest.findFirst({
       where: { 
         userId: user.id, 
@@ -68,7 +74,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You already have a pending or processing request for this Tracking ID.' }, { status: 409 });
     }
 
-    // --- 3. Call External API (Raudah) ---
+    // --- 3. Calculate Commission (Prep) ---
+    // We calculate this now, but only credit it if the API call succeeds later.
+    let commissionAmount = new Decimal(0);
+    let aggregatorWalletId = null;
+
+    if (user.role === 'AGENT' && user.aggregatorId) {
+      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
+        where: {
+          aggregatorId_serviceId: {
+            aggregatorId: user.aggregatorId,
+            serviceId: serviceId
+          }
+        }
+      });
+
+      if (aggregatorPrice) {
+        commissionAmount = new Decimal(aggregatorPrice.commission);
+        aggregatorWalletId = user.aggregatorId;
+      }
+    }
+
+    // --- 4. Call External API (Raudah) ---
+    // We call API *before* charging (as per your specific IPE flow)
     const response = await axios.post(SUBMIT_ENDPOINT, 
       { 
         value: trackingId,
@@ -85,33 +113,48 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 4. "World-Class" Auto-Refund Logic ---
+    // --- 5. "World-Class" Auto-Refund Logic ---
     if (data.response_code && REFUND_CODES.includes(data.response_code)) {
       console.log(`IPE Auto-Refund: ${data.message}`);
       return NextResponse.json({ error: `Sorry 😞 ${data.message}` }, { status: 400 });
     }
     
-    // --- THIS IS THE "WORLD-CLASS" FIX ---
-    // We "refurbish" the logic to check for BOTH "stunning" success types
+    // --- 6. Handle Success ---
     const isSuccess1 = (data.response_code === "00" && data.transactionStatus === "SUCCESSFUL");
     const isSuccess2 = (data.status === "Successful" && data.reply);
 
     if (isSuccess1 || isSuccess2) {
-      // --- "Stunning" Success! Now we charge and save. ---
-      await prisma.$transaction([
-        prisma.wallet.update({
+      const priceAsString = price.toString();
+      const commissionAsString = commissionAmount.toString();
+
+      // --- EXECUTE TRANSACTION ---
+      await prisma.$transaction(async (tx) => {
+        // a) Charge User
+        await tx.wallet.update({
           where: { userId: user.id },
-          data: { balance: { decrement: price } },
-        }),
-        prisma.ipeRequest.create({
+          data: { balance: { decrement: priceAsString } },
+        });
+
+        // b) Credit Aggregator (The new logic)
+        if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
+          await tx.wallet.update({
+            where: { userId: aggregatorWalletId },
+            data: { commissionBalance: { increment: commissionAsString } }
+          });
+        }
+
+        // c) Create IPE Request
+        await tx.ipeRequest.create({
           data: {
             userId: user.id,
             trackingId: trackingId,
             status: 'PROCESSING',
             statusMessage: 'Submitted. Awaiting completion.'
           },
-        }),
-        prisma.transaction.create({
+        });
+
+        // d) Log Transaction
+        await tx.transaction.create({
           data: {
             userId: user.id,
             serviceId: service.id,
@@ -121,8 +164,8 @@ export async function POST(request: Request) {
             reference: data.transactionReference || data.reply || `IPE-${Date.now()}`,
             status: 'COMPLETED',
           },
-        }),
-      ]);
+        });
+      });
 
       return NextResponse.json(
         { message: data.message || 'Request submitted successfully! You can check the status shortly.' },
@@ -130,7 +173,7 @@ export async function POST(request: Request) {
       );
       
     } else {
-      // --- "Rubbish" Failure ---
+      // --- Failure ---
       throw new Error(data.message || data.description || "Submission failed. Please check the Tracking ID.");
     }
 
