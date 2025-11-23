@@ -5,7 +5,7 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 const VEND_ENDPOINT = 'https://cheapdatasales.com/autobiz_vending_index.php';
-const API_KEY = process.env.CHEAPDATASALES_API_KEY; // 'Bearer YOUR_KEY'
+const API_KEY = process.env.CHEAPDATASALES_API_KEY; 
 
 if (!API_KEY) {
   console.error("CRITICAL: CHEAPDATASALES_API_KEY is not set.");
@@ -59,37 +59,35 @@ export async function POST(request: Request) {
     let apiPayload: any;
     userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
     
-    // --- 2. "World-Class" Dynamic Logic (THIS IS THE FIX) ---
+    // --- 2. Calculate Price (Standardized - No Earnings for Aggregators) ---
+    // We use defaultAgentPrice for everyone.
+    
     if (service.category === 'VTU_AIRTIME') {
       if (!phoneNumber || !amount) {
         return NextResponse.json({ error: 'Phone number and amount are required.' }, { status: 400 });
       }
       const amountDecimal = new Decimal(amount);
       
-      // "World-class" price is a percentage (e.g., 98.00)
-      const pricePercent = user.role === 'AGGREGATOR' 
-        ? service.platformPrice 
-        : service.defaultAgentPrice;
+      // Use defaultAgentPrice as the percentage for everyone
+      const pricePercent = service.defaultAgentPrice;
       
-      totalPrice = amountDecimal.times(pricePercent.dividedBy(100)); // e.g., 100 * (98 / 100) = 98
+      totalPrice = amountDecimal.times(pricePercent.dividedBy(100)); 
       
       apiPayload = {
         product_code: service.productCode,
         phone_number: phoneNumber,
-        amount: amount, // Send the *full* amount
+        amount: amount, 
         action: 'vend',
         user_reference: userReference,
         bypass_network: 'yes'
       };
-    } else if (service.category.startsWith('VTU_DATA')) { // Fix for all data types
+    } else if (service.category.startsWith('VTU_DATA')) { 
       if (!phoneNumber) {
         return NextResponse.json({ error: 'Phone number is required.' }, { status: 400 });
       }
       
-      // "World-class" price is a fixed fee
-      const pricePerPlan = user.role === 'AGGREGATOR' 
-        ? service.platformPrice 
-        : service.defaultAgentPrice;
+      // Use defaultAgentPrice as the fixed fee for everyone
+      const pricePerPlan = service.defaultAgentPrice;
       totalPrice = pricePerPlan.mul(quantity);
       
       apiPayload = {
@@ -140,7 +138,7 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 5. "World-Class" Refurbished Response ---
+    // --- 5. Handle Response (No Commission) ---
     if (data.status === true && (data.text_status === 'COMPLETED' || data.text_status === 'PENDING')) {
       // --- SUCCESS! ---
       let pins = null;
@@ -149,6 +147,7 @@ export async function POST(request: Request) {
         catch { pins = data.data.true_response; }
       }
       
+      // Just update status and save record. No aggregator credit here.
       await prisma.$transaction([
         prisma.transaction.update({
           where: { reference: userReference },
@@ -178,7 +177,7 @@ export async function POST(request: Request) {
       });
 
     } else {
-      // --- FAILED! "World-Class" Auto-Refund ---
+      // --- FAILED! Auto-Refund ---
       const errorMessage = data.server_message || data.data?.true_response || "Purchase failed.";
       
       await prisma.$transaction([
@@ -211,7 +210,7 @@ export async function POST(request: Request) {
     const errorMessage = parseApiError(error);
     console.error(`VTU (Vend) Error:`, errorMessage);
     
-    // --- "WORLD-CLASS" CRASH-RECOVERY REFUND ---
+    // --- CRASH-RECOVERY REFUND ---
     if (totalPrice.greaterThan(0)) {
       console.log("CRITICAL ERROR: Refunding user due to server crash.");
       await prisma.$transaction([
