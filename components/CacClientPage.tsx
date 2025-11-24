@@ -13,7 +13,8 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   XMarkIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -73,6 +74,19 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
   </div>
 );
 
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="mb-6 rounded-xl bg-blue-50 p-4 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+    <div className="flex items-start gap-3">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        You will get the Certificate and Status Report on or before 5 working days.
+      </div>
+    </div>
+  </div>
+);
+
 // --- MAIN COMPONENT ---
 export default function CacClientPage({ prices }: Props) {
   
@@ -96,8 +110,8 @@ export default function CacClientPage({ prices }: Props) {
   
   // --- Retrieval Fields ---
   const [docType, setDocType] = useState<'Certificate' | 'Status Report' | null>(null);
-  const [fullBizName, setFullBizName] = useState(''); // Specific to retrieval
-  const [bizNumber, setBizNumber] = useState('');     // Specific to retrieval
+  const [fullBizName, setFullBizName] = useState(''); 
+  const [bizNumber, setBizNumber] = useState('');     
 
   // --- Proprietor Fields (Shared) ---
   const [propFirstName, setPropFirstName] = useState('');
@@ -197,12 +211,11 @@ export default function CacClientPage({ prices }: Props) {
       attestationUrls = { passportUrl, signatureUrl, ninSlipUrl };
     } else if (serviceType === 'DOC_RETRIEVAL') {
       serviceId = 'CAC_DOC_RETRIEVAL';
-      // Correct fields for retrieval
       formData = {
         docType, 
         fullBizName, 
         bizNumber, 
-        proprietorName: `${propFirstName} ${propLastName}`, // Concatenate for retrieval summary
+        proprietorName: `${propFirstName} ${propLastName}`, 
         proprietorPhone: propPhone,
         proprietorEmail: propEmail
       };
@@ -221,10 +234,8 @@ export default function CacClientPage({ prices }: Props) {
       setSuccess(data.message);
       window.scrollTo(0, 0);
       
-      // Cleanup State
       setServiceType(null); 
       setHasAttested(false);
-      // ... (You can clear other fields here if desired)
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -252,6 +263,11 @@ export default function CacClientPage({ prices }: Props) {
       )}
 
       <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
+        
+        {/* --- NOTIFICATION BLOCK --- */}
+        <NoticeBox />
+        {/* -------------------------- */}
+
         <form onSubmit={handleOpenConfirmModal} className="space-y-8">
           
           {/* 1. Service Selection */}
