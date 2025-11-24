@@ -22,7 +22,7 @@ export default async function AdminCommissionPage() {
       id: true, 
       name: true, 
       category: true,
-      DefaultCommission: true // Fetch the new field
+      defaultCommission: true // Fetch the new field
     } 
   });
 
