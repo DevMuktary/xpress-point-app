@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 
 import React, { useState, useMemo } from 'react';
 import { 
@@ -13,14 +13,15 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   XMarkIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
 // --- Props Definition ---
 type Props = {
-  prices: Record<string, number>; // Received from server
+  prices: Record<string, number>; 
 };
 
 // --- Helper Components ---
@@ -70,6 +71,19 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
     </div>
     {file && <p className="text-xs text-gray-500 mt-1">{file.name}</p>}
     {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+  </div>
+);
+
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="mb-6 rounded-xl bg-blue-50 p-4 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+    <div className="flex items-start gap-3">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        You will get the Certificate within 48 to 72 working Hours.
+      </div>
+    </div>
   </div>
 );
 
@@ -231,7 +245,12 @@ export default function TinClientPage({ prices }: Props) {
         </div>
       )}
 
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+      <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
+        
+        {/* --- NOTIFICATION BLOCK (Visible always) --- */}
+        <NoticeBox />
+        {/* -------------------------- */}
+
         <form onSubmit={handleOpenConfirmModal} className="space-y-8">
           
           {/* 1. Service Type */}
