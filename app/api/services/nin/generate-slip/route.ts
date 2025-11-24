@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { generateNinSlipPdf } from '@/lib/slipGenerator';
 import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 const serviceIdMap: { [key: string]: string } = {
   Regular: 'NIN_SLIP_REGULAR',
@@ -45,7 +46,6 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Set Price (Standardized to Default Agent Price) ---
-    // Using defaultAgentPrice for everyone so commission can be extracted
     const price = new Decimal(service.defaultAgentPrice);
     
     // --- 3. Check Wallet ---
@@ -57,30 +57,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for this slip.' }, { status: 402 });
     }
 
-    // --- 4. Calculate Commission (New Logic) ---
-    let commissionAmount = new Decimal(0);
-    let aggregatorWalletId = null;
-
-    if (user.role === 'AGENT' && user.aggregatorId) {
-      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
-        where: {
-          aggregatorId_serviceId: {
-            aggregatorId: user.aggregatorId,
-            serviceId: serviceId
-          }
-        }
-      });
-
-      if (aggregatorPrice) {
-        commissionAmount = new Decimal(aggregatorPrice.commission);
-        aggregatorWalletId = user.aggregatorId;
-      }
-    }
-
     const priceAsString = price.toString();
-    const commissionAsString = commissionAmount.toString();
 
-    // --- 5. Execute Transaction ---
+    // --- 4. Execute Transaction ---
     await prisma.$transaction(async (tx) => {
       // a) Charge User Wallet
       await tx.wallet.update({
@@ -88,13 +67,9 @@ export async function POST(request: Request) {
         data: { balance: { decrement: priceAsString } },
       });
 
-      // b) Credit Aggregator (if applicable)
-      if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
-        await tx.wallet.update({
-          where: { userId: aggregatorWalletId },
-          data: { commissionBalance: { increment: commissionAsString } }
-        });
-      }
+      // b) PROCESS COMMISSION (The Definite Fix)
+      // This calculates and credits the aggregator instantly
+      await processCommission(tx, user.id, service.id);
 
       // c) Log Transaction
       await tx.transaction.create({
@@ -111,13 +86,13 @@ export async function POST(request: Request) {
       });
     });
 
-    // --- 6. Generate the PDF ---
+    // --- 5. Generate the PDF ---
     const pdfBuffer = await generateNinSlipPdf(
       slipType,
       verification.data as any
     );
 
-    // --- 7. Send the PDF file back ---
+    // --- 6. Send the PDF file back ---
     return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
