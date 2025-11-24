@@ -7,7 +7,7 @@ type Service = {
   id: string;
   name: string;
   category: string;
-  DefaultCommission: string;
+  defaultCommission: string;
 };
 
 export default function AdminCommissionClientPage({ services }: { services: Service[] }) {
