@@ -1,14 +1,8 @@
+import { prisma } from '@/lib/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
-/**
- * COMMISSION ENGINE
- * 1. Checks if the user is an Agent with an Upline.
- * 2. Checks for a specific Aggregator Price override.
- * 3. If no override, uses the Service's Global Default Commission.
- * 4. Credits the Aggregator's wallet instantly.
- */
 export async function processCommission(
-  tx: any, // The Prisma Transaction Client
+  tx: any, 
   userId: string,
   serviceId: string
 ) {
@@ -18,14 +12,13 @@ export async function processCommission(
     select: { role: true, aggregatorId: true }
   });
 
-  // Stop if not an Agent or has no Upline
   if (!user || user.role !== 'AGENT' || !user.aggregatorId) {
-    return;
+    return; // Not an agent or has no upline
   }
 
   let commissionAmount = new Decimal(0);
 
-  // 2. Check for Specific Override (AggregatorPrice table)
+  // 2. Check for Specific Override
   const aggPrice = await tx.aggregatorPrice.findUnique({
     where: {
       aggregatorId_serviceId: {
@@ -38,7 +31,7 @@ export async function processCommission(
   if (aggPrice) {
     commissionAmount = aggPrice.commission;
   } else {
-    // 3. Check for Global Default (Service table)
+    // 3. Fallback to Global Default
     const service = await tx.service.findUnique({
       where: { id: serviceId },
       select: { defaultCommission: true }
@@ -49,16 +42,18 @@ export async function processCommission(
     }
   }
 
-  // 4. Credit the Vault (Commission Balance)
+  // 4. Credit the Vault
   if (commissionAmount.greaterThan(0)) {
+    // FIX: Explicitly convert to string for safe Prisma increment
+    const amountString = commissionAmount.toString();
+    
     await tx.wallet.update({
       where: { userId: user.aggregatorId },
       data: { 
-        commissionBalance: { increment: commissionAmount } 
+        commissionBalance: { increment: amountString } 
       }
     });
     
-    // Optional: Log for debugging
-    // console.log(`PAID: ₦${commissionAmount} to Aggregator ${user.aggregatorId}`);
+    console.log(`COMMISSION: Credited ₦${amountString} to Aggregator ${user.aggregatorId}`);
   }
 }
