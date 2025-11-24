@@ -6,7 +6,9 @@ import {
   CheckCircleIcon,
   XMarkIcon,
   IdentificationIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { ValidationRequest } from '@prisma/client';
@@ -49,9 +51,29 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
       <input
         id={id} type={type} value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         required={isRequired}
       />
+    </div>
+  </div>
+);
+
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="space-y-3 rounded-xl bg-yellow-50 p-4 border border-yellow-100">
+    <div className="flex items-start gap-3">
+      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-yellow-800">
+        <span className="font-bold block mb-1">Non-Refundable Service</span>
+        This service cannot be cancelled or refunded once submitted. Please ensure the NIN is correct.
+      </div>
+    </div>
+    <div className="flex items-start gap-3 pt-2 border-t border-yellow-200/60">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        Validation may complete within 48 hours, but the status update on the portal might take up to 72 hours or more.
+      </div>
     </div>
   </div>
 );
@@ -111,40 +133,30 @@ export default function NinValidationClientPage({ prices, initialRequests }: Pro
     }
   };
   
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'COMPLETED': return 'bg-green-100 text-green-800';
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'PROCESSING': return 'bg-blue-100 text-blue-800';
-      case 'FAILED': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {isLoading && <Loading />}
       
       {success && (
-        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+        <div className="rounded-lg bg-green-50 p-4 border border-green-200 animate-in fade-in slide-in-from-top-2">
           <div className="flex">
             <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-blue-500" />
+              <CheckCircleIcon className="h-5 w-5 text-green-500" />
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-bold text-blue-800">Request Submitted!</h3>
-              <p className="mt-2 text-sm text-blue-700">{success}</p>
+              <h3 className="text-sm font-bold text-green-800">Request Submitted!</h3>
+              <p className="mt-2 text-sm text-green-700">{success}</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+      <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           {/* 1. Select Service Type */}
           <div>
-            <label className="text-lg font-semibold text-gray-900">1. Select Validation Reason</label>
-            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-lg font-bold text-gray-900">1. Select Validation Reason</label>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <ModTypeButton title="No Record" description={`Fee: ₦${prices.NIN_VALIDATION_47 || 0}`} selected={serviceId === 'NIN_VALIDATION_47'} onClick={() => setServiceId('NIN_VALIDATION_47')} />
               <ModTypeButton title="Sim Card Issues" description={`Fee: ₦${prices.NIN_VALIDATION_48 || 0}`} selected={serviceId === 'NIN_VALIDATION_48'} onClick={() => setServiceId('NIN_VALIDATION_48')} />
               <ModTypeButton title="Bank Validation" description={`Fee: ₦${prices.NIN_VALIDATION_49 || 0}`} selected={serviceId === 'NIN_VALIDATION_49'} onClick={() => setServiceId('NIN_VALIDATION_49')} />
@@ -154,25 +166,27 @@ export default function NinValidationClientPage({ prices, initialRequests }: Pro
 
           {/* 2. Show Form based on selection */}
           {serviceId && (
-            <div className="border-t border-gray-200 pt-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">2. Enter Details</h3>
-              <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
-            </div>
-          )}
+            <div className="border-t border-gray-200 pt-6 space-y-6 animate-in fade-in slide-in-from-top-4">
+              
+              {/* --- NOTIFICATION BLOCK --- */}
+              <NoticeBox />
+              {/* -------------------------- */}
 
-          {/* 3. Submit Button */}
-          {serviceId && (
-            <div className="border-t border-gray-200 pt-6">
-              {error && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{error}</p>
-              )}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
-              </button>
+              <h3 className="text-lg font-bold text-gray-900">2. Enter Details</h3>
+              <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
+              
+              <div className="pt-4">
+                {error && (
+                  <p className="mb-4 text-sm font-medium text-red-600 text-center bg-red-50 p-2 rounded-lg">{error}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
+                >
+                  {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
+                </button>
+              </div>
             </div>
           )}
         </form>
@@ -180,32 +194,39 @@ export default function NinValidationClientPage({ prices, initialRequests }: Pro
 
       {/* Confirmation Modal */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
-              <button onClick={() => setIsConfirmModalOpen(false)}>
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-200 p-4 bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-900">Please Confirm</h2>
+              <button onClick={() => setIsConfirmModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
             <div className="p-6">
-              <p className="text-center text-gray-600">
-                You are about to submit this validation request. This action is irreversible.
+              <div className="mb-4 flex justify-center">
+                <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
+                </div>
+              </div>
+              <p className="text-center text-gray-600 text-sm leading-relaxed">
+                You are about to submit this validation request. <br/>
+                <strong>This action is irreversible and non-refundable.</strong>
               </p>
-              <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{fee}
-              </p>
+              <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
+                <p className="text-center text-2xl font-bold text-blue-700">₦{fee}</p>
+              </div>
             </div>
-            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+            <div className="grid grid-cols-2 gap-0 border-t border-gray-200">
               <button
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+                className="py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors border-r border-gray-200"
               >
                 CANCEL
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                className="py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 YES, SUBMIT
               </button>
