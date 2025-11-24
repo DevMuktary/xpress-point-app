@@ -6,12 +6,12 @@ import {
   EnvelopeIcon, 
   PhoneIcon, 
   ShieldCheckIcon, 
-  CreditCardIcon,
-  KeyIcon,
-  ClockIcon,
-  CheckBadgeIcon,
-  BuildingLibraryIcon,
-  DocumentDuplicateIcon
+  CreditCardIcon, 
+  KeyIcon, 
+  ClockIcon, 
+  CheckBadgeIcon, 
+  BuildingLibraryIcon, 
+  DocumentDuplicateIcon 
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
@@ -82,7 +82,14 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
             <div className="relative">
               <div className="h-24 w-24 rounded-full border-4 border-white bg-white shadow-md overflow-hidden flex items-center justify-center">
                 {user.image ? (
-                  <SafeImage src={user.image} alt="Profile" width={96} height={96} className="object-cover" />
+                  <SafeImage 
+                    src={user.image} 
+                    alt="Profile" 
+                    width={96} 
+                    height={96} 
+                    className="object-cover" 
+                    fallbackSrc="/logos/default.png" // <-- FIXED HERE
+                  />
                 ) : (
                   <UserCircleIcon className="h-20 w-20 text-gray-300" />
                 )}
