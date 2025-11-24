@@ -132,7 +132,7 @@ model Service {
   
   platformPrice       Decimal                @default(0.00) @map("platform_price") @db.Decimal(10, 2)
   defaultAgentPrice   Decimal                @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
-  
+  aggregatorCommission Decimal @default(0.00) @map("aggregator_commission") @db.Decimal(10, 2)
   isActive            Boolean                @default(true) @map("is_active")
   productCode         String?                @map("product_code")
   
