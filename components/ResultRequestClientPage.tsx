@@ -1,4 +1,4 @@
-"use client"; // This is an interactive component
+"use client"; 
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ResultRequest, RequestStatus } from '@prisma/client';
@@ -17,32 +17,28 @@ import {
   CalendarDaysIcon,
   HashtagIcon,
   GlobeAltIcon,
-  XCircleIcon
+  XCircleIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
-// "World-class" type for the request + its service name
 type HistoryRequest = ResultRequest & {
   service: { name: string };
 };
 
-// Define the props to receive the initial data from the server
 type Props = {
   initialRequests: HistoryRequest[];
 };
 
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick }: {
-  title: string,
-  description: string,
-  selected: boolean,
-  onClick: () => void
+  title: string, description: string, selected: boolean, onClick: () => void
 }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`rounded-lg p-4 text-left transition-all border-2
+    className={`rounded-lg p-4 text-left transition-all border-2 w-full
       ${selected
         ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
         : 'border-gray-300 bg-white hover:border-gray-400'
@@ -53,18 +49,8 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- "World-Class" Reusable Input Component (THIS IS THE FIX) ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
-  label: string,
-  id: string,
-  value: string,
-  onChange: (value: string) => void,
-  Icon: React.ElementType,
-  type?: string,
-  isRequired?: boolean,
-  placeholder?: string,
-  maxLength?: number // <-- "Refurbished" to accept maxLength
-}) => (
+// --- Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
     <div className="relative mt-1">
@@ -72,30 +58,17 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id}
-        type={type}
-        value={value}
+        id={id} type={type} value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired}
-        placeholder={placeholder}
-        maxLength={maxLength} // <-- It is now correctly passed
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        required={isRequired} placeholder={placeholder} maxLength={maxLength}
       />
     </div>
   </div>
 );
-// -----------------------------------------------------------
 
-// --- "World-Class" Reusable Select Component ---
-const DataSelect = ({ label, id, value, onChange, Icon, children, isRequired = true }: {
-  label: string,
-  id: string,
-  value: string,
-  onChange: (value: string) => void,
-  Icon: React.ElementType,
-  children: React.ReactNode,
-  isRequired?: boolean
-}) => (
+// --- Reusable Select Component ---
+const DataSelect = ({ label, id, value, onChange, Icon, children, isRequired = true }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
     <div className="relative mt-1">
@@ -103,10 +76,8 @@ const DataSelect = ({ label, id, value, onChange, Icon, children, isRequired = t
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        id={id} value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         required={isRequired}
       >
         {children}
@@ -115,7 +86,20 @@ const DataSelect = ({ label, id, value, onChange, Icon, children, isRequired = t
   </div>
 );
 
-// --- The Main "World-Class" Component ---
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="mb-6 rounded-xl bg-blue-50 p-4 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+    <div className="flex items-start gap-3">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        You will get the Result Slip within 24 working hours.
+      </div>
+    </div>
+  </div>
+);
+
+// --- The Main Component ---
 export default function ResultRequestClientPage({ initialRequests }: Props) {
   
   // --- State Management ---
@@ -123,7 +107,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
   
   const [requests, setRequests] = useState(initialRequests);
-  const [isLoading, setIsLoading] = useState(false); // For main submit
+  const [isLoading, setIsLoading] = useState(false); 
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -141,7 +125,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
   const [serial, setSerial] = useState('');
   const [examType, setExamType] = useState('');
 
-  // --- "World-Class" Dynamic Fee ---
+  // --- Dynamic Fee ---
   const fee = useMemo(() => {
     if (serviceId === 'RESULT_REQUEST_WAEC') return 1000;
     if (serviceId === 'RESULT_REQUEST_NECO') return 1000;
@@ -149,7 +133,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     return 0;
   }, [serviceId]);
 
-  // --- "World-Class" API Fetch on Load ---
+  // --- API Fetch on Load ---
   useEffect(() => {
     fetchHistory();
   }, []);
@@ -180,7 +164,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     setIsConfirmModalOpen(true);
   };
   
-  // --- This is the *final* submit, called by the modal's "YES" button ---
+  // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -211,7 +195,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       setServiceId(null);
       setRegNumber(''); setName(''); setPhone(''); setNetwork('');
       setYear(''); setSector(''); setSerial(''); setExamType('');
-      fetchHistory(); // Refresh the history list
+      fetchHistory(); 
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -220,7 +204,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     }
   };
   
-  // --- "World-Class" Filtering Logic ---
+  // --- Filtering Logic ---
   const filteredRequests = useMemo(() => {
     return requests.filter(req => {
       const formData = req.formData as any;
@@ -231,7 +215,6 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     });
   }, [requests, searchTerm, statusFilter]);
 
-  // Helper to format the date
   const formatDate = (dateString: Date) => {
     return new Date(dateString).toLocaleString('en-US', {
       day: '2-digit',
@@ -240,23 +223,16 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     });
   };
   
-  // Helper to get "world-class" status info
   const getStatusInfo = (status: RequestStatus) => {
     switch (status) {
-      case 'COMPLETED':
-        return { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Completed' };
-      case 'PROCESSING':
-        return { color: 'bg-blue-100 text-blue-800', icon: ArrowPathIcon, text: 'Processing' };
-      case 'PENDING':
-        return { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon, text: 'Pending' };
-      case 'FAILED':
-        return { color: 'bg-red-100 text-red-800', icon: XCircleIcon, text: 'Failed' };
-      default:
-        return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
+      case 'COMPLETED': return { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Completed' };
+      case 'PROCESSING': return { color: 'bg-blue-100 text-blue-800', icon: ArrowPathIcon, text: 'Processing' };
+      case 'PENDING': return { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon, text: 'Pending' };
+      case 'FAILED': return { color: 'bg-red-100 text-red-800', icon: XCircleIcon, text: 'Failed' };
+      default: return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
     }
   };
   
-  // Helper for the "smart" button
   const renderActionButton = (request: HistoryRequest) => {
     switch (request.status) {
       case 'COMPLETED':
@@ -297,7 +273,6 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- Your "Sweet Alert" Style Message --- */}
       {success && (
         <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6">
           <div className="flex">
@@ -319,10 +294,15 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       )}
 
       {/* --- The "Submit New Request" Form --- */}
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+      <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
+        
+        {/* --- NOTIFICATION BLOCK --- */}
+        <NoticeBox />
+        {/* -------------------------- */}
+
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- "Modern Buttons" for Exam Type --- */}
+          {/* --- Exam Type Selection --- */}
           <div>
             <label className="text-lg font-semibold text-gray-900">
               1. Select Exam Type
@@ -418,11 +398,10 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
         </form>
       </div>
 
-      {/* --- 3. The "My Requests" History (Your "World-Class" Design) --- */}
-      <div className="rounded-2xl bg-white p-6 shadow-lg mt-6">
+      {/* --- 3. History Section --- */}
+      <div className="rounded-2xl bg-white p-6 shadow-lg mt-6 border border-gray-100">
         <h3 className="text-lg font-semibold text-gray-900">My Result Requests</h3>
         
-        {/* --- Filter & Search Bar --- */}
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -450,16 +429,16 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
         </div>
         
         {isHistoryLoading && (
-          <div className="py-8 text-center text-gray-500">
-            <ArrowPathIcon className="mx-auto h-8 w-8 animate-spin" />
-            <p>Loading history...</p>
+          <div className="py-12 text-center text-gray-500">
+            <ArrowPathIcon className="mx-auto h-8 w-8 animate-spin text-blue-600" />
+            <p className="mt-2 text-sm">Loading history...</p>
           </div>
         )}
         
         {!isHistoryLoading && filteredRequests.length === 0 && (
-          <div className="py-8 text-center text-gray-500">
-            <DocumentMagnifyingGlassIcon className="mx-auto h-12 w-12" />
-            <p className="mt-2 font-semibold">No History Found</p>
+          <div className="py-12 text-center text-gray-500">
+            <DocumentMagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-300" />
+            <p className="mt-2 font-semibold text-gray-900">No History Found</p>
             <p className="text-sm">You have not submitted any result requests.</p>
           </div>
         )}
@@ -470,17 +449,14 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
             const formData = request.formData as any;
 
             return (
-              <div 
-                key={request.id} 
-                className="rounded-lg border border-gray-200 bg-white shadow-sm"
-              >
+              <div key={request.id} className="rounded-lg border border-gray-200 bg-white shadow-sm hover:border-blue-300 transition-colors">
                 <div className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-base font-semibold text-gray-900">
                         {request.service.name}
                       </p>
-                      <p className="text-sm text-gray-600 break-all">
+                      <p className="text-sm text-gray-600 break-all font-mono mt-1">
                         {formData.regNumber}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
@@ -489,9 +465,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
                     </div>
                     
                     <div className="mt-4 sm:mt-0 sm:ml-4">
-                      <span 
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusInfo.color}`}
-                      >
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusInfo.color}`}>
                         <statusInfo.icon className={`h-4 w-4 ${statusInfo.text === 'Processing' ? 'animate-spin' : ''}`} />
                         {statusInfo.text}
                       </span>
@@ -499,7 +473,6 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
                   </div>
                 </div>
                 
-                {/* --- "World-Class" Action Footer --- */}
                 <div className="border-t border-gray-100 bg-gray-50 p-4">
                   {renderActionButton(request)}
                 </div>
@@ -509,14 +482,12 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
         </div>
       </div>
 
-      {/* --- Your "World-Class" Confirmation Modal --- */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Please Confirm
-              </h2>
+            <div className="flex items-center justify-between border-b border-gray-200 p-4 bg-gray-50">
+              <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
               <button onClick={() => setIsConfirmModalOpen(false)}>
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
