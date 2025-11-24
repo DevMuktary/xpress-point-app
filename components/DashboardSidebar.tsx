@@ -18,22 +18,22 @@ import {
   ArrowUpCircleIcon,
   ShieldCheckIcon,
   XMarkIcon,
-  Bars3Icon
+  WrenchScrewdriverIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
 type Props = {
-  userRole: string; // We receive the role from the layout
+  userRole: string;
 };
 
 export default function DashboardSidebar({ userRole }: Props) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isServicesOpen, setIsServicesOpen] = useState(true); // Default open
+  const [isServicesOpen, setIsServicesOpen] = useState(true); // Keep services open by default for visibility
   const pathname = usePathname(); 
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
 
-  // --- Navigation Groups ---
+  // --- 1. Define Menu Data ---
   const mainLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Fund Wallet', href: '/dashboard/fund-wallet', icon: CreditCardIcon },
@@ -45,185 +45,141 @@ export default function DashboardSidebar({ userRole }: Props) {
     { name: 'JTB TIN Services', href: '/dashboard/services/tin', icon: DocumentTextIcon },
     { name: 'VTU & Bills', href: '/dashboard/services/vtu', icon: DevicePhoneMobileIcon },
     { name: 'Newspapers', href: '/dashboard/services/newspaper', icon: NewspaperIcon },
+    { name: 'BVN Services', href: '/dashboard/services/bvn', icon: ShieldCheckIcon },
   ];
 
   const managementLinks = [
-    { name: 'Transaction History', href: '/dashboard/history', icon: ClockIcon },
+    { name: 'Transactions', href: '/dashboard/history', icon: ClockIcon },
     { name: 'Profile Settings', href: '/dashboard/profile', icon: UserCircleIcon },
   ];
 
-  // --- Render Sidebar Content ---
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
-      {/* 1. Logo Header */}
-      <div className="flex items-center gap-3 px-6 h-20 border-b border-gray-100">
-        <SafeImage 
-          src="/logos/logo.png" 
-          alt="XP" 
-          width={35} 
-          height={35} 
-          className="rounded-lg" 
-          fallbackSrc="/logos/default.png"
+  // --- 2. Helper Component for Links ---
+  const NavLink = ({ item, onClick }: { item: any, onClick?: () => void }) => {
+    const active = isActive(item.href);
+    return (
+      <Link
+        href={item.href}
+        onClick={onClick}
+        className={`group flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300
+          ${active 
+            ? 'bg-blue-600 text-white shadow-md shadow-blue-200 translate-x-1' 
+            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700 hover:translate-x-1'
+          }`}
+      >
+        <item.icon 
+          className={`h-5 w-5 flex-shrink-0 transition-colors duration-300
+            ${active ? 'text-white' : 'text-gray-400 group-hover:text-blue-600'}`} 
         />
+        {item.name}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white border-r border-gray-100 shadow-[2px_0_20px_rgba(0,0,0,0.02)]">
+      
+      {/* --- A. Header / Logo Area --- */}
+      <div className="flex items-center gap-3 px-6 h-24 flex-shrink-0">
+        <div className="relative h-10 w-10 overflow-hidden rounded-xl shadow-sm border border-gray-100">
+           <SafeImage 
+            src="/logos/logo.png" 
+            alt="XP" 
+            fill
+            className="object-cover"
+            fallbackSrc="/logos/default.png"
+          />
+        </div>
         <div className="flex flex-col">
-          <span className="text-lg font-extrabold text-gray-900 tracking-tight leading-none">
-            XPRESS POINT
+          <span className="text-xl font-black text-gray-900 tracking-tight leading-none">
+            XPRESS<span className="text-blue-600">POINT</span>
           </span>
-          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">
-            Agent Workspace
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+            {userRole} WORKSPACE
           </span>
         </div>
       </div>
 
-      {/* 2. Scrollable Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+      {/* --- B. Scrollable Navigation --- */}
+      <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-8 scrollbar-hide">
         
-        {/* Group: Overview */}
+        {/* Section: Overview */}
         <div>
-          <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+          <p className="px-4 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3">
             Overview
           </p>
           <div className="space-y-1">
             {mainLinks.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsSidebarOpen(false)}
-                className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group
-                  ${isActive(item.href) 
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-              >
-                <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive(item.href) ? 'text-white' : 'text-gray-400 group-hover:text-gray-500'}`} />
-                {item.name}
-              </Link>
+              <NavLink key={item.name} item={item} />
             ))}
           </div>
         </div>
 
-        {/* Group: Services (Dropdown) */}
+        {/* Section: Services Hub (Collapsible) */}
         <div>
           <button
             onClick={() => setIsServicesOpen(!isServicesOpen)}
-            className="w-full flex items-center justify-between px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 hover:text-gray-600 transition-colors"
+            className="w-full flex items-center justify-between px-4 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3 hover:text-blue-600 transition-colors"
           >
             <span>Services Hub</span>
-            {isServicesOpen ? <ChevronDownIcon className="h-3 w-3" /> : <ChevronRightIcon className="h-3 w-3" />}
+            <span className={`transition-transform duration-300 ${isServicesOpen ? 'rotate-180' : ''}`}>
+              <ChevronDownIcon className="h-3 w-3" />
+            </span>
           </button>
           
-          {isServicesOpen && (
-            <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
-              {serviceLinks.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 group ml-2
-                    ${isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                >
-                  <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive(item.href) ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isServicesOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {serviceLinks.map((item) => (
+              <NavLink key={item.name} item={item} />
+            ))}
+          </div>
         </div>
 
-        {/* Group: Management (Refined) */}
+        {/* Section: Management */}
         <div>
-          <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-            Management
+          <p className="px-4 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3">
+            Account
           </p>
           <div className="space-y-1">
             {managementLinks.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsSidebarOpen(false)}
-                className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group
-                  ${isActive(item.href) 
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-              >
-                <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive(item.href) ? 'text-white' : 'text-gray-400 group-hover:text-gray-500'}`} />
-                {item.name}
-              </Link>
+              <NavLink key={item.name} item={item} />
             ))}
           </div>
         </div>
       </nav>
 
-      {/* 3. Dynamic Bottom Action (The Upgrade/Tools Fix) */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50/50">
+      {/* --- C. Footer / Action Area --- */}
+      <div className="p-5 border-t border-gray-100 bg-gray-50/30 space-y-3">
+        
+        {/* Dynamic Role-Based Button */}
         {userRole === 'AGGREGATOR' ? (
-          // --- View for Aggregators ---
           <Link 
             href="/dashboard/aggregator"
-            onClick={() => setIsSidebarOpen(false)}
-            className="flex items-center justify-center gap-2 w-full rounded-xl bg-purple-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all active:scale-[0.98]"
+            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-gray-200 hover:bg-black transition-all active:scale-[0.98]"
           >
-            <ShieldCheckIcon className="h-5 w-5" />
-            Aggregator Tools
+            <WrenchScrewdriverIcon className="h-5 w-5 text-purple-400 group-hover:rotate-12 transition-transform" />
+            <span>Aggregator Tools</span>
           </Link>
         ) : (
-          // --- View for Agents ---
           <Link 
             href="/dashboard/upgrade"
-            onClick={() => setIsSidebarOpen(false)}
-            className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:from-blue-700 hover:to-blue-900 transition-all active:scale-[0.98]"
+            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:shadow-xl hover:from-blue-700 hover:to-blue-800 transition-all active:scale-[0.98]"
           >
-            <ArrowUpCircleIcon className="h-5 w-5" />
-            Upgrade Account
+            <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowUpCircleIcon className="h-5 w-5 animate-bounce-slow" />
+            <span>Upgrade Account</span>
           </Link>
         )}
+        
+        {/* Logout Button */}
+        <form action="/api/auth/logout" method="POST">
+          <button
+            type="submit"
+            className="group flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 hover:border-red-100 hover:bg-red-50 hover:text-red-600 transition-all"
+          >
+            <ArrowRightOnRectangleIcon className="h-5 w-5 text-gray-400 group-hover:text-red-500 transition-colors" />
+            <span>Sign Out</span>
+          </button>
+        </form>
       </div>
     </div>
-  );
-
-  return (
-    <>
-      {/* Mobile Header */}
-      <header className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-30">
-        <div className="flex items-center gap-2">
-          <SafeImage src="/logos/logo.png" alt="Logo" width={30} height={30} fallbackSrc="/logos/default.png" className="rounded" />
-          <span className="font-bold text-gray-900">XPRESS POINT</span>
-        </div>
-        <button 
-          onClick={() => setIsSidebarOpen(true)}
-          className="p-2 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-        >
-          <Bars3Icon className="h-6 w-6" />
-        </button>
-      </header>
-
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar Container */}
-      <aside 
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:shadow-none border-r border-gray-200
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
-      >
-        {/* Close Button for Mobile */}
-        <div className="absolute top-4 right-4 lg:hidden">
-          <button onClick={() => setIsSidebarOpen(false)} className="p-1 bg-gray-100 rounded-full text-gray-500">
-            <XMarkIcon className="h-6 w-6" />
-          </button>
-        </div>
-
-        <SidebarContent />
-      </aside>
-    </>
   );
 }
