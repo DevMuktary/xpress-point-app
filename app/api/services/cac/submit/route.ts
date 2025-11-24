@@ -1,8 +1,8 @@
-
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Set Price (Standardized to Default Agent Price) ---
-    // Using defaultAgentPrice for everyone, just like the BVN code
+    // Using defaultAgentPrice for everyone
     const price = new Decimal(service.defaultAgentPrice);
     
     // --- 3. Check Wallet ---
@@ -40,30 +40,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price.toString()}.` }, { status: 402 });
     }
 
-    // --- 4. Calculate Commission (New Logic) ---
-    let commissionAmount = new Decimal(0);
-    let aggregatorWalletId = null;
-
-    if (user.role === 'AGENT' && user.aggregatorId) {
-      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
-        where: {
-          aggregatorId_serviceId: {
-            aggregatorId: user.aggregatorId,
-            serviceId: serviceId
-          }
-        }
-      });
-
-      if (aggregatorPrice) {
-        commissionAmount = new Decimal(aggregatorPrice.commission);
-        aggregatorWalletId = user.aggregatorId;
-      }
-    }
-
     const priceAsString = price.toString();
-    const commissionAsString = commissionAmount.toString();
+    const negatedPriceAsString = price.negated().toString();
 
-    // --- 5. Execute Transaction ---
+    // --- 4. Execute Transaction ---
     await prisma.$transaction(async (tx) => {
       // a) Charge User Wallet
       await tx.wallet.update({
@@ -71,13 +51,9 @@ export async function POST(request: Request) {
         data: { balance: { decrement: priceAsString } },
       });
 
-      // b) Credit Aggregator (if applicable)
-      if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
-        await tx.wallet.update({
-          where: { userId: aggregatorWalletId },
-          data: { commissionBalance: { increment: commissionAsString } }
-        });
-      }
+      // b) PROCESS COMMISSION (The Definite Fix)
+      // This calculates and credits the aggregator instantly
+      await processCommission(tx, user.id, service.id);
 
       // c) Create CAC Request
       await tx.cacRequest.create({
@@ -100,7 +76,7 @@ export async function POST(request: Request) {
           userId: user.id,
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: price.negated(), // Storing as Decimal or String depending on your schema setup, ensuring negative value
+          amount: negatedPriceAsString,
           description: `${service.name} (CAC)`,
           reference: `CAC-${Date.now()}`,
           status: 'COMPLETED',
