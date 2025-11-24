@@ -12,7 +12,7 @@ export default async function AdminCommissionPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // 1. Fetch all Services with their current global commission
+  // 1. Fetch all Services
   const services = await prisma.service.findMany({
     orderBy: [
       { category: 'asc' },
@@ -22,14 +22,16 @@ export default async function AdminCommissionPage() {
       id: true, 
       name: true, 
       category: true,
-      defaultCommission: true // Fetch the new field
+      defaultCommission: true // <--- FIXED: lowercase 'd'
     } 
   });
 
-  // 2. Serialize Decimal to String for Client Component
+  // 2. Serialize
   const serializedServices = services.map(s => ({
-    ...s,
-    aggregatorCommission: s.aggregatorCommission.toString()
+    id: s.id,
+    name: s.name,
+    category: s.category,
+    defaultCommission: s.defaultCommission.toString() // <--- FIXED: lowercase 'd'
   }));
 
   return (
@@ -42,7 +44,7 @@ export default async function AdminCommissionPage() {
         <ShieldCheckIcon className="h-8 w-8 text-gray-900" />
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Global Commissions</h1>
-          <p className="text-sm text-gray-500">Set the commission aggregators earn when their agents perform these services.</p>
+          <p className="text-sm text-gray-500">Set default commissions for all aggregators.</p>
         </div>
       </div>
 
