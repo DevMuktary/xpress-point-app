@@ -8,37 +8,36 @@ datasource db {
 }
 
 model User {
-  id                           String                 @id @default(uuid())
-  firstName                    String                 @map("first_name")
-  lastName                     String                 @map("last_name")
-  businessName                 String?                @map("business_name")
+  id                           String   @id @default(uuid())
+  firstName                    String   @map("first_name")
+  lastName                     String   @map("last_name")
+  businessName                 String?  @map("business_name")
   address                      String?
-  email                        String                 @unique
-  phoneNumber                  String                 @unique @map("phone_number")
-  passwordHash                 String                 @map("password_hash")
-  role                         Role                   @default(AGENT)
-  isPhoneVerified              Boolean                @default(false) @map("is_phone_verified")
-  isEmailVerified              Boolean                @default(false) @map("is_email_verified")
-  isIdentityVerified           Boolean                @default(false) @map("is_identity_verified")
-  createdAt                    DateTime               @default(now()) @map("created_at")
+  email                        String   @unique
+  phoneNumber                  String   @unique @map("phone_number")
+  passwordHash                 String   @map("password_hash")
+  role                         Role     @default(AGENT)
+  isPhoneVerified              Boolean  @default(false) @map("is_phone_verified")
+  isEmailVerified              Boolean  @default(false) @map("is_email_verified")
+  isIdentityVerified           Boolean  @default(false) @map("is_identity_verified")
+  createdAt                    DateTime @default(now()) @map("created_at")
   bvn                          String?
   nin                          String?
-  hasAgreedToModificationTerms Boolean                @default(false) @map("has_agreed_to_mod_terms")
+  hasAgreedToModificationTerms Boolean  @default(false) @map("has_agreed_to_mod_terms")
   
-  // --- AGGREGATOR FIELDS (FIX 1: RE-ADDED) ---
-  subdomain                    String?                @unique
-  accountName                  String?                @map("account_name")
-  accountNumber                String?                @map("account_number")
-  bankName                     String?                @map("bank_name")
+  // --- AGGREGATOR FIELDS ---
+  subdomain                    String?  @unique
+  accountName                  String?  @map("account_name")
+  accountNumber                String?  @map("account_number")
+  bankName                     String?  @map("bank_name")
   
-  aggregatorId                 String?                @map("aggregator_id")
-  aggregator                   User?                  @relation("AgentToAggregator", fields: [aggregatorId], references: [id])
-  agents                       User[]                 @relation("AgentToAggregator")
+  aggregatorId                 String?  @map("aggregator_id")
+  aggregator                   User?    @relation("AgentToAggregator", fields: [aggregatorId], references: [id])
+  agents                       User[]   @relation("AgentToAggregator")
   
   aggregatorPrices             AggregatorPrice[]
   withdrawalRequests           WithdrawalRequest[]
   pendingAccountChanges        PendingAccountChange[]
-  // ---------------------------------------------
   
   // --- Relations ---
   wallet                       Wallet?
@@ -49,11 +48,11 @@ model User {
   ipeRequests                  IpeRequest[]
   validationRequests           ValidationRequest[]
   modificationRequests         ModificationRequest[]
-  delinkRequests               DelinkRequest[] // <-- FIX 2 (RE-ADDED)
+  delinkRequests               DelinkRequest[]
   newspaperRequests            NewspaperRequest[]
   cacRequests                  CacRequest[]
   tinRequests                  TinRequest[]
-  jambRequests                 JambRequest[]   // <-- FIX 3 (RE-ADDED)
+  jambRequests                 JambRequest[]
   examPinRequests              ExamPinRequest[]
   resultRequests               ResultRequest[]
   vtuRequests                  VtuRequest[]
@@ -64,11 +63,11 @@ model User {
 }
 
 model Wallet {
-  id        String   @id @default(uuid())
-  userId    String   @unique @map("user_id")
-  balance   Decimal  @default(0.00) @db.Decimal(12, 2)
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id])
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  balance           Decimal  @default(0.00) @db.Decimal(12, 2)
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  user              User     @relation(fields: [userId], references: [id])
   
   commissionBalance Decimal  @default(0.00) @map("commission_balance") @db.Decimal(12, 2)
   
@@ -76,42 +75,42 @@ model Wallet {
 }
 
 model VirtualAccount {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  bankName       String   @map("bank_name")
-  accountNumber  String   @unique @map("account_number")
-  accountName    String   @map("account_name")
-  accountType    String   @default("STATIC") @map("account_type")
-  reference      String   @unique
-  user           User     @relation(fields: [userId], references: [id])
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  bankName      String   @map("bank_name")
+  accountNumber String   @unique @map("account_number")
+  accountName   String   @map("account_name")
+  accountType   String   @default("STATIC") @map("account_type")
+  reference     String   @unique
+  user          User     @relation(fields: [userId], references: [id])
   @@map("virtual_accounts")
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  type        String
-  amount      Decimal  @db.Decimal(12, 2)
-  description String
-  reference   String   @unique
-  status      String
-  createdAt   DateTime @default(now()) @map("created_at")
-  serviceId   String?  @map("service_id")
-  service     Service? @relation(fields: [serviceId], references: [id])
-  user        User     @relation(fields: [userId], references: [id])
-  verificationId String?            @map("verification_id")
-  verification   NinVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+  id             String            @id @default(uuid())
+  userId         String            @map("user_id")
+  type           String
+  amount         Decimal           @db.Decimal(12, 2)
+  description    String
+  reference      String            @unique
+  status         String
+  createdAt      DateTime          @default(now()) @map("created_at")
+  serviceId      String?           @map("service_id")
+  service        Service?          @relation(fields: [serviceId], references: [id])
+  user           User              @relation(fields: [userId], references: [id])
+  verificationId String?           @map("verification_id")
+  verification   NinVerification?  @relation(fields: [verificationId], references: [id], onDelete: SetNull)
 
   @@map("transactions")
 }
 
 model NinVerification {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  data            Json
-  expiresAt       DateTime @map("expires_at")
-  user            User     @relation(fields: [userId], references: [id])
-  transactions    Transaction[]
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  data         Json
+  expiresAt    DateTime      @map("expires_at")
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
   @@map("nin_verifications")
 }
 
@@ -126,22 +125,26 @@ model Otp {
 }
 
 model Service {
-  id                  String                 @id
-  name                String
-  category            String
+  id                String   @id
+  name              String
+  category          String
   
-  platformPrice       Decimal                @default(0.00) @map("platform_price") @db.Decimal(10, 2)
-  defaultAgentPrice   Decimal                @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
-  aggregatorCommission Decimal @default(0.00) @map("aggregator_commission") @db.Decimal(10, 2)
-  isActive            Boolean                @default(true) @map("is_active")
-  productCode         String?                @map("product_code")
+  platformPrice     Decimal  @default(0.00) @map("platform_price") @db.Decimal(10, 2)
+  defaultAgentPrice Decimal  @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
+  
+  // --- THIS IS THE NEW FIELD FOR THE PUSH STRATEGY ---
+  defaultCommission Decimal  @default(0.00) @map("default_commission") @db.Decimal(10, 2)
+  // -------------------------------------------------
+
+  isActive          Boolean  @default(true) @map("is_active")
+  productCode       String?  @map("product_code")
   
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
   NewspaperRequest    NewspaperRequest[]
   CacRequest          CacRequest[]
   TinRequest          TinRequest[]
-  JambRequest         JambRequest[] // <-- FIX 4 (RE-ADDED)
+  JambRequest         JambRequest[]
   ExamPinRequest      ExamPinRequest[]
   ResultRequest       ResultRequest[]
   VtuRequest          VtuRequest[]
@@ -159,44 +162,44 @@ enum RequestStatus {
 }
 
 model PersonalizationRequest {
-  id             String        @id @default(uuid())
-  userId         String        @map("user_id")
-  trackingId     String        @map("tracking_id")
-  status         RequestStatus @default(PROCESSING)
-  statusMessage  String?       @map("status_message")
-  data           Json?
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  user           User          @relation(fields: [userId], references: [id])
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  trackingId    String        @map("tracking_id")
+  status        RequestStatus @default(PROCESSING)
+  statusMessage String?       @map("status_message")
+  data          Json?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  user          User          @relation(fields: [userId], references: [id])
   @@unique([userId, trackingId])
   @@map("personalization_requests")
 }
 
 model IpeRequest {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
-  trackingId      String        @map("tracking_id")
-  newTrackingId   String?       @map("new_tracking_id")
-  status          RequestStatus @default(PROCESSING)
-  statusMessage   String?       @map("status_message")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  user            User          @relation(fields: [userId], references: [id])
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  trackingId    String        @map("tracking_id")
+  newTrackingId String?       @map("new_tracking_id")
+  status        RequestStatus @default(PROCESSING)
+  statusMessage String?       @map("status_message")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  user          User          @relation(fields: [userId], references: [id])
   @@unique([userId, trackingId])
   @@map("ipe_requests")
 }
 
 model ValidationRequest {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
-  nin             String        @map("nin")
-  scode           String
-  newTrackingId   String?       @map("new_tracking_id")
-  status          RequestStatus @default(PROCESSING)
-  statusMessage   String?       @map("status_message")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  user            User          @relation(fields: [userId], references: [id])
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  nin           String        @map("nin")
+  scode         String
+  newTrackingId String?       @map("new_tracking_id")
+  status        RequestStatus @default(PROCESSING)
+  statusMessage String?       @map("status_message")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  user          User          @relation(fields: [userId], references: [id])
   @@unique([userId, nin, scode])
   @@map("validation_requests")
 }
@@ -218,69 +221,68 @@ model ModificationRequest {
 }
 
 model DelinkRequest {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
-  nin             String        @map("nin")
-  status          RequestStatus @default(PENDING)
-  statusMessage   String?       @map("status_message")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  user            User          @relation(fields: [userId], references: [id])
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  nin           String        @map("nin")
+  status        RequestStatus @default(PENDING)
+  statusMessage String?       @map("status_message")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  user          User          @relation(fields: [userId], references: [id])
   @@map("delink_requests")
 }
 
 model NewspaperRequest {
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  serviceId      String        @map("service_id")
+  status         RequestStatus @default(PENDING)
+  statusMessage  String?       @map("status_message")
+  formData       Json
+  publicationUrl String?       @map("publication_url")
+  pageNumber     String?       @map("page_number")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  user           User          @relation(fields: [userId], references: [id])
+  service        Service       @relation(fields: [serviceId], references: [id])
+  @@map("newspaper_requests")
+}
+
+model CacRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
   serviceId       String        @map("service_id")
   status          RequestStatus @default(PENDING)
   statusMessage   String?       @map("status_message")
   formData        Json
-  publicationUrl  String?       @map("publication_url")
-  pageNumber      String?       @map("page_number")
+  passportUrl     String?       @map("passport_url")
+  signatureUrl    String?       @map("signature_url")
+  ninSlipUrl      String?       @map("nin_slip_url")
+  certificateUrl  String?       @map("certificate_url")
+  statusReportUrl String?       @map("status_report_url")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
   user            User          @relation(fields: [userId], references: [id])
   service         Service       @relation(fields: [serviceId], references: [id])
-  @@map("newspaper_requests")
-}
-
-model CacRequest {
-  id                String        @id @default(uuid())
-  userId            String        @map("user_id")
-  serviceId         String        @map("service_id")
-  status            RequestStatus @default(PENDING)
-  statusMessage     String?       @map("status_message")
-  formData          Json
-  passportUrl       String?       @map("passport_url")
-  signatureUrl      String?       @map("signature_url")
-  ninSlipUrl        String?       @map("nin_slip_url")
-  certificateUrl    String?       @map("certificate_url")
-  statusReportUrl   String?       @map("status_report_url")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
-  user              User          @relation(fields: [userId], references: [id])
-  service           Service       @relation(fields: [serviceId], references: [id])
   @@map("cac_requests")
 }
 
 model TinRequest {
-  id                String        @id @default(uuid())
-  userId            String        @map("user_id")
-  serviceId         String        @map("service_id")
-  status            RequestStatus @default(PENDING)
-  statusMessage     String?       @map("status_message")
-  formData          Json
-  statusReportUrl   String?       @map("status_report_url")
-  certificateUrl    String?       @map("certificate_url")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
-  user              User          @relation(fields: [userId], references: [id])
-  service           Service       @relation(fields: [serviceId], references: [id])
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  serviceId       String        @map("service_id")
+  status          RequestStatus @default(PENDING)
+  statusMessage   String?       @map("status_message")
+  formData        Json
+  statusReportUrl String?       @map("status_report_url")
+  certificateUrl  String?       @map("certificate_url")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User          @relation(fields: [userId], references: [id])
+  service         Service       @relation(fields: [serviceId], references: [id])
   @@map("tin_requests")
 }
 
-// --- FIX 5: RE-ADDING JAMB MODEL ---
 model JambRequest {
   id                String        @id @default(uuid())
   userId            String        @map("user_id")
@@ -292,123 +294,120 @@ model JambRequest {
   profileCodeResult String?       @map("profile_code_result")
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
-
   user              User          @relation(fields: [userId], references: [id])
   service           Service       @relation(fields: [serviceId], references: [id])
-  
   @@map("jamb_requests")
 }
-// ---------------------------------
 
 model ExamPinRequest {
-  id             String    @id @default(uuid())
-  userId         String    @map("user_id")
-  serviceId      String    @map("service_id")
-  userReference  String    @unique @map("user_reference")
-  phoneNumber    String    @map("phone_number")
-  quantity       Int
-  status         String
-  apiResponse    Json?
-  pins           Json?
-  createdAt      DateTime  @default(now()) @map("created_at")
-  user           User      @relation(fields: [userId], references: [id])
-  service        Service   @relation(fields: [serviceId], references: [id])
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  serviceId     String   @map("service_id")
+  userReference String   @unique @map("user_reference")
+  phoneNumber   String   @map("phone_number")
+  quantity      Int
+  status        String
+  apiResponse   Json?
+  pins          Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+  user          User     @relation(fields: [userId], references: [id])
+  service       Service  @relation(fields: [serviceId], references: [id])
   @@map("exam_pin_requests")
 }
 
 model ResultRequest {
-  id                String        @id @default(uuid())
-  userId            String        @map("user_id")
-  serviceId         String        @map("service_id")
-  status            RequestStatus @default(PENDING)
-  statusMessage     String?       @map("status_message")
-  formData          Json
-  uploadedSlipUrl   String?       @map("uploaded_slip_url")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
-  user              User          @relation(fields: [userId], references: [id])
-  service           Service       @relation(fields: [serviceId], references: [id])
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  serviceId       String        @map("service_id")
+  status          RequestStatus @default(PENDING)
+  statusMessage   String?       @map("status_message")
+  formData        Json
+  uploadedSlipUrl String?       @map("uploaded_slip_url")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User          @relation(fields: [userId], references: [id])
+  service         Service       @relation(fields: [serviceId], references: [id])
   @@map("result_requests")
 }
 
 model VtuRequest {
-  id             String    @id @default(uuid())
-  userId         String    @map("user_id")
-  serviceId      String    @map("service_id")
-  userReference  String    @unique @map("user_reference")
-  phoneNumber    String?   @map("phone_number")
-  meterNumber    String?   @map("meter_number")
-  amount         Decimal   @db.Decimal(12, 2)
-  quantity       Int?      @default(1)
-  status         String
-  apiResponse    Json?
-  token          String?
-  units          String?
-  pins           Json?
-  createdAt      DateTime  @default(now()) @map("created_at")
-  user           User      @relation(fields: [userId], references: [id])
-  service        Service   @relation(fields: [serviceId], references: [id])
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  serviceId     String   @map("service_id")
+  userReference String   @unique @map("user_reference")
+  phoneNumber   String?  @map("phone_number")
+  meterNumber   String?  @map("meter_number")
+  amount        Decimal  @db.Decimal(12, 2)
+  quantity      Int?     @default(1)
+  status        String
+  apiResponse   Json?
+  token         String?
+  units         String?
+  pins          Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+  user          User     @relation(fields: [userId], references: [id])
+  service       Service  @relation(fields: [serviceId], references: [id])
   @@map("vtu_requests")
 }
 
 model BvnRequest {
-  id                String        @id @default(uuid())
-  userId            String        @map("user_id")
-  serviceId         String        @map("service_id")
-  status            RequestStatus @default(PENDING)
-  statusMessage     String?       @map("status_message")
-  formData          Json
+  id                  String        @id @default(uuid())
+  userId              String        @map("user_id")
+  serviceId           String        @map("service_id")
+  status              RequestStatus @default(PENDING)
+  statusMessage       String?       @map("status_message")
+  formData            Json
   
-  failedEnrollmentUrl String?     @map("failed_enrollment_url")
-  vninSlipUrl         String?     @map("vnin_slip_url")
-  uploadedSlipUrl     String?     @map("uploaded_slip_url")
-  retrievalResult     String?     @map("retrieval_result")
-  newspaperUrl        String?     @map("newspaper_url") // Your new field
+  failedEnrollmentUrl String?       @map("failed_enrollment_url")
+  vninSlipUrl         String?       @map("vnin_slip_url")
+  uploadedSlipUrl     String?       @map("uploaded_slip_url")
+  retrievalResult     String?       @map("retrieval_result")
+  newspaperUrl        String?       @map("newspaper_url")
   
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
 
-  user              User          @relation(fields: [userId], references: [id])
-  service           Service       @relation(fields: [serviceId], references: [id])
+  user                User          @relation(fields: [userId], references: [id])
+  service             Service       @relation(fields: [serviceId], references: [id])
   
   @@map("bvn_requests")
 }
 
 model AggregatorPrice {
-  id              String   @id @default(uuid())
-  aggregatorId    String   @map("aggregator_id")
-  serviceId       String   @map("service_id")
-  commission      Decimal  @db.Decimal(10, 2)
+  id           String   @id @default(uuid())
+  aggregatorId String   @map("aggregator_id")
+  serviceId    String   @map("service_id")
+  commission   Decimal  @db.Decimal(10, 2)
   
-  aggregator      User     @relation(fields: [aggregatorId], references: [id])
-  service         Service  @relation(fields: [serviceId], references: [id])
+  aggregator   User     @relation(fields: [aggregatorId], references: [id])
+  service      Service  @relation(fields: [serviceId], references: [id])
   
   @@unique([aggregatorId, serviceId])
   @@map("aggregator_prices")
 }
 
 model WithdrawalRequest {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
-  amount          Decimal       @db.Decimal(12, 2)
-  status          RequestStatus @default(PENDING)
-  createdAt       DateTime      @default(now()) @map("created_at")
-  completedAt     DateTime?     @map("completed_at")
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  amount      Decimal       @db.Decimal(12, 2)
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  completedAt DateTime?     @map("completed_at")
   
-  user            User          @relation(fields: [userId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
   
   @@map("withdrawal_requests")
 }
 
 model PendingAccountChange {
-  id              String   @id @default(uuid())
-  userId          String   @unique @map("user_id")
-  newAccountName  String   @map("new_account_name")
-  newAccountNumber String  @map("new_account_number")
-  newBankName     String   @map("new_bank_name")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid())
+  userId           String   @unique @map("user_id")
+  newAccountName   String   @map("new_account_name")
+  newAccountNumber String   @map("new_account_number")
+  newBankName      String   @map("new_bank_name")
+  createdAt        DateTime @default(now()) @map("created_at")
   
-  user            User     @relation(fields: [userId], references: [id])
+  user             User     @relation(fields: [userId], references: [id])
   
   @@map("pending_account_changes")
 }
