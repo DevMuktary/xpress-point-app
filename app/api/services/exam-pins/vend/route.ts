@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 const VEND_ENDPOINT = 'https://cheapdatasales.com/autobiz_vending_index.php';
 const API_KEY = process.env.CHEAPDATASALES_API_KEY; 
@@ -45,10 +46,6 @@ export async function POST(request: Request) {
   let totalPrice: Decimal = new Decimal(0);
   let userReference: string = `XPS-FAILED-${Date.now()}`;
 
-  // Variables for Commission
-  let totalCommission: Decimal = new Decimal(0);
-  let aggregatorWalletId: string | null = null;
-
   try {
     const body = await request.json();
     const { serviceId, phoneNumber, quantity } = body; 
@@ -73,27 +70,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Insufficient funds. This purchase costs ₦${totalPrice.toString()}.` }, { status: 402 });
     }
 
-    // --- COMMISSION CALCULATION ---
-    if (user.role === 'AGENT' && user.aggregatorId) {
-      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
-        where: {
-          aggregatorId_serviceId: {
-            aggregatorId: user.aggregatorId,
-            serviceId: serviceId
-          }
-        }
-      });
-
-      if (aggregatorPrice) {
-        const commissionPerItem = new Decimal(aggregatorPrice.commission);
-        totalCommission = commissionPerItem.mul(quantity); 
-        aggregatorWalletId = user.aggregatorId;
-      }
-    }
-
     // --- 2. Charge User *before* API call ---
     userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
-    const totalPriceString = totalPrice.toString(); // Convert to string for Prisma
+    const totalPriceString = totalPrice.toString();
     
     await prisma.$transaction([
       prisma.wallet.update({
@@ -137,7 +116,6 @@ export async function POST(request: Request) {
     if (data.status === true && data.text_status === 'COMPLETED' && data.data?.true_response) {
       // --- SUCCESS! ---
       const pins = JSON.parse(data.data.true_response); 
-      const totalCommissionString = totalCommission.toString();
 
       await prisma.$transaction(async (tx) => {
         // a) Complete Transaction
@@ -147,7 +125,6 @@ export async function POST(request: Request) {
         });
 
         // b) Save Pins
-        // Use 'service.id' safely here because we are in the success block implies service exists
         await tx.examPinRequest.create({
           data: {
             userId: user.id,
@@ -161,12 +138,17 @@ export async function POST(request: Request) {
           }
         });
 
-        // c) Credit Aggregator Commission (Only happens on success)
-        if (aggregatorWalletId && totalCommission.greaterThan(0)) {
-           await tx.wallet.update({
-             where: { userId: aggregatorWalletId },
-             data: { commissionBalance: { increment: totalCommissionString } }
-           });
+        // c) PROCESS COMMISSION (The Definite Fix)
+        // Since this is a "Quantity" based purchase, we need to loop or calculate total commission.
+        // Our helper calculates PER UNIT. So we might need to call it 'quantity' times or adjust the helper.
+        //
+        // BETTER APPROACH: We modify the logic slightly here to handle QUANTITY.
+        // Since `processCommission` credits based on ONE service execution, 
+        // and the DB `commission` field is usually "Per Transaction" or "Per Unit".
+        // Assuming commission is PER PIN:
+        
+        for (let i = 0; i < quantity; i++) {
+             await processCommission(tx, user.id, service.id);
         }
       });
 
@@ -213,7 +195,6 @@ export async function POST(request: Request) {
     console.error(`Exam Pin (Vend) Error:`, errorMessage);
     
     // --- CRASH-RECOVERY REFUND ---
-    // Only refund if we have a valid Service and Price (meaning step 1 passed)
     if (service && totalPrice.greaterThan(0)) {
       console.log("CRITICAL ERROR: Refunding user due to server crash.");
       const totalPriceString = totalPrice.toString();
@@ -227,14 +208,13 @@ export async function POST(request: Request) {
           where: { reference: userReference },
           data: { status: 'FAILED' },
         }),
-        // Only try to log the pin request if we have the service ID
         prisma.examPinRequest.create({
           data: {
             userId: user!.id,
             serviceId: service.id,
             userReference: userReference,
-            phoneNumber: (request as any).phoneNumber || "Unknown", // Safe fallback
-            quantity: 1, // Fallback
+            phoneNumber: (request as any).phoneNumber || "Unknown", 
+            quantity: 1, 
             status: 'FAILED',
             apiResponse: { error: errorMessage } as any,
           }
