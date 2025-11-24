@@ -1,6 +1,6 @@
-"use client"; // This is an interactive component
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   CheckCircleIcon,
   XMarkIcon,
@@ -8,13 +8,12 @@ import {
   UserIcon,
   IdentificationIcon,
   ArrowPathIcon,
-  BuildingOfficeIcon,
-  CalendarDaysIcon,
   EnvelopeIcon,
   LockClosedIcon,
   ExclamationTriangleIcon,
   PencilSquareIcon,
-  ArrowUpTrayIcon // For File Upload
+  InformationCircleIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -57,17 +56,9 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- Reusable Input Component (THIS IS THE FIX for maxLength) ---
+// --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
-  label: string,
-  id: string,
-  value: string,
-  onChange: (value: string) => void,
-  Icon: React.ElementType,
-  type?: string,
-  isRequired?: boolean,
-  placeholder?: string,
-  maxLength?: number // <-- "Fixed" to accept maxLength
+  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string, maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -76,45 +67,25 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id}
-        type={type}
-        value={value}
+        id={id} type={type} value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired}
-        placeholder={placeholder}
-        maxLength={maxLength} // <-- It is now correctly passed
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        required={isRequired} placeholder={placeholder} maxLength={maxLength}
       />
     </div>
   </div>
 );
-// -----------------------------------------------------------
 
 // --- Reusable File Upload Component ---
 const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: {
-  label: string,
-  id: string,
-  file: File | null,
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
-  fileUrl: string | null,
-  isUploading: boolean,
-  error: string | null
+  label: string, id: string, file: File | null, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, fileUrl: string | null, isUploading: boolean, error: string | null
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
     <div className="mt-1 flex items-center gap-4">
       <input
-        id={id}
-        type="file"
-        onChange={onChange}
-        className="flex-1 w-full text-sm text-gray-500
-                   file:mr-4 file:py-2 file:px-4
-                   file:rounded-lg file:border-0
-                   file:text-sm file:font-semibold
-                   file:bg-blue-50 file:text-blue-700
-                   hover:file:bg-blue-100"
-        accept="image/png, image/jpeg, application/pdf"
-        required
+        id={id} type="file" onChange={onChange} accept="image/png, image/jpeg, application/pdf" required
+        className="flex-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
       />
       {isUploading && <ArrowPathIcon className="h-5 w-5 animate-spin text-blue-600" />}
       {fileUrl && <CheckCircleIcon className="h-6 w-6 text-green-600" />}
@@ -124,7 +95,20 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
   </div>
 );
 
-// --- Consent Modal Component ---
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="mb-6 rounded-xl bg-blue-50 p-4 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+    <div className="flex items-start gap-3">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        This service will be completed within 7 working days.
+      </div>
+    </div>
+  </div>
+);
+
+// --- Terms Modal ---
 const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -138,17 +122,12 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
         </button>
       </div>
       <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
-        <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>. Ask the customer if they have *ever* made a modification before.</p>
-        <p>2. If they did NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span> (NIMC Server). NIBSS does not do double modifications.</p>
-        <p>3. You can only change your details <span className="font-bold">Once</span>. e.g if you modified your Name, you can't do it again. You are eligible to modify DOB, Phone Number and so on, same thing if its DOB.</p>
-        <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we process your work and we later found out:</p>
-        <ul className="list-disc list-inside pl-4">
-          <li>It's a Bank Enrollment (Except Listed Banks).</li>
-          <li>Your Old NIN Details are incorrect.</li>
-          <li>Or you have already done a similar modification.</li>
-        </ul>
-        <p>5. <span className="font-bold">Listed Banks:</span> Agency BVN, B.O.A (Bank of Agriculture), NIBSS Microfinance, Enterprise Bank, Heritage Bank, FCMB, First Bank, Keystone Bank.</p>
-        <p className="font-bold text-red-700">6. Do NOT submit a "Complete Change of Name" (First, Middle, and Last) as the service is currently down.</p>
+        <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>.</p>
+        <p>2. If they did NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span>. NIBSS does not do double modifications.</p>
+        <p>3. You can only change your details <span className="font-bold">Once</span>.</p>
+        <p>4. <span className="font-bold text-red-700">NO REFUND</span> if we process your work and found errors on your end.</p>
+        <p>5. <span className="font-bold">Listed Banks:</span> Agency BVN, B.O.A, NIBSS Microfinance, Enterprise Bank, Heritage Bank, FCMB, First Bank, Keystone Bank.</p>
+        <p className="font-bold text-red-700">6. Do NOT submit a "Complete Change of Name".</p>
       </div>
       <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
         <Link
@@ -200,9 +179,8 @@ export default function BvnModificationClientPage({ prices }: Props) {
   const [newspaperUrl, setNewspaperUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  // --------------------------
 
-  // --- Dynamic Fee Calculation (Your Design) ---
+  // --- Dynamic Fee Calculation ---
   const { totalFee, dobFee, dobError } = useMemo(() => {
     if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null };
 
@@ -224,7 +202,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
           } else if (['Agency BVN', 'B.O.A', 'NIBSS Microfinance', 'Enterprise Bank', 'Heritage Bank'].includes(bankType)) {
             dobFee = 4000;
           } else {
-            // "OTHER" was removed, but we keep this as a default
             dobFee = 2000; 
           }
         }
@@ -245,7 +222,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
 
     try {
       const formData = new FormData();
-      formData.append('attestation', file); // Use the API's expected key
+      formData.append('attestation', file); 
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -256,7 +233,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
       if (!response.ok) {
         throw new Error(data.error || 'File upload failed.');
       }
-      setNewspaperUrl(data.url); // Save the permanent URL
+      setNewspaperUrl(data.url); 
     } catch (err: any) {
       setUploadError(err.message);
       setNewspaperFile(null);
@@ -275,7 +252,6 @@ export default function BvnModificationClientPage({ prices }: Props) {
       setSubmitError(dobError);
       return;
     }
-    // Check for marriage file upload
     if (serviceId?.includes('NAME') && isMarriage === true && !newspaperUrl) {
       setSubmitError("Please wait for the Newspaper Publication to finish uploading.");
       return;
@@ -284,7 +260,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
     setIsConfirmModalOpen(true);
   };
   
-  // --- This is the *final* submit ---
+  // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -313,7 +289,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
           serviceId: serviceId, 
           bankType: bankType,
           formData, 
-          newspaperUrl: newspaperUrl || null // Send the new field
+          newspaperUrl: newspaperUrl || null 
         }),
       });
       
@@ -343,38 +319,28 @@ export default function BvnModificationClientPage({ prices }: Props) {
       
       {/* --- Success Message --- */}
       {success && (
-        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-blue-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-bold text-blue-800">
-                Request Submitted Successfully!
-              </h3>
-              <div className="mt-2 text-sm text-blue-700">
-                <p>
-                  Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
-                  <Link href="/dashboard/history/bvn" className="font-semibold underline hover:text-blue-600">
-                    BVN History
-                  </Link> page.
-                </p>
-              </div>
-            </div>
+        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6 flex gap-3">
+          <CheckCircleIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
+          <div>
+            <h3 className="text-sm font-bold text-blue-800">Request Submitted Successfully!</h3>
+            <p className="mt-1 text-sm text-blue-700">
+              Your request is now <strong className="font-semibold">PENDING</strong>. Monitor status on the
+              <Link href="/dashboard/history/bvn" className="font-semibold underline hover:text-blue-600 ml-1">
+                BVN History
+              </Link> page.
+            </p>
           </div>
         </div>
       )}
 
       {/* --- The "Submit New Request" Form --- */}
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+      <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
           {/* --- Step 1: Select Institution --- */}
           {!bankType && (
             <div>
-              <label className="text-lg font-semibold text-gray-900">
-                1. Select Enrollment Institution
-              </label>
+              <label className="text-lg font-semibold text-gray-900">1. Select Enrollment Institution</label>
               <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
                 {banksList.map(bank => (
                   <ModTypeButton
@@ -392,25 +358,17 @@ export default function BvnModificationClientPage({ prices }: Props) {
           {/* --- Step 2: Select Mod Type --- */}
           {bankType && !serviceId && (
             <div className="space-y-6">
-              {/* Summary of Step 1 */}
               <div className="pb-4 border-b border-gray-200">
-                <label className="text-sm font-medium text-gray-500">Selected Institution</label>
                 <div className="flex items-center justify-between">
-                  <p className="text-lg font-semibold text-gray-900">{bankType}</p>
-                  <button
-                    type="button"
-                    onClick={() => { setBankType(null); setServiceId(null); }}
-                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-                  >
-                    <PencilSquareIcon className="h-4 w-4" />
-                    Change
+                  <label className="text-sm font-medium text-gray-500">Selected Institution</label>
+                  <button type="button" onClick={() => { setBankType(null); setServiceId(null); }} className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800">
+                    <PencilSquareIcon className="h-4 w-4" /> Change
                   </button>
                 </div>
+                <p className="text-lg font-semibold text-gray-900">{bankType}</p>
               </div>
               
-              <label className="text-lg font-semibold text-gray-900">
-                2. Select Modification Type
-              </label>
+              <label className="text-lg font-semibold text-gray-900">2. Select Modification Type</label>
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                 {modTypes.map(mod => (
                   <ModTypeButton
@@ -427,42 +385,27 @@ export default function BvnModificationClientPage({ prices }: Props) {
 
           {/* --- Step 3: Enter Details --- */}
           {bankType && serviceId && (
-            <div className="space-y-6">
-              {/* Summary of Steps 1 & 2 */}
+            <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
+              
+              {/* --- NOTIFICATION BLOCK --- */}
+              <NoticeBox />
+              {/* -------------------------- */}
+
               <div className="pb-4 border-b border-gray-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-500">Institution</label>
-                  <button
-                    type="button"
-                    onClick={() => { setBankType(null); setServiceId(null); }}
-                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-                  >
-                    <PencilSquareIcon className="h-4 w-4" />
-                    Change
+                  <label className="text-sm font-medium text-gray-500">Selected Service</label>
+                  <button type="button" onClick={() => setServiceId(null)} className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800">
+                    <PencilSquareIcon className="h-4 w-4" /> Change
                   </button>
                 </div>
-                <p className="text-lg font-semibold text-gray-900 -mt-2">{bankType}</p>
-              </div>
-              
-              <div className="pb-4 border-b border-gray-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-500">Modification Type</label>
-                  <button
-                    type="button"
-                    onClick={() => setServiceId(null)}
-                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-                  >
-                    <PencilSquareIcon className="h-4 w-4" />
-                    Change
-                  </button>
+                <div className="flex gap-2 text-lg font-semibold text-gray-900">
+                  <span>{bankType}</span>
+                  <span className="text-gray-400">/</span>
+                  <span>{modTypes.find(m => m.id === serviceId)?.name}</span>
                 </div>
-                <p className="text-lg font-semibold text-gray-900 -mt-2">
-                  {modTypes.find(m => m.id === serviceId)?.name}
-                </p>
               </div>
               
-              {/* Conditional Form Fields */}
-              <div className="pt-6 space-y-4">
+              <div className="pt-2 space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900">3. Enter Required Details</h3>
                 
                 <DataInput label="BVN Number*" id="bvn" value={bvn} onChange={setBvn} Icon={IdentificationIcon} />
@@ -477,7 +420,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
                       <DataInput label="New Last Name*" id="new-lname" value={newLastName} onChange={setNewLastName} Icon={UserIcon} />
                       <DataInput label="New Middle Name (Optional)" id="new-mname" value={newMiddleName} onChange={setNewMiddleName} Icon={UserIcon} isRequired={false} />
                     
-                      {/* --- THIS IS THE NEW MARRIAGE FIX --- */}
+                      {/* --- Marriage Logic --- */}
                       <div className="pt-4 border-t border-gray-200">
                         <label className="block text-sm font-medium text-gray-700">Is this for female change of SurName?</label>
                         <div className="mt-2 grid grid-cols-2 gap-3">
@@ -499,11 +442,11 @@ export default function BvnModificationClientPage({ prices }: Props) {
                           </p>
                         </div>
                       )}
-                      {/* ---------------------------------- */}
                     </div>
                   </fieldset>
                 )}
                 
+                {/* --- DOB Fields --- */}
                 {serviceId.includes('DOB') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">DOB Details</legend>
@@ -515,6 +458,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
                   </fieldset>
                 )}
                 
+                {/* --- Phone Fields --- */}
                 {serviceId.includes('PHONE') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">Phone Details</legend>
@@ -573,35 +517,28 @@ export default function BvnModificationClientPage({ prices }: Props) {
 
       {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Please Confirm
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
               <button onClick={() => setIsConfirmModalOpen(false)}>
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
             <div className="p-6">
-              <p className="text-center text-gray-600">
+              <p className="text-center text-gray-600 text-sm">
                 Please confirm you have filled in the right details. This action is irreversible.
               </p>
-              <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{totalFee}
-              </p>
+              <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
+                <p className="text-center text-2xl font-bold text-blue-700">₦{totalFee}</p>
+              </div>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <button
-                onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
-              >
+              <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100">
                 CANCEL
               </button>
-              <button
-                onClick={handleFinalSubmit}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-              >
+              <button onClick={handleFinalSubmit} className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                 YES, SUBMIT
               </button>
             </div>
