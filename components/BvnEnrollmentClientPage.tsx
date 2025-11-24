@@ -1,4 +1,4 @@
-"use client"; // This is an interactive component
+"use client"; 
 
 import React, { useState, useMemo } from 'react';
 import { 
@@ -12,7 +12,7 @@ import {
   MapPinIcon,
   BuildingOfficeIcon,
   CalendarDaysIcon,
-  InformationCircleIcon // <-- Added for the new info box
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -64,7 +64,6 @@ const nigeriaData: { [key: string]: { zone: string; lgas: string[] } } = {
 };
 
 const allStates = Object.keys(nigeriaData);
-const allZones = ["North West", "North East", "North Central", "South West", "South East", "South South"];
 
 // --- Reusable Select Component ---
 const DataSelect = ({ label, id, value, onChange, Icon, children, isRequired = true, disabled = false }: {
@@ -106,6 +105,33 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
         required={isRequired} placeholder={placeholder}
       />
+    </div>
+  </div>
+);
+
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="mb-6 space-y-3 rounded-xl bg-blue-50 p-4 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+    <div className="flex items-start gap-3">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Important: New Email & Phone</span>
+        Ensure you provide a completely new email address and phone number that have never been used before for any Android BVN Enrollment request.
+      </div>
+    </div>
+    <div className="flex items-start gap-3 pt-2 border-t border-blue-200/60">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        You will Receive your User Login Details via your Email within 48 to 72 working hours.
+      </div>
+    </div>
+    <div className="flex items-start gap-3 pt-2 border-t border-blue-200/60">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Check Result</span>
+        You can visit: <a href="https://agency.xpresspoint.net" target="_blank" className="underline">agency.xpresspoint.net</a> to check the Enrollment Result.
+      </div>
     </div>
   </div>
 );
@@ -221,21 +247,9 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
             <h3 className="text-lg font-semibold text-gray-900">Enter Enrollment Details</h3>
           </div>
 
-          {/* --- THIS IS THE FIX (Part 1) --- */}
-          {/* Added the new info box */}
-          <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <InformationCircleIcon className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-blue-800">
-                  Ensure you provide a completely new email address and phone number that have never been used before for any Android BVN Enrollment request.
-                </p>
-              </div>
-            </div>
-          </div>
-          {/* ------------------------------- */}
+          {/* --- NOTIFICATION BLOCK --- */}
+          <NoticeBox />
+          {/* -------------------------- */}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DataInput label="Agent Location*" id="agentLocation" value={agentLocation} onChange={setAgentLocation} Icon={MapPinIcon} />
@@ -353,8 +367,8 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
                     <a 
                       href="https://agency.xpresspoint.net" 
                       target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="font-semibold underline text-blue-600"
+                      rel="noopener noreferrer"
+                      className="font-semibold underline text-blue-600 ml-1"
                     >
                       https://agency.xpresspoint.net
                     </a>
