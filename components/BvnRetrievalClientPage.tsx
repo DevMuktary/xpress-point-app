@@ -8,14 +8,15 @@ import {
   UserIcon,
   IdentificationIcon,
   ArrowUpTrayIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
 // --- Type Definitions ---
 type Props = {
-  prices: { [key: string]: number }; // Expect a price map
+  prices: { [key: string]: number }; 
 };
 type ServiceID = 'BVN_RETRIEVAL_PHONE' | 'BVN_RETRIEVAL_CRM';
 
@@ -63,7 +64,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         required={isRequired}
         placeholder={placeholder}
         maxLength={maxLength}
@@ -103,6 +104,19 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
     </div>
     {file && <p className="text-xs text-gray-500 mt-1">{file.name}</p>}
     {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+  </div>
+);
+
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="mb-6 rounded-xl bg-blue-50 p-4 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+    <div className="flex items-start gap-3">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        You will get the Result within 24 working hours.
+      </div>
+    </div>
   </div>
 );
 
@@ -183,7 +197,7 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
     setIsConfirmModalOpen(true);
   };
   
-  // --- This is the *final* submit ---
+  // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -230,33 +244,34 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
       
       {/* --- Success Message --- */}
       {success && (
-        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-blue-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-bold text-blue-800">
-                Request Submitted Successfully!
-              </h3>
-              <div className="mt-2 text-sm text-blue-700">
-                <p>
-                  Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
-                  <Link href="/dashboard/history/bvn" className="font-semibold underline hover:text-blue-600">
-                    BVN History
-                  </Link> page.
-                </p>
-              </div>
-            </div>
+        <div className="rounded-lg bg-green-50 p-4 border border-green-200 flex gap-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex-shrink-0">
+            <CheckCircleIcon className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-green-800">
+              Request Submitted Successfully!
+            </h3>
+            <p className="text-sm text-green-700 mt-1">
+              Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
+              <Link href="/dashboard/history/bvn" className="font-semibold underline hover:text-green-600 ml-1">
+                BVN History
+              </Link> page.
+            </p>
           </div>
         </div>
       )}
 
       {/* --- The "Submit New Request" Form --- */}
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+      <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
+        
+        {/* --- NOTIFICATION BLOCK --- */}
+        <NoticeBox />
+        {/* -------------------------- */}
+
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- "Modern Buttons" for Service Type --- */}
+          {/* --- Service Type --- */}
           <div>
             <label className="text-lg font-semibold text-gray-900">
               1. Select Retrieval Type
@@ -279,7 +294,7 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
 
           {/* --- Conditional Form Fields --- */}
           {serviceId === 'BVN_RETRIEVAL_PHONE' && (
-            <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div className="border-t border-gray-200 pt-6 space-y-4 animate-in fade-in slide-in-from-top-4">
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Required Details</h3>
               <DataInput label="Phone Number*" id="phone" value={phone} onChange={setPhone} Icon={PhoneIcon} type="tel" maxLength={11} />
               <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />
@@ -287,7 +302,7 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
           )}
           
           {serviceId === 'BVN_RETRIEVAL_CRM' && (
-            <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div className="border-t border-gray-200 pt-6 space-y-4 animate-in fade-in slide-in-from-top-4">
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Required Details</h3>
               <DataInput label="Agent Code*" id="agentCode" value={agentCode} onChange={setAgentCode} Icon={IdentificationIcon} />
               <DataInput label="BMS Ticket / Ticket ID*" id="ticketId" value={ticketId} onChange={setTicketId} Icon={IdentificationIcon} />
@@ -305,12 +320,12 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
           {serviceId && (
             <div className="border-t border-gray-200 pt-6">
               {submitError && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+                <p className="mb-4 text-sm font-medium text-red-600 text-center bg-red-50 p-2 rounded-lg">{submitError}</p>
               )}
               <button
                 type="submit"
                 disabled={isLoading || isUploading}
-                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
               >
                 {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
               </button>
@@ -321,34 +336,35 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
 
       {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-200 p-4 bg-gray-50">
               <h2 className="text-lg font-semibold text-gray-900">
                 Please Confirm
               </h2>
-              <button onClick={() => setIsConfirmModalOpen(false)}>
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              <button onClick={() => setIsConfirmModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
             <div className="p-6">
-              <p className="text-center text-gray-600">
+              <p className="text-center text-gray-600 text-sm leading-relaxed">
                 Please confirm you have filled in the right details. This action is irreversible.
               </p>
-              <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{fee}
-              </p>
+              <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
+                <p className="text-center text-2xl font-bold text-blue-700">₦{fee}</p>
+              </div>
             </div>
-            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+            <div className="grid grid-cols-2 gap-0 border-t border-gray-200">
               <button
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+                className="py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors border-r border-gray-200"
               >
                 CANCEL
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                className="py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 YES, SUBMIT
               </button>
