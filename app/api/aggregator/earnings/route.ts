@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// "World-class" type for our commission log
+// Type definition
 type CommissionEarning = {
   id: string;
   createdAt: Date;
@@ -12,7 +12,7 @@ type CommissionEarning = {
   commission: Decimal;
 };
 
-// "World-class" helper function to get earnings
+// Helper function to get earnings
 async function getCommissionEarnings(aggregatorId: string): Promise<CommissionEarning[]> {
   // 1. Get all agents for this aggregator
   const agents = await prisma.user.findMany({
@@ -22,18 +22,18 @@ async function getCommissionEarnings(aggregatorId: string): Promise<CommissionEa
   
   const agentIds = agents.map(a => a.id);
   if (agentIds.length === 0) {
-    return []; // No agents, no earnings
+    return []; 
   }
   
-  // 2. Get all commission rates set by the Super-Admin
+  // 2. Get specific overrides (AggregatorPrice)
   const commissionPrices = await prisma.aggregatorPrice.findMany({
-    where: { aggregatorId: aggregatorId },
+    where: { aggregatorId: aggregatorId }, 
     select: { serviceId: true, commission: true }
   });
   
   const commissionMap = new Map(commissionPrices.map(c => [c.serviceId, c.commission]));
 
-  // 3. Get all transactions from those agents
+  // 3. Get transactions (Fetch defaultCommission from Service too!)
   const transactions = await prisma.transaction.findMany({
     where: {
       userId: { in: agentIds },
@@ -45,28 +45,35 @@ async function getCommissionEarnings(aggregatorId: string): Promise<CommissionEa
         select: { firstName: true, lastName: true }
       },
       service: {
-        select: { name: true }
+        select: { name: true, defaultCommission: true } // <--- CRITICAL ADDITION
       }
     },
     orderBy: { createdAt: 'desc' },
-    take: 50 // Get the 50 most recent
+    take: 50 
   });
 
-  // 4. "Refurbish" the data
+  // 4. Calculate Earnings (Matching the Wallet Logic)
   const earnings: CommissionEarning[] = transactions.map(t => {
-    const commission = commissionMap.get(t.serviceId!) || new Decimal(0);
+    let commission = new Decimal(0);
+
+    // Logic: Check Override -> Then Check Global Default
+    if (t.serviceId && commissionMap.has(t.serviceId)) {
+      commission = commissionMap.get(t.serviceId)!;
+    } else if (t.service?.defaultCommission) {
+      commission = t.service.defaultCommission;
+    }
+
     return {
       id: t.id,
       createdAt: t.createdAt,
       agentName: `${t.user.firstName} ${t.user.lastName}`,
-      serviceName: t.service!.name,
+      serviceName: t.service?.name || 'Unknown Service',
       commission: commission
     };
   }).filter(e => e.commission.greaterThan(0)); 
   
   return earnings;
 }
-
 
 export async function GET(request: Request) {
   const user = await getUserFromSession();
