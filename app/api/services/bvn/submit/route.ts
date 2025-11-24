@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -30,10 +31,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // --- PRICING LOGIC FIX ---
+    // --- PRICING LOGIC ---
     // Base price is ALWAYS defaultAgentPrice
     const price = new Decimal(service.defaultAgentPrice);
-    // -------------------------
     
     // 2. Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -41,48 +41,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price.toString()}.` }, { status: 402 });
     }
 
-    // --- COMMISSION LOGIC ---
-    let commissionAmount = new Decimal(0);
-    let aggregatorWalletId = null;
-
-    // If user is an Agent under an Aggregator, calculate commission
-    if (user.role === 'AGENT' && user.aggregatorId) {
-      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
-        where: {
-          aggregatorId_serviceId: {
-            aggregatorId: user.aggregatorId,
-            serviceId: serviceId
-          }
-        }
-      });
-
-      if (aggregatorPrice) {
-        commissionAmount = new Decimal(aggregatorPrice.commission);
-        // Set the aggregator ID to credit
-        aggregatorWalletId = user.aggregatorId;
-      }
-    }
-    // ------------------------
-
     // 3. Execute Transaction
     const priceAsString = price.toString();
     const negatedPriceAsString = price.negated().toString();
-    const commissionAsString = commissionAmount.toString();
 
     await prisma.$transaction(async (tx) => {
       // a) Charge User Wallet
       await tx.wallet.update({
         where: { userId: user.id },
-        data: { balance: { decrement: priceAsString } }, // FIX: Use string
+        data: { balance: { decrement: priceAsString } },
       });
 
-      // b) Credit Aggregator Commission (if applicable)
-      if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
-        await tx.wallet.update({
-          where: { userId: aggregatorWalletId },
-          data: { commissionBalance: { increment: commissionAsString } } // FIX: Use string
-        });
-      }
+      // b) PROCESS COMMISSION (The Definite Fix)
+      // This calculates and credits the aggregator instantly
+      await processCommission(tx, user.id, service.id);
 
       // c) Create the new request
       await tx.bvnRequest.create({
@@ -106,7 +78,7 @@ export async function POST(request: Request) {
           userId: user.id,
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: negatedPriceAsString, // FIX: Use string
+          amount: negatedPriceAsString,
           description: `${service.name}`,
           reference: `BVN-MANUAL-${Date.now()}`,
           status: 'COMPLETED',
