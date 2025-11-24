@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 // --- Fee Constants ---
 const DOB_GAP_FEE_MEDIUM = new Decimal(35000); // 6-10 years
@@ -58,9 +59,9 @@ export async function POST(request: Request) {
     const { 
       serviceId, 
       bankType, 
-      formData,
+      formData, 
       // File URLs from Client
-      passportUrl,
+      passportUrl, 
       attestationUrl
     } = body; 
 
@@ -83,27 +84,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price.toString()}.` }, { status: 402 });
     }
 
-    // --- 3. Calculate Commission (New Logic) ---
-    let commissionAmount = new Decimal(0);
-    let aggregatorWalletId = null;
-
-    if (user.role === 'AGENT' && user.aggregatorId) {
-      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
-        where: {
-          aggregatorId_serviceId: {
-            aggregatorId: user.aggregatorId,
-            serviceId: serviceId
-          }
-        }
-      });
-
-      if (aggregatorPrice) {
-        commissionAmount = new Decimal(aggregatorPrice.commission);
-        aggregatorWalletId = user.aggregatorId;
-      }
-    }
-
-    // --- 4. Prepare Data ---
+    // --- 3. Prepare Data ---
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     const finalFormData = {
       ...formData,
@@ -113,9 +94,8 @@ export async function POST(request: Request) {
     
     const priceAsString = price.toString();
     const negatedPriceAsString = price.negated().toString();
-    const commissionAsString = commissionAmount.toString();
 
-    // --- 5. Execute Transaction ---
+    // --- 4. Execute Transaction ---
     await prisma.$transaction(async (tx) => {
       // a) Charge User Wallet
       await tx.wallet.update({
@@ -123,13 +103,9 @@ export async function POST(request: Request) {
         data: { balance: { decrement: priceAsString } },
       });
 
-      // b) Credit Aggregator (if applicable)
-      if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
-        await tx.wallet.update({
-          where: { userId: aggregatorWalletId },
-          data: { commissionBalance: { increment: commissionAsString } }
-        });
-      }
+      // b) PAY THE AGGREGATOR (The Definite Fix)
+      // This will check for specific overrides, fall back to global default, and credit wallet instantly.
+      await processCommission(tx, user.id, serviceId);
 
       // c) Create Request
       await tx.bvnRequest.create({
@@ -142,9 +118,7 @@ export async function POST(request: Request) {
           
           // Map the files
           uploadedSlipUrl: passportUrl || null, // Passport goes here
-          // Note: BvnRequest doesn't have a separate attestation column in the schema, 
-          // so we rely on it being in formData or add a new column. 
-          // For now, saving in formData is safe.
+          newspaperUrl: body.newspaperUrl || null // Map newspaper if present
         },
       });
 
