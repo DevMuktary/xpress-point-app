@@ -3,12 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
 import axios from 'axios';
-import https from 'https'; // Import https for the agent
 
 // --- Cloudflare Config ---
 const CF_ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
-const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN; // Should be "Bearer <token>"
-const APP_DOMAIN = "xpresspoint.net"; // Your main domain
+const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN; 
+const APP_DOMAIN = "xpresspoint.net"; 
 
 let cfHeaders: any = {};
 if (CF_API_TOKEN) {
@@ -30,7 +29,6 @@ function generateSubdomain(businessName: string): string {
 async function createCloudflareRecord(subdomain: string) {
   if (!CF_ZONE_ID || !CF_API_TOKEN) {
     console.error("CRITICAL: Cloudflare variables are not set. Skipping subdomain creation.");
-    // This is a server configuration error, we should stop
     throw new Error("DNS API is not configured. Upgrade cannot proceed."); 
   }
 
@@ -38,10 +36,10 @@ async function createCloudflareRecord(subdomain: string) {
 
   const payload = {
     type: 'CNAME',
-    name: subdomain,         // e.g., "quadrox"
-    content: APP_DOMAIN,     // e.g., "xpresspoint.net"
-    ttl: 1,                  // 1 = Automatic
-    proxied: true            // The "orange cloud"
+    name: subdomain,         
+    content: APP_DOMAIN,     
+    ttl: 1,                  
+    proxied: true            
   };
 
   try {
@@ -51,7 +49,6 @@ async function createCloudflareRecord(subdomain: string) {
     const data = response.data;
     if (data.success !== true) {
       const error = data.errors[0]?.message || 'Unknown Cloudflare API error';
-      // If it "fails" because it *already exists*, that is fine
       if (error.includes('already exists')) {
         console.log(`Cloudflare: CNAME record ${subdomain}.${APP_DOMAIN} already exists. This is OK.`);
       } else {
@@ -86,13 +83,13 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Get Price & Check Wallet ---
-    const service = await prisma.service.findUnique({ where: { id: 'AGGREGATOR_UPGRADE' } });
-    if (!service) {
+    const upgradeService = await prisma.service.findUnique({ where: { id: 'AGGREGATOR_UPGRADE' } });
+    if (!upgradeService) {
       throw new Error("AGGREGATOR_UPGRADE service not found.");
     }
     
-    const rawPrice = service.defaultAgentPrice;
-    const price = new Decimal(rawPrice); // Instantiate as Decimal
+    const rawPrice = upgradeService.defaultAgentPrice;
+    const price = new Decimal(rawPrice); 
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
@@ -110,19 +107,28 @@ export async function POST(request: Request) {
     }
 
     // --- 3. Cloudflare Call (BEFORE payment) ---
-    // We create the DNS record first. If it fails, we stop.
     await createCloudflareRecord(subdomain);
 
-    // --- 4. Database Transaction ---
+    // --- 4. Prepare "Push Strategy" Commissions ---
+    // Fetch all services that have a default commission set
+    const commissionServices = await prisma.service.findMany({
+      where: { defaultCommission: { gt: 0 } }
+    });
+
     const priceAsString = price.toString();
     const negatedPriceAsString = price.negated().toString();
 
-    await prisma.$transaction([
-      prisma.wallet.update({
+    // --- 5. Database Transaction ---
+    await prisma.$transaction(async (tx) => {
+      
+      // a) Charge User
+      await tx.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: priceAsString } },
-      }),
-      prisma.user.update({
+      });
+
+      // b) Upgrade User Role & Details
+      await tx.user.update({
         where: { id: user.id },
         data: {
           role: 'AGGREGATOR',
@@ -132,21 +138,34 @@ export async function POST(request: Request) {
           businessName: businessName,
           subdomain: subdomain
         }
-      }),
-      prisma.transaction.create({
+      });
+
+      // c) Log Transaction
+      await tx.transaction.create({
         data: {
           userId: user.id,
-          serviceId: service.id,
+          serviceId: upgradeService.id,
           type: 'SERVICE_CHARGE',
           amount: negatedPriceAsString,
           description: `Aggregator Account Upgrade`,
           reference: `AGG-UPG-${Date.now()}`,
           status: 'COMPLETED',
         },
-      }),
-    ]);
+      });
 
-    // --- 5. Return Success Response ---
+      // d) "Push Strategy": Apply Default Commissions
+      if (commissionServices.length > 0) {
+        await tx.aggregatorPrice.createMany({
+          data: commissionServices.map(s => ({
+            aggregatorId: user.id,
+            serviceId: s.id,
+            commission: s.defaultCommission
+          }))
+        });
+      }
+    });
+
+    // --- 6. Return Success Response ---
     return NextResponse.json(
       { 
         message: 'Upgrade successful!',
