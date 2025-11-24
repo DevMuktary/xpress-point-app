@@ -1,31 +1,31 @@
-import { prisma } from '@/lib/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
 /**
- * Calculates commission and credits the Aggregator's wallet.
- * Call this function inside your transaction endpoint after a successful charge.
+ * COMMISSION ENGINE
+ * 1. Checks if the user is an Agent with an Upline.
+ * 2. Checks for a specific Aggregator Price override.
+ * 3. If no override, uses the Service's Global Default Commission.
+ * 4. Credits the Aggregator's wallet instantly.
  */
 export async function processCommission(
   tx: any, // The Prisma Transaction Client
   userId: string,
   serviceId: string
 ) {
-  // 1. Get the User (Agent) details including Aggregator ID
+  // 1. Get Agent details
   const user = await tx.user.findUnique({
     where: { id: userId },
     select: { role: true, aggregatorId: true }
   });
 
-  // Only Agents with an Upline Aggregator generate commission
+  // Stop if not an Agent or has no Upline
   if (!user || user.role !== 'AGENT' || !user.aggregatorId) {
     return;
   }
 
-  // 2. Find the Commission Rate
-  // Priority: Specific Aggregator Price -> Global Service Default -> 0
   let commissionAmount = new Decimal(0);
 
-  // Check for specific override first
+  // 2. Check for Specific Override (AggregatorPrice table)
   const aggPrice = await tx.aggregatorPrice.findUnique({
     where: {
       aggregatorId_serviceId: {
@@ -38,17 +38,18 @@ export async function processCommission(
   if (aggPrice) {
     commissionAmount = aggPrice.commission;
   } else {
-    // Fallback to Global Default
+    // 3. Check for Global Default (Service table)
     const service = await tx.service.findUnique({
       where: { id: serviceId },
       select: { defaultCommission: true }
     });
-    if (service) {
+    
+    if (service && service.defaultCommission) {
       commissionAmount = service.defaultCommission;
     }
   }
 
-  // 3. Credit the Aggregator Wallet (The Vault)
+  // 4. Credit the Vault (Commission Balance)
   if (commissionAmount.greaterThan(0)) {
     await tx.wallet.update({
       where: { userId: user.aggregatorId },
@@ -57,6 +58,7 @@ export async function processCommission(
       }
     });
     
-    console.log(`COMMISSION: Credited ₦${commissionAmount} to Aggregator ${user.aggregatorId}`);
+    // Optional: Log for debugging
+    // console.log(`PAID: ₦${commissionAmount} to Aggregator ${user.aggregatorId}`);
   }
 }
