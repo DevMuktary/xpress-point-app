@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 // Get API credentials
 const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
@@ -74,28 +75,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You already have a pending or processing request for this Tracking ID.' }, { status: 409 });
     }
 
-    // --- 3. Calculate Commission (Prep) ---
-    // We calculate this now, but only credit it if the API call succeeds later.
-    let commissionAmount = new Decimal(0);
-    let aggregatorWalletId = null;
-
-    if (user.role === 'AGENT' && user.aggregatorId) {
-      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
-        where: {
-          aggregatorId_serviceId: {
-            aggregatorId: user.aggregatorId,
-            serviceId: serviceId
-          }
-        }
-      });
-
-      if (aggregatorPrice) {
-        commissionAmount = new Decimal(aggregatorPrice.commission);
-        aggregatorWalletId = user.aggregatorId;
-      }
-    }
-
-    // --- 4. Call External API (Raudah) ---
+    // --- 3. Call External API (Raudah) ---
     // We call API *before* charging (as per your specific IPE flow)
     const response = await axios.post(SUBMIT_ENDPOINT, 
       { 
@@ -113,19 +93,18 @@ export async function POST(request: Request) {
 
     const data = response.data;
     
-    // --- 5. "World-Class" Auto-Refund Logic ---
+    // --- 4. Auto-Refund Logic ---
     if (data.response_code && REFUND_CODES.includes(data.response_code)) {
       console.log(`IPE Auto-Refund: ${data.message}`);
       return NextResponse.json({ error: `Sorry 😞 ${data.message}` }, { status: 400 });
     }
     
-    // --- 6. Handle Success ---
+    // --- 5. Handle Success ---
     const isSuccess1 = (data.response_code === "00" && data.transactionStatus === "SUCCESSFUL");
     const isSuccess2 = (data.status === "Successful" && data.reply);
 
     if (isSuccess1 || isSuccess2) {
       const priceAsString = price.toString();
-      const commissionAsString = commissionAmount.toString();
 
       // --- EXECUTE TRANSACTION ---
       await prisma.$transaction(async (tx) => {
@@ -135,13 +114,9 @@ export async function POST(request: Request) {
           data: { balance: { decrement: priceAsString } },
         });
 
-        // b) Credit Aggregator (The new logic)
-        if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
-          await tx.wallet.update({
-            where: { userId: aggregatorWalletId },
-            data: { commissionBalance: { increment: commissionAsString } }
-          });
-        }
+        // b) PROCESS COMMISSION (The Definite Fix)
+        // This calculates and credits the aggregator instantly
+        await processCommission(tx, user.id, service.id);
 
         // c) Create IPE Request
         await tx.ipeRequest.create({
