@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 const ROBOSTTECH_API_KEY = process.env.ROBOSTTECH_API_KEY;
 const SUBMIT_ENDPOINT = 'https://robosttech.com/api/personalization';
@@ -55,28 +56,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You have already submitted this Tracking ID.' }, { status: 409 });
     }
 
-    // --- 4. Calculate Commission (New Logic) ---
-    // We calculate this now, but only pay it if the API call succeeds later.
-    let commissionAmount = new Decimal(0);
-    let aggregatorWalletId = null;
-
-    if (user.role === 'AGENT' && user.aggregatorId) {
-      const aggregatorPrice = await prisma.aggregatorPrice.findUnique({
-        where: {
-          aggregatorId_serviceId: {
-            aggregatorId: user.aggregatorId,
-            serviceId: serviceId
-          }
-        }
-      });
-
-      if (aggregatorPrice) {
-        commissionAmount = new Decimal(aggregatorPrice.commission);
-        aggregatorWalletId = user.aggregatorId;
-      }
-    }
-
-    // --- 5. Call Provider (Robosttech) ---
+    // --- 4. Call Provider (Robosttech) ---
     // We call API *before* charging (Standard safety practice)
     const response = await axios.post(SUBMIT_ENDPOINT, 
       { tracking_id: trackingId },
@@ -94,9 +74,8 @@ export async function POST(request: Request) {
       throw new Error(data.message || "Submission failed. Please check the Tracking ID.");
     }
 
-    // --- 6. Execute Transaction ---
+    // --- 5. Execute Transaction ---
     const priceAsString = price.toString();
-    const commissionAsString = commissionAmount.toString();
     const negatedPriceAsString = price.negated().toString();
 
     const newRequest = await prisma.$transaction(async (tx) => {
@@ -106,13 +85,9 @@ export async function POST(request: Request) {
         data: { balance: { decrement: priceAsString } },
       });
 
-      // b) Credit Aggregator (if applicable)
-      if (aggregatorWalletId && commissionAmount.greaterThan(0)) {
-        await tx.wallet.update({
-          where: { userId: aggregatorWalletId },
-          data: { commissionBalance: { increment: commissionAsString } }
-        });
-      }
+      // b) PROCESS COMMISSION (The Definite Fix)
+      // This calculates and credits the aggregator instantly
+      await processCommission(tx, user.id, service.id);
 
       // c) Create Request
       const req = await tx.personalizationRequest.create({
