@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
 
-const MINIMUM_PAYOUT = new Decimal(1000); // Your ₦1000 minimum
+const MINIMUM_PAYOUT = new Decimal(1000); 
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
-  // "World-class" security: Must be an AGGREGATOR
+  
+  // Security Check: Must be an AGGREGATOR
   if (!user || user.role !== 'AGGREGATOR') {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
@@ -24,12 +25,12 @@ export async function POST(request: Request) {
     
     const balance = wallet.commissionBalance;
 
-    // 2. "World-Class" Check: Do they have enough to withdraw?
+    // 2. Check: Do they have enough to withdraw?
     if (balance.lessThan(MINIMUM_PAYOUT)) {
       return NextResponse.json({ error: `Minimum payout is ₦${MINIMUM_PAYOUT}.` }, { status: 400 });
     }
     
-    // 3. "World-Class" Check: Do they have a pending request?
+    // 3. Check: Do they have a pending request?
     const existingRequest = await prisma.withdrawalRequest.findFirst({
       where: {
         userId: user.id,
@@ -42,15 +43,16 @@ export async function POST(request: Request) {
     }
     
     const amountToWithdraw = balance; // They withdraw their entire balance
+    const amountString = amountToWithdraw.toString();
 
-    // 4. "Stunning" Transaction
+    // 4. Execute Transaction
     const [_, newRequest] = await prisma.$transaction([
-      // a) Set their commission balance to 0
+      // a) Set their commission balance to 0 (decrement by current balance)
       prisma.wallet.update({
         where: { userId: user.id },
-        data: { commissionBalance: { decrement: amountToWithdraw } }
+        data: { commissionBalance: { decrement: amountString } }
       }),
-      // b) Create the "world-class" PENDING request for the Admin
+      // b) Create the PENDING request for the Admin
       prisma.withdrawalRequest.create({
         data: {
           userId: user.id,
@@ -60,11 +62,11 @@ export async function POST(request: Request) {
       })
     ]);
 
-    // 5. Return "stunning" success
+    // 5. Return success
     return NextResponse.json(
       { 
         message: 'Withdrawal request submitted successfully! The admin will process it shortly.',
-        newRequest: newRequest // Send the new request back to update the history
+        newRequest: newRequest 
       },
       { status: 200 }
     );
