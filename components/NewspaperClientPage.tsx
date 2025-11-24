@@ -1,12 +1,11 @@
-"use client"; // This is an interactive component
+"use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   CheckCircleIcon,
-  ExclamationTriangleIcon,
   UserIcon,
-  IdentificationIcon
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -32,7 +31,20 @@ const ModTypeButton = ({ title, description, selected, onClick }: {
   </button>
 );
 
-// --- The Main "World-Class" Component ---
+// --- Notification Component ---
+const NoticeBox = () => (
+  <div className="mb-6 rounded-xl bg-blue-50 p-4 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+    <div className="flex items-start gap-3">
+      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-blue-800">
+        <span className="font-bold block mb-1">Processing Time</span>
+        This Service will be Completed within 48 to 72 working hours.
+      </div>
+    </div>
+  </div>
+);
+
+// --- The Main Component ---
 export default function NewspaperClientPage() {
   const router = useRouter();
   
@@ -40,8 +52,8 @@ export default function NewspaperClientPage() {
   const [modType, setModType] = useState<'NAME_CHANGE' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null); // Your "Sweet Alert" message
-  const [hasAttested, setHasAttested] = useState(false); // Your Attestation
+  const [success, setSuccess] = useState<string | null>(null); 
+  const [hasAttested, setHasAttested] = useState(false); 
   
   // --- Form Data State (for Change of Name) ---
   const [oldFirstName, setOldFirstName] = useState('');
@@ -58,7 +70,6 @@ export default function NewspaperClientPage() {
     setSubmitError(null);
     setSuccess(null);
 
-    // "World-class" validation
     if (!hasAttested) {
       setSubmitError("You must agree to the attestation before submitting.");
       setIsSubmitting(false);
@@ -92,7 +103,7 @@ export default function NewspaperClientPage() {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSuccess(data.message); // Your "Sweet Alert" - style message
+      setSuccess(data.message); 
       // Reset the form
       setOldFirstName(''); setOldLastName(''); setOldMiddleName('');
       setNewFirstName(''); setNewLastName(''); setNewMiddleName('');
@@ -110,9 +121,9 @@ export default function NewspaperClientPage() {
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
       
-      {/* --- Your "Sweet Alert" Style Message --- */}
+      {/* --- Success Message --- */}
       {success && (
-        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+        <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 animate-in fade-in slide-in-from-top-2">
           <div className="flex">
             <div className="flex-shrink-0">
               <CheckCircleIcon className="h-5 w-5 text-blue-500" />
@@ -124,7 +135,7 @@ export default function NewspaperClientPage() {
               <div className="mt-2 text-sm text-blue-700">
                 <p>
                   Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
-                  <Link href="/dashboard/history/newspaper" className="font-semibold underline hover:text-blue-600">
+                  <Link href="/dashboard/history/newspaper" className="font-semibold underline hover:text-blue-600 ml-1">
                     Newspaper History
                   </Link> page.
                 </p>
@@ -134,11 +145,11 @@ export default function NewspaperClientPage() {
         </div>
       )}
 
-      {/* --- 2. The "Submit New Request" Form --- */}
-      <div className="rounded-2xl bg-white p-6 shadow-lg">
+      {/* --- The "Submit New Request" Form --- */}
+      <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* --- "Modern Buttons" for Mod Type --- */}
+          {/* --- Mod Type Selection --- */}
           <div>
             <label className="text-lg font-semibold text-gray-900">
               1. Select Publication Type
@@ -150,13 +161,17 @@ export default function NewspaperClientPage() {
                 selected={modType === 'NAME_CHANGE'}
                 onClick={() => setModType('NAME_CHANGE')}
               />
-              {/* We can add more "modern buttons" here later */}
             </div>
           </div>
 
           {/* --- Conditional Fields --- */}
           {modType === 'NAME_CHANGE' && (
-            <div className="border-t border-gray-200 pt-6 space-y-4">
+            <div className="border-t border-gray-200 pt-6 space-y-6 animate-in fade-in slide-in-from-top-4">
+              
+              {/* --- NOTIFICATION BLOCK --- */}
+              <NoticeBox />
+              {/* -------------------------- */}
+
               <h3 className="text-lg font-semibold text-gray-900">2. Enter Publication Details</h3>
               
               {/* Old Names */}
@@ -179,7 +194,7 @@ export default function NewspaperClientPage() {
                 </div>
               </fieldset>
               
-              {/* --- Your "World-Class" Attestation --- */}
+              {/* --- Attestation --- */}
               <div className="relative flex items-start rounded-lg bg-gray-50 p-4 border border-gray-200">
                 <div className="flex h-6 items-center">
                   <input
@@ -207,12 +222,12 @@ export default function NewspaperClientPage() {
           {modType && (
             <div className="border-t border-gray-200 pt-6">
               {submitError && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
+                <p className="mb-4 text-sm font-medium text-red-600 text-center bg-red-50 p-2 rounded-lg">{submitError}</p>
               )}
               <button
                 type="submit"
                 disabled={isSubmitting || !hasAttested}
-                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Publication Request (Fee: ₦4500)'}
               </button>
@@ -224,7 +239,7 @@ export default function NewspaperClientPage() {
   );
 }
 
-// --- "World-Class" Reusable Input Component ---
+// --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, maxLength = 524288 }: {
   label: string,
   id: string,
@@ -246,7 +261,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         required={isRequired}
         maxLength={maxLength}
       />
