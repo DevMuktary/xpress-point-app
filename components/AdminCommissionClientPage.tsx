@@ -15,7 +15,7 @@ export default function AdminCommissionClientPage({ services }: { services: Serv
   const [searchTerm, setSearchTerm] = useState('');
   const [commissions, setCommissions] = useState<Record<string, string>>(
     // Initialize state with DB values
-    services.reduce((acc, s) => ({ ...acc, [s.id]: s.aggregatorCommission }), {})
+    services.reduce((acc, s) => ({ ...acc, [s.id]: s.defaultCommission }), {})
   );
   
   const [isSaving, setIsSaving] = useState<string | null>(null); // ID of service being saved
