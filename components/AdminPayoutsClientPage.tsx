@@ -6,7 +6,8 @@ import {
   XCircleIcon, 
   ClipboardDocumentIcon,
   ArrowPathIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  BanknotesIcon
 } from '@heroicons/react/24/outline';
 
 type Payout = {
