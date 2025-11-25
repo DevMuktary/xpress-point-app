@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
-// import { processCommission } from '@/lib/commission'; // Removed for delayed payout
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -18,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'NIN is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Service & Validate ---
+    // 1. Get Service
     const serviceId = 'NIN_DELINK'; 
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     
@@ -26,16 +25,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // --- 2. Set Price ---
+    // 2. Set Price
     const price = new Decimal(service.defaultAgentPrice);
     
-    // --- 3. Check Wallet ---
+    // 3. Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price.toString()}.` }, { status: 402 });
     }
 
-    // --- 4. Check for Duplicate Pending Requests ---
+    // 4. Check Duplicates
     const existingRequest = await prisma.delinkRequest.findFirst({
       where: { 
         userId: user.id, 
@@ -48,20 +47,18 @@ export async function POST(request: Request) {
     }
 
     const priceAsString = price.toString();
-    const negatedPriceAsString = price.negated().toString();
 
-    // --- 5. Execute Transaction ---
+    // 5. Execute Transaction
     await prisma.$transaction(async (tx) => {
-      // a) Charge User Wallet
+      // a) Charge User
       await tx.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: priceAsString } },
       });
 
-      // NOTE: Commission is NOT processed here anymore. 
-      // It will be processed by Admin upon completion.
+      // NOTE: Commission is NOT paid here. It is paid by Admin on Completion.
 
-      // b) Create Delink Request
+      // b) Create Request
       await tx.delinkRequest.create({
         data: {
           userId: user.id,
@@ -77,7 +74,7 @@ export async function POST(request: Request) {
           userId: user.id,
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
-          amount: negatedPriceAsString,
+          amount: price.negated(),
           description: `NIN Delink / Retrieve Email (${nin})`,
           reference: `NIN-DELINK-${Date.now()}`,
           status: 'COMPLETED',
