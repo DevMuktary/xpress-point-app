@@ -5,12 +5,10 @@ import {
   MagnifyingGlassIcon, 
   CheckCircleIcon, 
   XCircleIcon, 
-  ArrowPathIcon,
   PaperClipIcon,
-  IdentificationIcon,
   UserIcon,
-  PhoneIcon,
-  CalendarDaysIcon
+  EyeIcon,
+  EyeSlashIcon
 } from '@heroicons/react/24/outline';
 
 type AdminRequest = {
@@ -24,7 +22,6 @@ type AdminRequest = {
     firstName: string;
     lastName: string;
     email: string;
-    phoneNumber: string;
   };
   service: {
     name: string;
@@ -48,6 +45,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
   const [shouldRefund, setShouldRefund] = useState(false);
   const [resultFile, setResultFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // To toggle password visibility
 
   // --- Filtering ---
   const filteredRequests = requests.filter(req => {
@@ -64,6 +62,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
     setAdminNote('');
     setShouldRefund(false);
     setResultFile(null);
+    setShowPassword(false);
   };
 
   const closeModal = () => {
@@ -136,61 +135,132 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
     }
   };
 
-  // --- Helper to render form details based on category ---
+  // --- Helper to render ALL user details ---
   const renderDetails = (req: AdminRequest) => {
     const d = req.formData;
     
     return (
-      <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
-        <div className="col-span-2 bg-gray-50 p-2 rounded border border-gray-200 font-mono text-center font-bold">
-          NIN: {d.nin}
+      <div className="space-y-4 text-sm text-gray-700">
+        
+        {/* 1. Basic Info Block */}
+        <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-500">NIN Number:</span>
+            <span className="font-mono font-bold">{d.nin}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Contact Phone:</span>
+            <span className="font-bold">{d.phone}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Portal Email:</span>
+            <span className="font-bold">{d.email}</span>
+          </div>
+          
+          {/* Password Toggle */}
+          {d.password && (
+            <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
+               <span className="text-gray-500">Portal Password:</span>
+               <div className="flex items-center gap-2">
+                 <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border">
+                   {showPassword ? d.password : '••••••••'}
+                 </span>
+                 <button onClick={() => setShowPassword(!showPassword)} className="text-gray-500 hover:text-gray-700">
+                   {showPassword ? <EyeSlashIcon className="h-4 w-4"/> : <EyeIcon className="h-4 w-4"/>}
+                 </button>
+               </div>
+            </div>
+          )}
         </div>
 
-        {/* Name Section */}
-        {(d.newFirstName || d.newLastName) && (
-          <>
-             <div className="col-span-2 font-bold text-gray-900 border-b pb-1 mt-2">Name Correction</div>
-             <div>
-               <span className="block text-xs text-gray-500">New First Name</span>
-               {d.newFirstName}
-             </div>
-             <div>
-               <span className="block text-xs text-gray-500">New Last Name</span>
-               {d.newLastName}
-             </div>
-             {d.newMiddleName && (
-               <div>
-                 <span className="block text-xs text-gray-500">New Middle Name</span>
-                 {d.newMiddleName}
+        {/* 2. Service Specific Changes */}
+        
+        {/* Name Correction */}
+        {(d.firstName || d.lastName || d.oldName) && (
+          <div className="border rounded-lg p-3">
+             <div className="font-bold text-gray-900 border-b pb-1 mb-2">Name Correction</div>
+             <div className="grid grid-cols-2 gap-2">
+               <div className="col-span-2">
+                 <span className="block text-xs text-gray-500">Old Full Name</span>
+                 <div className="font-medium">{d.oldName}</div>
                </div>
-             )}
-          </>
+               <div>
+                 <span className="block text-xs text-gray-500">New First Name</span>
+                 <div className="font-medium">{d.firstName || d.newFirstName}</div>
+               </div>
+               <div>
+                 <span className="block text-xs text-gray-500">New Last Name</span>
+                 <div className="font-medium">{d.lastName || d.newLastName}</div>
+               </div>
+               {d.middleName && (
+                 <div className="col-span-2">
+                   <span className="block text-xs text-gray-500">New Middle Name</span>
+                   <div className="font-medium">{d.middleName || d.newMiddleName}</div>
+                 </div>
+               )}
+             </div>
+          </div>
         )}
 
-        {/* DOB Section */}
-        {(d.newDob) && (
-          <>
-             <div className="col-span-2 font-bold text-gray-900 border-b pb-1 mt-2">Date of Birth</div>
-             <div>
-               <span className="block text-xs text-gray-500">Old DOB</span>
-               {d.oldDob}
+        {/* DOB Correction */}
+        {(d.newDob || d.oldDob) && (
+          <div className="border rounded-lg p-3">
+             <div className="font-bold text-gray-900 border-b pb-1 mb-2">Date of Birth</div>
+             <div className="grid grid-cols-2 gap-2">
+               <div>
+                 <span className="block text-xs text-gray-500">Old DOB</span>
+                 <div className="font-medium">{d.oldDob}</div>
+               </div>
+               <div>
+                 <span className="block text-xs text-gray-500 font-bold text-blue-600">New DOB</span>
+                 <div className="font-bold text-blue-600">{d.newDob}</div>
+               </div>
              </div>
-             <div>
-               <span className="block text-xs text-gray-500 font-bold text-blue-600">New DOB</span>
-               {d.newDob}
-             </div>
-          </>
+          </div>
         )}
 
-        {/* Phone Section */}
-        {(d.newPhone) && (
-          <>
-             <div className="col-span-2 font-bold text-gray-900 border-b pb-1 mt-2">Phone Number</div>
-             <div className="col-span-2">
-               <span className="block text-xs text-gray-500">New Phone</span>
-               {d.newPhone}
+        {/* Phone Correction */}
+        {(d.newPhone || d.oldPhone) && (
+          <div className="border rounded-lg p-3">
+             <div className="font-bold text-gray-900 border-b pb-1 mb-2">Phone Change</div>
+             <div className="grid grid-cols-2 gap-2">
+               <div>
+                 <span className="block text-xs text-gray-500">Old Phone</span>
+                 <div className="font-medium">{d.oldPhone}</div>
+               </div>
+               <div>
+                 <span className="block text-xs text-gray-500">New Phone</span>
+                 <div className="font-medium">{d.newPhone}</div>
+               </div>
              </div>
-          </>
+          </div>
+        )}
+
+        {/* Address Correction */}
+        {(d.newAddress || d.address) && (
+          <div className="border rounded-lg p-3">
+             <div className="font-bold text-gray-900 border-b pb-1 mb-2">Address Change</div>
+             <div className="space-y-2">
+               <div>
+                 <span className="block text-xs text-gray-500">Old Address</span>
+                 <div className="font-medium">{d.oldAddress}</div>
+               </div>
+               <div>
+                 <span className="block text-xs text-gray-500 font-bold text-blue-600">New Address</span>
+                 <div className="font-medium text-blue-600">{d.newAddress || d.address}</div>
+               </div>
+               <div className="grid grid-cols-2 gap-2">
+                 <div>
+                   <span className="block text-xs text-gray-500">State</span>
+                   <div className="font-medium">{d.state}</div>
+                 </div>
+                 <div>
+                   <span className="block text-xs text-gray-500">LGA</span>
+                   <div className="font-medium">{d.lga}</div>
+                 </div>
+               </div>
+             </div>
+          </div>
         )}
       </div>
     );
@@ -230,10 +300,10 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Agent</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Summary</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Docs</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">User</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Service</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">NIN</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Documents</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
               </tr>
@@ -249,7 +319,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
                     {req.service.name}
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-600 font-mono">
-                    NIN: {req.formData.nin}
+                    {req.formData.nin}
                   </td>
                   <td className="px-6 py-4 text-xs space-y-1">
                     {req.uploadedSlipUrl && (
@@ -269,8 +339,10 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                     <div className="flex justify-end gap-2">
-                       <button 
+                     {/* Action Buttons */}
+                     {req.status !== 'COMPLETED' && req.status !== 'FAILED' && (
+                       <>
+                         <button 
                            onClick={() => openModal(req, 'PROCESSING')}
                            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100"
                          >
@@ -280,7 +352,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
                            onClick={() => openModal(req, 'COMPLETED')}
                            className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded border border-green-200 hover:bg-green-100"
                          >
-                           Done
+                           Complete
                          </button>
                          <button 
                            onClick={() => openModal(req, 'FAILED')}
@@ -288,13 +360,12 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
                          >
                            Fail
                          </button>
-                     </div>
+                       </>
+                     )}
                      {req.status === 'COMPLETED' && req.formData.resultUrl && (
-                       <div className="mt-1">
-                         <a href={req.formData.resultUrl} target="_blank" className="text-xs font-bold text-green-700 underline">
-                           View Result
-                         </a>
-                       </div>
+                       <a href={req.formData.resultUrl} target="_blank" className="inline-block text-xs text-green-700 underline">
+                         View Result
+                       </a>
                      )}
                   </td>
                 </tr>
@@ -319,28 +390,10 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
-              {/* LEFT: Request Details */}
-              <div className="space-y-4 border-r border-gray-100 pr-4">
+              {/* LEFT: Request Details (All Fields) */}
+              <div className="space-y-4 border-r border-gray-100 pr-4 max-h-[60vh] overflow-y-auto">
                 <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider">User Submission</h4>
                 {renderDetails(selectedReq)}
-                
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <h5 className="text-sm font-bold text-gray-700 mb-2">Attachments</h5>
-                  <div className="flex gap-4">
-                    {selectedReq.uploadedSlipUrl && (
-                      <a href={selectedReq.uploadedSlipUrl} target="_blank" className="flex flex-col items-center p-2 border rounded hover:bg-gray-50">
-                        <UserIcon className="h-6 w-6 text-gray-400" />
-                        <span className="text-xs text-blue-600 underline mt-1">Passport</span>
-                      </a>
-                    )}
-                    {selectedReq.attestationUrl && (
-                      <a href={selectedReq.attestationUrl} target="_blank" className="flex flex-col items-center p-2 border rounded hover:bg-gray-50">
-                        <PaperClipIcon className="h-6 w-6 text-gray-400" />
-                        <span className="text-xs text-blue-600 underline mt-1">Attestation</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
               </div>
 
               {/* RIGHT: Action Form */}
