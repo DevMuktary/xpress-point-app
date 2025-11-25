@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -20,28 +19,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // 1. Get the request & transaction info
+    // 1. Get the request
     const modRequest = await prisma.modificationRequest.findUnique({
       where: { id: requestId },
-      include: { user: true }
     });
 
     if (!modRequest) {
       return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     }
-
-    // 2. Find the transaction amount to refund (if needed)
-    // We look for the transaction associated with this service execution
-    const transaction = await prisma.transaction.findFirst({
-      where: {
-        userId: modRequest.userId,
-        serviceId: modRequest.serviceId,
-        // We assume the most recent transaction for this service is the one (simplified)
-        // Or you could link transactionId in the request model in the future.
-        type: 'SERVICE_CHARGE'
-      },
-      orderBy: { createdAt: 'desc' }
-    });
 
     await prisma.$transaction(async (tx) => {
       
@@ -56,7 +41,7 @@ export async function POST(request: Request) {
       } 
       
       else if (action === 'COMPLETED') {
-        // Update formData to include the result URL without losing previous data
+        // Update formData to include the result URL
         const currentFormData = modRequest.formData as any || {};
         const updatedFormData = {
           ...currentFormData,
@@ -83,27 +68,38 @@ export async function POST(request: Request) {
         });
 
         // --- Refund Logic ---
-        if (refund && transaction) {
-          // Convert the negative transaction amount back to positive for refund
-          const refundAmount = transaction.amount.abs(); 
-          
-          // 1. Credit Wallet
-          await tx.wallet.update({
-            where: { userId: modRequest.userId },
-            data: { balance: { increment: refundAmount } }
+        if (refund) {
+          // Find the transaction to know how much to refund
+          const transaction = await tx.transaction.findFirst({
+            where: {
+              userId: modRequest.userId,
+              serviceId: modRequest.serviceId,
+              type: 'SERVICE_CHARGE'
+            },
+            orderBy: { createdAt: 'desc' }
           });
 
-          // 2. Log Refund Transaction
-          await tx.transaction.create({
-            data: {
-              userId: modRequest.userId,
-              type: 'REFUND',
-              amount: refundAmount,
-              description: `Refund: ${modRequest.serviceId} Failed`,
-              reference: `REF-${Date.now()}`,
-              status: 'COMPLETED'
-            }
-          });
+          if (transaction) {
+            const refundAmount = transaction.amount.abs(); 
+            
+            // 1. Credit Wallet
+            await tx.wallet.update({
+              where: { userId: modRequest.userId },
+              data: { balance: { increment: refundAmount } }
+            });
+
+            // 2. Log Refund
+            await tx.transaction.create({
+              data: {
+                userId: modRequest.userId,
+                type: 'REFUND',
+                amount: refundAmount,
+                description: `Refund: ${modRequest.serviceId} Failed`,
+                reference: `REF-${Date.now()}`,
+                status: 'COMPLETED'
+              }
+            });
+          }
         }
       }
     });
