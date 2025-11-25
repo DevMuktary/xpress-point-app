@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
+import { processCommission } from '@/lib/commission'; // <--- IMPORT THIS
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -13,7 +14,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { requestId, action, refund, note, resultUrl } = body; 
-    // action: 'PROCESSING' | 'COMPLETED' | 'FAILED'
 
     if (!requestId || !action) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -41,11 +41,11 @@ export async function POST(request: Request) {
       } 
       
       else if (action === 'COMPLETED') {
-        // Critical: Merge new resultUrl with existing formData
+        // A. Update Request Status
         const currentFormData = modRequest.formData as any || {};
         const updatedFormData = {
           ...currentFormData,
-          resultUrl: resultUrl // This saves the file link you uploaded
+          resultUrl: resultUrl 
         };
 
         await tx.modificationRequest.update({
@@ -56,6 +56,12 @@ export async function POST(request: Request) {
             formData: updatedFormData
           }
         });
+
+        // B. PAY COMMISSION (The Logic Moved Here)
+        // This finds the Agent's aggregator and pays them NOW.
+        // modRequest.userId is the Agent.
+        // modRequest.serviceId is the Service they performed.
+        await processCommission(tx, modRequest.userId, modRequest.serviceId);
       } 
       
       else if (action === 'FAILED') {
@@ -68,6 +74,8 @@ export async function POST(request: Request) {
         });
 
         // --- Refund Logic ---
+        // Since we never paid commission, we only need to refund the User's base fee.
+        // We don't need to reverse any commission from the Aggregator. Safe and Easy.
         if (refund) {
           const transaction = await tx.transaction.findFirst({
             where: {
