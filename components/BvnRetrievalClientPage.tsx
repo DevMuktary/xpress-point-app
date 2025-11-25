@@ -254,8 +254,8 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
             </h3>
             <p className="text-sm text-green-700 mt-1">
               Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
-              <Link href="/dashboard/history/bvn" className="font-semibold underline hover:text-green-600 ml-1">
-                BVN History
+              <Link href="/dashboard/history/bvn/retrieval" className="font-semibold underline hover:text-green-600 ml-1">
+                BVN RETRIEVAL History
               </Link> page.
             </p>
           </div>
