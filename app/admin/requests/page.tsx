@@ -13,6 +13,7 @@ export default async function AdminRequestsPage() {
   }
 
   // 1. Fetch counts for ALL manual service tables
+  // We check for 'PENDING' status which usually indicates manual review is needed
   const [
     ninModCount,
     ninDelinkCount,
@@ -28,12 +29,9 @@ export default async function AdminRequestsPage() {
   ] = await Promise.all([
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
-    // API-based services often sit in PROCESSING if manual intervention is needed
-    prisma.validationRequest.count({ where: { status: 'PROCESSING' } }), 
-    prisma.ipeRequest.count({ where: { status: 'PROCESSING' } }),        
-    prisma.personalizationRequest.count({ where: { status: 'PROCESSING' } }), 
-    
-    // Manual Upload Services
+    prisma.validationRequest.count({ where: { status: 'PROCESSING' } }), // API items usually stuck in PROCESSING
+    prisma.ipeRequest.count({ where: { status: 'PROCESSING' } }),        // API items usually stuck in PROCESSING
+    prisma.personalizationRequest.count({ where: { status: 'PROCESSING' } }), // API items usually stuck in PROCESSING
     prisma.bvnRequest.count({ where: { status: 'PENDING' } }),
     prisma.cacRequest.count({ where: { status: 'PENDING' } }),
     prisma.tinRequest.count({ where: { status: 'PENDING' } }),
@@ -78,3 +76,5 @@ export default async function AdminRequestsPage() {
     </div>
   );
 }
+
+
