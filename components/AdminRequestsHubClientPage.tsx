@@ -4,29 +4,26 @@ import React from 'react';
 import Link from 'next/link';
 import {
   IdentificationIcon,
-  ShieldCheckIcon,
   BriefcaseIcon,
   DocumentTextIcon,
   AcademicCapIcon,
   NewspaperIcon,
   ArrowRightIcon,
   UserCircleIcon,
-  FingerPrintIcon,
   CheckBadgeIcon,
-  XCircleIcon
+  XCircleIcon,
+  FingerPrintIcon
 } from '@heroicons/react/24/outline';
 
 type RequestStats = {
   ninMod: number;
   ninDelink: number;
   ninValidation: number;
-  ipe: number;
-  personalization: number;
   bvn: number;
-  cac: number;
-  tin: number;
   jamb: number;
+  tin: number;
   result: number;
+  cac: number;
   newspaper: number;
 };
 
@@ -36,13 +33,13 @@ const RequestCard = ({
   count, 
   href, 
   icon: Icon, 
-  colorClass // kept for future styling flexibility
+  subtext
 }: { 
   title: string; 
   count: number; 
   href: string; 
   icon: React.ElementType; 
-  colorClass: string; 
+  subtext: string;
 }) => {
   const hasPending = count > 0;
 
@@ -73,7 +70,7 @@ const RequestCard = ({
         <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
           {title}
         </h3>
-        <p className="text-sm text-gray-500 mt-1">Manage pending items</p>
+        <p className="text-xs text-gray-500 mt-1 font-medium">{subtext}</p>
         
         <div className="flex items-center gap-2 mt-4 text-sm font-medium text-blue-600 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all">
           View Requests <ArrowRightIcon className="h-4 w-4" />
@@ -87,106 +84,92 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
   return (
     <div className="space-y-10">
       
-      {/* 1. Identity Services */}
+      {/* 1. Identity Services (NIN) */}
       <section>
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-          Identity Management (NIMC)
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
+          NIN Services (Manual)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <RequestCard 
-            title="NIN Modifications" 
+            title="NIN Modification" 
             count={stats.ninMod} 
             href="/admin/requests/nin-modification" 
             icon={UserCircleIcon} 
-            colorClass="blue" 
+            subtext="Name, DOB, Phone Corrections"
           />
           <RequestCard 
-            title="NIN Delink" 
+            title="Self Service Delink" 
             count={stats.ninDelink} 
             href="/admin/requests/nin-delink" 
             icon={XCircleIcon} 
-            colorClass="indigo" 
+            subtext="NIN Number Delinking"
           />
           <RequestCard 
-            title="NIN Validations" 
+            title="NIN Validation" 
             count={stats.ninValidation} 
             href="/admin/requests/nin-validation" 
             icon={CheckBadgeIcon} 
-            colorClass="green" 
-          />
-          <RequestCard 
-            title="IPE Clearance" 
-            count={stats.ipe} 
-            href="/admin/requests/ipe-clearance" 
-            icon={ShieldCheckIcon} 
-            colorClass="teal" 
-          />
-          <RequestCard 
-            title="Personalization" 
-            count={stats.personalization} 
-            href="/admin/requests/personalization" 
-            icon={FingerPrintIcon} 
-            colorClass="orange" 
+            subtext="Validation Processing"
           />
         </div>
       </section>
 
       {/* 2. Financial & Business */}
       <section>
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-          Business & Financial
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
+          General Services (Manual)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <RequestCard 
             title="BVN Services" 
             count={stats.bvn} 
             href="/admin/requests/bvn" 
-            icon={IdentificationIcon} 
-            colorClass="purple" 
+            icon={FingerPrintIcon} 
+            subtext="Retrieval, Mod, Android, VNIN-NIBSS"
           />
           <RequestCard 
-            title="CAC Registrations" 
+            title="CAC Services" 
             count={stats.cac} 
             href="/admin/requests/cac" 
             icon={BriefcaseIcon} 
-            colorClass="green" 
+            subtext="Registration & Retrieval"
           />
           <RequestCard 
             title="TIN Services" 
             count={stats.tin} 
             href="/admin/requests/tin" 
             icon={DocumentTextIcon} 
-            colorClass="blue" 
+            subtext="JTB Registration & Retrieval"
           />
            <RequestCard 
-            title="Newspaper Ads" 
+            title="Newspaper Services" 
             count={stats.newspaper} 
             href="/admin/requests/newspaper" 
             icon={NewspaperIcon} 
-            colorClass="gray" 
+            subtext="Change of Name Publication"
           />
         </div>
       </section>
 
       {/* 3. Education */}
       <section>
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-          Education
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
+          Education Services (Manual)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <RequestCard 
             title="JAMB Services" 
             count={stats.jamb} 
             href="/admin/requests/jamb" 
             icon={AcademicCapIcon} 
-            colorClass="orange" 
+            subtext="Slip Printing & Profile Code"
           />
           <RequestCard 
             title="Result Checkers" 
             count={stats.result} 
             href="/admin/requests/result" 
             icon={DocumentTextIcon} 
-            colorClass="pink" 
+            subtext="Request Result (Manual Only)"
           />
         </div>
       </section>
@@ -194,5 +177,3 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
     </div>
   );
 }
-
-
