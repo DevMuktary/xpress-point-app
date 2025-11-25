@@ -10,16 +10,25 @@ import {
   NewspaperIcon,
   ArrowRightIcon,
   UserCircleIcon,
-  CheckBadgeIcon,
   XCircleIcon,
-  FingerPrintIcon
+  FingerPrintIcon,
+  ShieldCheckIcon,
+  DevicePhoneMobileIcon,
+  GlobeAltIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 
 type RequestStats = {
   ninMod: number;
   ninDelink: number;
-  ninValidation: number;
-  bvn: number;
+  ipe: number;
+  personalization: number;
+  
+  bvnRetrieval: number;
+  bvnMod: number;
+  bvnEnrollment: number;
+  bvnNibss: number;
+
   jamb: number;
   tin: number;
   result: number;
@@ -89,7 +98,7 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
           NIN Services (Manual)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <RequestCard 
             title="NIN Modification" 
             count={stats.ninMod} 
@@ -105,28 +114,65 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
             subtext="NIN Number Delinking"
           />
           <RequestCard 
-            title="NIN Validation" 
-            count={stats.ninValidation} 
-            href="/admin/requests/nin-validation" 
-            icon={CheckBadgeIcon} 
-            subtext="Validation Processing"
+            title="IPE Clearance" 
+            count={stats.ipe} 
+            href="/admin/requests/ipe-clearance" 
+            icon={ShieldCheckIcon} 
+            subtext="IPE Clearing Process"
+          />
+          <RequestCard 
+            title="Personalization" 
+            count={stats.personalization} 
+            href="/admin/requests/personalization" 
+            icon={FingerPrintIcon} 
+            subtext="NIN ID Card Printing"
           />
         </div>
       </section>
 
-      {/* 2. Financial & Business */}
+      {/* 2. BVN Services (Broken Down) */}
       <section>
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-          General Services (Manual)
+          BVN Services (Manual)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <RequestCard 
+            title="BVN Retrieval" 
+            count={stats.bvnRetrieval} 
+            href="/admin/requests/bvn/retrieval" 
+            icon={MagnifyingGlassIcon} 
+            subtext="Phone & CRM Retrieval"
+          />
+          <RequestCard 
+            title="BVN Modification" 
+            count={stats.bvnMod} 
+            href="/admin/requests/bvn/modification" 
+            icon={UserCircleIcon} 
+            subtext="Name, DOB, Phone Changes"
+          />
+          <RequestCard 
+            title="Android Enrollment" 
+            count={stats.bvnEnrollment} 
+            href="/admin/requests/bvn/enrollment" 
+            icon={DevicePhoneMobileIcon} 
+            subtext="New Enrollment Processing"
+          />
+          <RequestCard 
+            title="VNIN to NIBSS" 
+            count={stats.bvnNibss} 
+            href="/admin/requests/bvn/nibss" 
+            icon={GlobeAltIcon} 
+            subtext="Validation to NIBSS"
+          />
+        </div>
+      </section>
+
+      {/* 3. General Business & Education */}
+      <section>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
+          General & Education Services
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <RequestCard 
-            title="BVN Services" 
-            count={stats.bvn} 
-            href="/admin/requests/bvn" 
-            icon={FingerPrintIcon} 
-            subtext="Retrieval, Mod, Android, VNIN-NIBSS"
-          />
           <RequestCard 
             title="CAC Services" 
             count={stats.cac} 
@@ -148,15 +194,6 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
             icon={NewspaperIcon} 
             subtext="Change of Name Publication"
           />
-        </div>
-      </section>
-
-      {/* 3. Education */}
-      <section>
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-          Education Services (Manual)
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <RequestCard 
             title="JAMB Services" 
             count={stats.jamb} 
@@ -169,7 +206,7 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
             count={stats.result} 
             href="/admin/requests/result" 
             icon={DocumentTextIcon} 
-            subtext="Request Result (Manual Only)"
+            subtext="Request Result (Manual)"
           />
         </div>
       </section>
