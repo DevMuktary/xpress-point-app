@@ -8,7 +8,9 @@ import {
   PaperClipIcon,
   UserIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  ArrowDownTrayIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 type AdminRequest = {
@@ -22,6 +24,7 @@ type AdminRequest = {
     firstName: string;
     lastName: string;
     email: string;
+    phoneNumber: string;
   };
   service: {
     name: string;
@@ -37,6 +40,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
 
   // --- Modal State ---
   const [selectedReq, setSelectedReq] = useState<AdminRequest | null>(null);
+  const [viewReq, setViewReq] = useState<AdminRequest | null>(null); // For "View Details" only
   const [actionType, setActionType] = useState<'PROCESSING' | 'COMPLETED' | 'FAILED' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -45,7 +49,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
   const [shouldRefund, setShouldRefund] = useState(false);
   const [resultFile, setResultFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // To toggle password visibility
+  const [showPassword, setShowPassword] = useState(false);
 
   // --- Filtering ---
   const filteredRequests = requests.filter(req => {
@@ -55,8 +59,56 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
     return matchesSearch && matchesStatus;
   });
 
+  // --- Export Function ---
+  const handleExport = () => {
+    if (filteredRequests.length === 0) return alert("No data to export");
+
+    // Define CSV Headers
+    const headers = [
+      "Date",
+      "Agent Name",
+      "Agent Email",
+      "Service Type",
+      "NIN",
+      "Status",
+      "New Name (if applicable)",
+      "New DOB (if applicable)",
+      "New Phone (if applicable)"
+    ];
+
+    // Map Data to Rows
+    const rows = filteredRequests.map(req => {
+      const d = req.formData;
+      const newName = d.newName || `${d.newFirstName || ''} ${d.newLastName || ''}`.trim();
+      
+      return [
+        `"${new Date(req.createdAt).toLocaleDateString()}"`,
+        `"${req.user.firstName} ${req.user.lastName}"`,
+        `"${req.user.email}"`,
+        `"${req.service.name}"`,
+        `"${d.nin || ''}"`,
+        `"${req.status}"`,
+        `"${newName}"`,
+        `"${d.newDob || ''}"`,
+        `"${d.newPhone || ''}"`
+      ].join(",");
+    });
+
+    // Create CSV Content
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+    
+    // Trigger Download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `nin_mod_requests_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // --- Actions ---
-  const openModal = (req: AdminRequest, action: 'PROCESSING' | 'COMPLETED' | 'FAILED') => {
+  const openActionModal = (req: AdminRequest, action: 'PROCESSING' | 'COMPLETED' | 'FAILED') => {
     setSelectedReq(req);
     setActionType(action);
     setAdminNote('');
@@ -65,7 +117,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
     setShowPassword(false);
   };
 
-  const closeModal = () => {
+  const closeActionModal = () => {
     setSelectedReq(null);
     setActionType(null);
   };
@@ -117,7 +169,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
       if (!res.ok) throw new Error("Failed to process request");
 
       setRequests(prev => prev.map(r => r.id === selectedReq.id ? { ...r, status: actionType } : r));
-      closeModal();
+      closeActionModal();
 
     } catch (error) {
       alert("An error occurred while processing.");
@@ -135,7 +187,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
     }
   };
 
-  // --- Helper to render ALL user details ---
+  // --- Render Details Helper ---
   const renderDetails = (req: AdminRequest) => {
     const d = req.formData;
     
@@ -262,6 +314,23 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
              </div>
           </div>
         )}
+
+        {/* Documents Links */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <h5 className="text-sm font-bold text-gray-700 mb-2">Attachments</h5>
+          <div className="flex flex-wrap gap-4">
+            {req.uploadedSlipUrl && (
+              <a href={req.uploadedSlipUrl} target="_blank" className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 text-blue-700 text-xs font-medium transition-colors">
+                <UserIcon className="h-4 w-4" /> Passport Photo
+              </a>
+            )}
+            {req.attestationUrl && (
+              <a href={req.attestationUrl} target="_blank" className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 text-blue-700 text-xs font-medium transition-colors">
+                <PaperClipIcon className="h-4 w-4" /> Attestation Letter
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -269,7 +338,7 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
   return (
     <div className="space-y-6">
       
-      {/* Search & Filter */}
+      {/* Controls Header */}
       <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
         <div className="relative flex-1 max-w-md">
            <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -281,16 +350,25 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
              onChange={e => setSearchTerm(e.target.value)}
            />
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-lg">
-          {['ALL', 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'].map(s => (
-            <button 
-              key={s} 
-              onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterStatus === s ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-            >
-              {s}
-            </button>
-          ))}
+        <div className="flex gap-2">
+           <div className="flex bg-gray-100 p-1 rounded-lg">
+            {['ALL', 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'].map(s => (
+              <button 
+                key={s} 
+                onClick={() => setFilterStatus(s)}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterStatus === s ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          {/* Export Button */}
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" /> Export
+          </button>
         </div>
       </div>
 
@@ -300,10 +378,10 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">User</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Service</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Agent</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Service Type</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">NIN</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Documents</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
               </tr>
@@ -311,62 +389,73 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
             <tbody className="divide-y divide-gray-200">
               {filteredRequests.map((req) => (
                 <tr key={req.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                    {new Date(req.createdAt).toLocaleDateString()}
+                  </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-bold text-gray-900">{req.user.firstName} {req.user.lastName}</div>
                     <div className="text-xs text-gray-500">{req.user.email}</div>
                   </td>
-                  <td className="px-6 py-4 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg">
-                    {req.service.name}
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-md">
+                      {req.service.name}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-600 font-mono">
                     {req.formData.nin}
-                  </td>
-                  <td className="px-6 py-4 text-xs space-y-1">
-                    {req.uploadedSlipUrl && (
-                      <a href={req.uploadedSlipUrl} target="_blank" className="flex items-center gap-1 text-blue-600 hover:underline">
-                        <UserIcon className="h-3 w-3" /> Passport
-                      </a>
-                    )}
-                    {req.attestationUrl && (
-                      <a href={req.attestationUrl} target="_blank" className="flex items-center gap-1 text-blue-600 hover:underline">
-                        <PaperClipIcon className="h-3 w-3" /> Attestation
-                      </a>
-                    )}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(req.status)}`}>
                       {req.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                     {/* Action Buttons */}
-                     {req.status !== 'COMPLETED' && req.status !== 'FAILED' && (
-                       <>
-                         <button 
-                           onClick={() => openModal(req, 'PROCESSING')}
-                           className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100"
+                  <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                     <div className="flex justify-end items-center gap-2">
+                       
+                       {/* VIEW BUTTON (The new feature) */}
+                       <button 
+                         onClick={() => setViewReq(req)}
+                         className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                         title="View Details"
+                       >
+                         <EyeIcon className="h-5 w-5" />
+                       </button>
+
+                       {/* ACTION BUTTONS (Only if active) */}
+                       {req.status !== 'COMPLETED' && req.status !== 'FAILED' && (
+                         <div className="flex gap-1">
+                           <button 
+                             onClick={() => openActionModal(req, 'PROCESSING')}
+                             className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100"
+                           >
+                             Process
+                           </button>
+                           <button 
+                             onClick={() => openActionModal(req, 'COMPLETED')}
+                             className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded border border-green-200 hover:bg-green-100"
+                           >
+                             Done
+                           </button>
+                           <button 
+                             onClick={() => openActionModal(req, 'FAILED')}
+                             className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded border border-red-200 hover:bg-red-100"
+                           >
+                             Fail
+                           </button>
+                         </div>
+                       )}
+                       
+                       {/* DOWNLOAD RESULT LINK */}
+                       {req.status === 'COMPLETED' && req.formData.resultUrl && (
+                         <a 
+                           href={req.formData.resultUrl} 
+                           target="_blank" 
+                           className="text-xs font-bold text-green-700 hover:underline bg-green-50 px-2 py-1 rounded"
                          >
-                           Process
-                         </button>
-                         <button 
-                           onClick={() => openModal(req, 'COMPLETED')}
-                           className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded border border-green-200 hover:bg-green-100"
-                         >
-                           Complete
-                         </button>
-                         <button 
-                           onClick={() => openModal(req, 'FAILED')}
-                           className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded border border-red-200 hover:bg-red-100"
-                         >
-                           Fail
-                         </button>
-                       </>
-                     )}
-                     {req.status === 'COMPLETED' && req.formData.resultUrl && (
-                       <a href={req.formData.resultUrl} target="_blank" className="inline-block text-xs text-green-700 underline">
-                         View Result
-                       </a>
-                     )}
+                           Result
+                         </a>
+                       )}
+                     </div>
                   </td>
                 </tr>
               ))}
@@ -375,57 +464,103 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
         </div>
       </div>
 
-      {/* --- PROCESS MODAL --- */}
+      {/* --- VIEW DETAILS MODAL --- */}
+      {viewReq && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-gray-200 p-6">
+              <div>
+                 <h3 className="text-xl font-bold text-gray-900">Request Details</h3>
+                 <p className="text-sm text-gray-500">ID: {viewReq.id}</p>
+              </div>
+              <button 
+                onClick={() => setViewReq(null)} 
+                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6 text-gray-600"/>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <div className="mb-6">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(viewReq.status)}`}>
+                  Status: {viewReq.status}
+                </span>
+              </div>
+              
+              {renderDetails(viewReq)}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex justify-end">
+              <button 
+                onClick={() => setViewReq(null)}
+                className="px-6 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-100"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- PROCESS ACTION MODAL --- */}
       {selectedReq && actionType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 relative my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative my-8 animate-in fade-in zoom-in-95 duration-200">
             
             <div className="flex justify-between items-start mb-4">
               <div>
-                 <h3 className="text-xl font-bold text-gray-900">Process Request</h3>
-                 <p className="text-sm text-gray-500">{selectedReq.service.name}</p>
+                 <h3 className="text-xl font-bold text-gray-900">
+                   Mark as {actionType}
+                 </h3>
+                 <p className="text-sm text-gray-500">{selectedReq.user.firstName} {selectedReq.user.lastName}</p>
               </div>
-              <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-full"><XCircleIcon className="h-6 w-6 text-gray-500"/></button>
+              <button onClick={closeActionModal} className="p-1 hover:bg-gray-100 rounded-full">
+                <XCircleIcon className="h-6 w-6 text-gray-500"/>
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
               
-              {/* LEFT: Request Details (All Fields) */}
-              <div className="space-y-4 border-r border-gray-100 pr-4 max-h-[60vh] overflow-y-auto">
-                <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider">User Submission</h4>
-                {renderDetails(selectedReq)}
-              </div>
+              {/* 1. Processing State */}
+              {actionType === 'PROCESSING' && (
+                <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                  This will update the status to "Processing" so the agent knows you are working on it.
+                </p>
+              )}
 
-              {/* RIGHT: Action Form */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Admin Action</h4>
-                
-                <div className={`p-3 rounded-lg text-sm font-semibold text-center
-                  ${actionType === 'PROCESSING' ? 'bg-blue-100 text-blue-700' : 
-                    actionType === 'COMPLETED' ? 'bg-green-100 text-green-700' : 
-                    'bg-red-100 text-red-700'}`}>
-                  Marking as: {actionType}
-                </div>
-
-                {/* Success State: Upload */}
-                {actionType === 'COMPLETED' && (
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Upload Result File (PDF/Image)</label>
+              {/* 2. Success State (Upload) */}
+              {actionType === 'COMPLETED' && (
+                <div className="space-y-4">
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                    <label className="block text-sm font-bold text-green-800 mb-2">Upload Result (PDF/Image)</label>
                     <input 
                       type="file" 
                       onChange={e => setResultFile(e.target.files?.[0] || null)}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-green-600 file:text-white hover:file:bg-green-700"
                     />
-                    <p className="text-xs text-gray-500">The user will be able to download this.</p>
                   </div>
-                )}
+                  <textarea
+                    placeholder="Optional Success Note (e.g. Tracking ID)"
+                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-green-500 focus:border-green-500"
+                    rows={2}
+                    value={adminNote}
+                    onChange={e => setAdminNote(e.target.value)}
+                  />
+                </div>
+              )}
 
-                {/* Failed State: Refund */}
-                {actionType === 'FAILED' && (
-                  <div className="flex items-center justify-between bg-red-50 p-3 rounded-lg border border-red-100">
+              {/* 3. Failed State (Refund Toggle) */}
+              {actionType === 'FAILED' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-red-50 p-4 rounded-lg border border-red-100">
                     <div>
                       <span className="text-sm font-bold text-red-800 block">Refund User?</span>
-                      <span className="text-xs text-red-600">Reverses the wallet charge.</span>
+                      <span className="text-xs text-red-600">This reverses the wallet charge.</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
@@ -437,24 +572,31 @@ export default function AdminNinModClientPage({ initialRequests }: { initialRequ
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                     </label>
                   </div>
-                )}
+                  <textarea
+                    placeholder="Reason for rejection (Required)"
+                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-red-500 focus:border-red-500 min-h-[100px]"
+                    value={adminNote}
+                    onChange={e => setAdminNote(e.target.value)}
+                  />
+                </div>
+              )}
 
-                <textarea
-                  placeholder={actionType === 'FAILED' ? "Reason for rejection..." : "Admin note (Optional)..."}
-                  className="w-full border rounded-lg p-2 text-sm min-h-[100px]"
-                  value={adminNote}
-                  onChange={e => setAdminNote(e.target.value)}
-                />
-
+              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
+                <button 
+                  onClick={closeActionModal} 
+                  className="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
                 <button 
                   onClick={handleSubmit}
                   disabled={isProcessing || isUploading || (actionType === 'FAILED' && !adminNote)}
-                  className={`w-full py-3 text-sm font-bold text-white rounded-lg shadow-md transition-all
+                  className={`flex-1 py-2.5 text-sm font-bold text-white rounded-lg shadow-md transition-all
                     ${actionType === 'COMPLETED' ? 'bg-green-600 hover:bg-green-700' : 
                       actionType === 'FAILED' ? 'bg-red-600 hover:bg-red-700' : 
                       'bg-blue-600 hover:bg-blue-700'}`}
                 >
-                  {isProcessing || isUploading ? 'Processing...' : 'Confirm Update'}
+                  {isProcessing || isUploading ? 'Processing...' : 'Confirm'}
                 </button>
               </div>
             </div>
