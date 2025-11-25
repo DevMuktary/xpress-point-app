@@ -41,11 +41,11 @@ export async function POST(request: Request) {
       } 
       
       else if (action === 'COMPLETED') {
-        // Update formData to include the result URL
+        // Critical: Merge new resultUrl with existing formData
         const currentFormData = modRequest.formData as any || {};
         const updatedFormData = {
           ...currentFormData,
-          resultUrl: resultUrl // Store the Admin's PDF here
+          resultUrl: resultUrl // This saves the file link you uploaded
         };
 
         await tx.modificationRequest.update({
@@ -69,7 +69,6 @@ export async function POST(request: Request) {
 
         // --- Refund Logic ---
         if (refund) {
-          // Find the transaction to know how much to refund
           const transaction = await tx.transaction.findFirst({
             where: {
               userId: modRequest.userId,
@@ -82,13 +81,11 @@ export async function POST(request: Request) {
           if (transaction) {
             const refundAmount = transaction.amount.abs(); 
             
-            // 1. Credit Wallet
             await tx.wallet.update({
               where: { userId: modRequest.userId },
               data: { balance: { increment: refundAmount } }
             });
 
-            // 2. Log Refund
             await tx.transaction.create({
               data: {
                 userId: modRequest.userId,
