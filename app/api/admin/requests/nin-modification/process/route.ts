@@ -5,101 +5,101 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
+  
+  // Security: Admin Only
   if (!user || user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const body = await request.json();
-    const { requestId, action, resultUrl, adminNote, shouldRefund, rejectionReason } = body;
+    const { requestId, action, refund, note, resultUrl } = body; 
+    // action: 'PROCESSING' | 'COMPLETED' | 'FAILED'
 
     if (!requestId || !action) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // Get the request details (including service price for refund calculation)
-    const reqItem = await prisma.modificationRequest.findUnique({
+    // 1. Get the request & transaction info
+    const modRequest = await prisma.modificationRequest.findUnique({
       where: { id: requestId },
-      include: { service: true, user: true }
+      include: { user: true }
     });
 
-    if (!reqItem) {
+    if (!modRequest) {
       return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     }
 
+    // 2. Find the transaction amount to refund (if needed)
+    // We look for the transaction associated with this service execution
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        userId: modRequest.userId,
+        serviceId: modRequest.serviceId,
+        // We assume the most recent transaction for this service is the one (simplified)
+        // Or you could link transactionId in the request model in the future.
+        type: 'SERVICE_CHARGE'
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
     await prisma.$transaction(async (tx) => {
       
-      // --- 1. ACTION: START PROCESSING ---
-      if (action === 'PROCESS') {
+      if (action === 'PROCESSING') {
         await tx.modificationRequest.update({
           where: { id: requestId },
           data: {
             status: 'PROCESSING',
-            statusMessage: 'Your request is currently being processed by our team.'
+            statusMessage: 'Processing... ' + (note || '')
           }
         });
-      }
+      } 
+      
+      else if (action === 'COMPLETED') {
+        // Update formData to include the result URL without losing previous data
+        const currentFormData = modRequest.formData as any || {};
+        const updatedFormData = {
+          ...currentFormData,
+          resultUrl: resultUrl // Store the Admin's PDF here
+        };
 
-      // --- 2. ACTION: COMPLETE (Success) ---
-      else if (action === 'COMPLETE') {
-        if (!resultUrl) throw new Error("Result PDF is required for completion.");
-        
         await tx.modificationRequest.update({
           where: { id: requestId },
           data: {
             status: 'COMPLETED',
-            statusMessage: adminNote || 'Request completed successfully.',
-            uploadedSlipUrl: resultUrl // Admin uploads this
+            statusMessage: note || 'Modification Successful',
+            formData: updatedFormData
           }
         });
-      }
-
-      // --- 3. ACTION: FAIL (Reject) ---
-      else if (action === 'FAIL') {
-        const message = rejectionReason || 'Request failed. Please contact support.';
-        
+      } 
+      
+      else if (action === 'FAILED') {
         await tx.modificationRequest.update({
           where: { id: requestId },
           data: {
             status: 'FAILED',
-            statusMessage: message
+            statusMessage: note || 'Modification Failed'
           }
         });
 
-        // --- REFUND LOGIC ---
-        if (shouldRefund) {
-          // We assume the amount charged was the defaultAgentPrice + dynamic fees.
-          // Ideally, we check the transaction history. For now, we refund the base service price
-          // OR you can pass the exact amount if you tracked the dynamic fee separately.
-          // Here, we look for the Transaction record linked to this service call to get exact amount.
+        // --- Refund Logic ---
+        if (refund && transaction) {
+          // Convert the negative transaction amount back to positive for refund
+          const refundAmount = transaction.amount.abs(); 
           
-          // Find the original transaction (negative amount)
-          const originalTx = await tx.transaction.findFirst({
-            where: {
-              userId: reqItem.userId,
-              serviceId: reqItem.serviceId,
-              createdAt: { lte: reqItem.createdAt }, // Created around the same time
-              amount: { lt: 0 } // Negative (Debit)
-            },
-            orderBy: { createdAt: 'desc' }
-          });
-
-          const refundAmount = originalTx ? originalTx.amount.abs() : reqItem.service.defaultAgentPrice;
-
-          // Credit the Wallet
+          // 1. Credit Wallet
           await tx.wallet.update({
-            where: { userId: reqItem.userId },
+            where: { userId: modRequest.userId },
             data: { balance: { increment: refundAmount } }
           });
 
-          // Log the Refund Transaction
+          // 2. Log Refund Transaction
           await tx.transaction.create({
             data: {
-              userId: reqItem.userId,
-              serviceId: reqItem.serviceId,
+              userId: modRequest.userId,
               type: 'REFUND',
               amount: refundAmount,
-              description: `Refund for Failed NIN Mod (${reqItem.id.slice(0, 8)})`,
+              description: `Refund: ${modRequest.serviceId} Failed`,
               reference: `REF-${Date.now()}`,
               status: 'COMPLETED'
             }
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error("Process Request Error:", error);
+    console.error("Process NIN Mod Error:", error);
     return NextResponse.json({ error: error.message || "Processing failed" }, { status: 500 });
   }
 }
