@@ -12,7 +12,6 @@ import {
   UserCircleIcon,
   XCircleIcon,
   FingerPrintIcon,
-  ShieldCheckIcon,
   DevicePhoneMobileIcon,
   GlobeAltIcon,
   MagnifyingGlassIcon
@@ -21,8 +20,6 @@ import {
 type RequestStats = {
   ninMod: number;
   ninDelink: number;
-  ipe: number;
-  personalization: number;
   
   bvnRetrieval: number;
   bvnMod: number;
@@ -98,7 +95,7 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
           NIN Services (Manual)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
           <RequestCard 
             title="NIN Modification" 
             count={stats.ninMod} 
@@ -113,29 +110,16 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
             icon={XCircleIcon} 
             subtext="NIN Number Delinking"
           />
-          <RequestCard 
-            title="IPE Clearance" 
-            count={stats.ipe} 
-            href="/admin/requests/ipe-clearance" 
-            icon={ShieldCheckIcon} 
-            subtext="IPE Clearing Process"
-          />
-          <RequestCard 
-            title="Personalization" 
-            count={stats.personalization} 
-            href="/admin/requests/personalization" 
-            icon={FingerPrintIcon} 
-            subtext="NIN ID Card Printing"
-          />
         </div>
       </section>
 
-      {/* 2. BVN Services (Broken Down) */}
+      {/* 2. Financial & Business */}
       <section>
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-          BVN Services (Manual)
+          BVN & Business Services (Manual)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* BVN Group */}
           <RequestCard 
             title="BVN Retrieval" 
             count={stats.bvnRetrieval} 
@@ -165,14 +149,9 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
             subtext="Validation to NIBSS"
           />
         </div>
-      </section>
 
-      {/* 3. General Business & Education */}
-      <section>
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-          General & Education Services
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          {/* Corporate Group */}
           <RequestCard 
             title="CAC Services" 
             count={stats.cac} 
@@ -194,6 +173,15 @@ export default function AdminRequestsHubClientPage({ stats }: { stats: RequestSt
             icon={NewspaperIcon} 
             subtext="Change of Name Publication"
           />
+        </div>
+      </section>
+
+      {/* 3. Education */}
+      <section>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
+          Education Services (Manual)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <RequestCard 
             title="JAMB Services" 
             count={stats.jamb} 
