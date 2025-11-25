@@ -12,41 +12,83 @@ export default async function AdminRequestsPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // Fetch counts only for the specific manual services listed
+  // 1. Fetch counts for specific manual services
   const [
     ninModCount,
     ninDelinkCount,
-    ninValidationCount,
-    bvnCount,
-    jambCount,
-    tinCount,
-    resultCount,
+    // ninValidation removed (Auto)
+    ipeCount,
+    personalizationCount,
+    
+    // BVN Broken Down
+    bvnRetrievalCount,
+    bvnModCount,
+    bvnEnrollmentCount,
+    bvnNibssCount,
+
+    // Other Manual Services
     cacCount,
+    tinCount,
+    jambCount,
+    resultCount,
     newspaperCount
   ] = await Promise.all([
-    // NIN Services (Separate Tables)
+    // NIN (Manual)
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
-    prisma.validationRequest.count({ where: { status: { in: ['PENDING', 'PROCESSING'] } } }), // Validation might sit in processing
+    prisma.ipeRequest.count({ where: { status: 'PROCESSING' } }),
+    prisma.personalizationRequest.count({ where: { status: 'PROCESSING' } }),
     
-    // Consolidated Services (One Table per Category)
-    prisma.bvnRequest.count({ where: { status: 'PENDING' } }),       // Covers Retrieval, Mod, Android, VNIN-NIBSS
-    prisma.jambRequest.count({ where: { status: 'PENDING' } }),      // Covers Slip & Profile Code
-    prisma.tinRequest.count({ where: { status: 'PENDING' } }),       // Covers Reg & Retrieval
-    prisma.resultRequest.count({ where: { status: 'PENDING' } }),    // Covers Request Result
-    prisma.cacRequest.count({ where: { status: 'PENDING' } }),       // All CAC
-    prisma.newspaperRequest.count({ where: { status: 'PENDING' } })  // All Newspaper
+    // BVN (Specific IDs)
+    prisma.bvnRequest.count({ 
+      where: { 
+        status: 'PENDING',
+        serviceId: { in: ['BVN_RETRIEVAL_PHONE', 'BVN_RETRIEVAL_CRM'] } 
+      } 
+    }),
+    prisma.bvnRequest.count({ 
+      where: { 
+        status: 'PENDING',
+        serviceId: { startsWith: 'BVN_MOD' } 
+      } 
+    }),
+    prisma.bvnRequest.count({ 
+      where: { 
+        status: 'PENDING',
+        serviceId: 'BVN_ENROLLMENT_ANDROID'
+      } 
+    }),
+    prisma.bvnRequest.count({ 
+      where: { 
+        status: 'PENDING',
+        serviceId: 'BVN_VNIN_TO_NIBSS'
+      } 
+    }),
+
+    // Others
+    prisma.cacRequest.count({ where: { status: 'PENDING' } }),
+    prisma.tinRequest.count({ where: { status: 'PENDING' } }),
+    prisma.jambRequest.count({ where: { status: 'PENDING' } }),
+    prisma.resultRequest.count({ where: { status: 'PENDING' } }),
+    prisma.newspaperRequest.count({ where: { status: 'PENDING' } })
   ]);
 
+  // 2. Organize into a stats object
   const stats = {
     ninMod: ninModCount,
     ninDelink: ninDelinkCount,
-    ninValidation: ninValidationCount,
-    bvn: bvnCount,
-    jamb: jambCount,
-    tin: tinCount,
-    result: resultCount,
+    ipe: ipeCount,
+    personalization: personalizationCount,
+    
+    bvnRetrieval: bvnRetrievalCount,
+    bvnMod: bvnModCount,
+    bvnEnrollment: bvnEnrollmentCount,
+    bvnNibss: bvnNibssCount,
+
     cac: cacCount,
+    tin: tinCount,
+    jamb: jambCount,
+    result: resultCount,
     newspaper: newspaperCount
   };
 
@@ -61,8 +103,8 @@ export default async function AdminRequestsPage() {
           <ClipboardDocumentListIcon className="h-8 w-8" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manual Request Manager</h1>
-          <p className="text-sm text-gray-500">Manage all pending applications requiring manual attention.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Request Manager</h1>
+          <p className="text-sm text-gray-500">Central hub for all manual service requests.</p>
         </div>
       </div>
 
