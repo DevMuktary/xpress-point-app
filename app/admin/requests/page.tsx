@@ -16,9 +16,6 @@ export default async function AdminRequestsPage() {
   const [
     ninModCount,
     ninDelinkCount,
-    // ninValidation removed (Auto)
-    ipeCount,
-    personalizationCount,
     
     // BVN Broken Down
     bvnRetrievalCount,
@@ -33,11 +30,9 @@ export default async function AdminRequestsPage() {
     resultCount,
     newspaperCount
   ] = await Promise.all([
-    // NIN (Manual)
+    // NIN (Manual Only)
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
-    prisma.ipeRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.personalizationRequest.count({ where: { status: 'PROCESSING' } }),
     
     // BVN (Specific IDs)
     prisma.bvnRequest.count({ 
@@ -77,8 +72,6 @@ export default async function AdminRequestsPage() {
   const stats = {
     ninMod: ninModCount,
     ninDelink: ninDelinkCount,
-    ipe: ipeCount,
-    personalization: personalizationCount,
     
     bvnRetrieval: bvnRetrievalCount,
     bvnMod: bvnModCount,
@@ -103,8 +96,8 @@ export default async function AdminRequestsPage() {
           <ClipboardDocumentListIcon className="h-8 w-8" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Request Manager</h1>
-          <p className="text-sm text-gray-500">Central hub for all manual service requests.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Manual Request Manager</h1>
+          <p className="text-sm text-gray-500">Manage all pending applications requiring manual attention.</p>
         </div>
       </div>
 
