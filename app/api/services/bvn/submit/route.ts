@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
-import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -15,7 +14,6 @@ export async function POST(request: Request) {
     const { 
       serviceId, 
       formData,
-      // File URLs
       failedEnrollmentUrl,
       vninSlipUrl,
       newspaperUrl
@@ -31,32 +29,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // --- PRICING LOGIC ---
-    // Base price is ALWAYS defaultAgentPrice
-    const price = new Decimal(service.defaultAgentPrice);
-    
     // 2. Check Wallet
+    const price = new Decimal(service.defaultAgentPrice);
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    
     if (!wallet || wallet.balance.lessThan(price)) {
       return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price.toString()}.` }, { status: 402 });
     }
 
-    // 3. Execute Transaction
     const priceAsString = price.toString();
     const negatedPriceAsString = price.negated().toString();
 
+    // 3. Execute Transaction
     await prisma.$transaction(async (tx) => {
-      // a) Charge User Wallet
+      // a) Charge User
       await tx.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: priceAsString } },
       });
 
-      // b) PROCESS COMMISSION (The Definite Fix)
-      // This calculates and credits the aggregator instantly
-      await processCommission(tx, user.id, service.id);
+      // NOTE: Commission is NOT paid here. It is paid by Admin on Completion.
 
-      // c) Create the new request
+      // b) Create Request
       await tx.bvnRequest.create({
         data: {
           userId: user.id,
@@ -65,14 +59,14 @@ export async function POST(request: Request) {
           statusMessage: 'Request submitted. Awaiting admin review.',
           formData: formData as any,
           
-          // File mappings
+          // Files
           failedEnrollmentUrl: failedEnrollmentUrl || null,
           vninSlipUrl: vninSlipUrl || null,
           newspaperUrl: newspaperUrl || null
         },
       });
 
-      // d) Log the transaction
+      // c) Log Transaction
       await tx.transaction.create({
         data: {
           userId: user.id,
