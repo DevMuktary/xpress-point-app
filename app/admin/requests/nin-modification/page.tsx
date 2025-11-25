@@ -25,7 +25,10 @@ export default async function AdminNinModPage() {
         }
       },
       service: {
-        select: { name: true }
+        select: { 
+          name: true,
+          id: true // <--- ADDED THIS TO FIX THE BUILD ERROR
+        }
       }
     }
   });
