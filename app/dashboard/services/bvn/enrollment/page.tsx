@@ -1,11 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import BvnEnrollmentClientPage from '@/components/BvnEnrollmentClientPage';
-import SafeImage from '@/components/SafeImage';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export default async function BvnEnrollmentPage() {
   const user = await getUserFromSession();
@@ -13,36 +13,30 @@ export default async function BvnEnrollmentPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  const service = await prisma.service.findUnique({
-    where: { id: 'BVN_ENROLLMENT_ANDROID' },
-  });
-  if (!service) {
-    throw new Error("BVN_ENROLLMENT_ANDROID service not found.");
-  }
-
-  // --- THIS IS THE FIX ---
-  const serviceFee = service.defaultAgentPrice.toNumber();
-  // -----------------------
+  // 1. Get Service Price
+  const serviceId = 'BVN_ENROLLMENT_ANDROID';
+  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  
+  const fee = service ? Number(service.defaultAgentPrice) : 0;
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto">
+      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/services/bvn" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        <SafeImage
-          src="/logos/bvn.png"
-          alt="BVN Logo"
-          width={40}
-          height={40}
-          fallbackSrc="/logos/default.png"
-          className="rounded-full"
-        />
-        <h1 className="text-2xl font-bold text-gray-900">
-          BVN Android Enrollment User
-        </h1>
+        <div className="p-2 bg-purple-100 rounded-lg text-purple-700">
+          <DevicePhoneMobileIcon className="h-8 w-8" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">BVN Android Enrollment</h1>
+          <p className="text-sm text-gray-500">Request setup for Android enrollment and view your Agent Code.</p>
+        </div>
       </div>
-      <BvnEnrollmentClientPage fee={serviceFee} />
+
+      {/* Client Component */}
+      <BvnEnrollmentClientPage fee={fee} />
     </div>
   );
 }
