@@ -326,7 +326,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
             <h3 className="text-sm font-bold text-blue-800">Request Submitted Successfully!</h3>
             <p className="mt-1 text-sm text-blue-700">
               Your request is now <strong className="font-semibold">PENDING</strong>. Monitor status on the
-              <Link href="/dashboard/history/bvn" className="font-semibold underline hover:text-blue-600 ml-1">
+              <Link href="/dashboard/history/bvn/modification" className="font-semibold underline hover:text-blue-600 ml-1">
                 BVN History
               </Link> page.
             </p>
