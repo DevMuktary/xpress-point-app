@@ -1,16 +1,14 @@
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
-import { Role } from '@prisma/client'; // Import Role
+import { Role } from '@prisma/client';
 
-// Define the shape of our token
 interface UserPayload {
   userId: string;
   email: string;
   role: Role;
 }
 
-// This is the function to get the user from their cookie
 export async function getUserFromSession() {
   const token = cookies().get('auth_token')?.value;
 
@@ -21,11 +19,8 @@ export async function getUserFromSession() {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as UserPayload;
     
-    // Get the user from the database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      // --- THIS IS THE FIX ---
-      // We must select all the fields we need from the database.
       select: {
         id: true,
         email: true,
@@ -36,22 +31,21 @@ export async function getUserFromSession() {
         isEmailVerified: true,
         isIdentityVerified: true,
         bvn: true,
-        nin: true, // <-- THE MISSING LINE IS NOW ADDED
+        nin: true,
+        agentCode: true, // <--- ADD THIS
         hasAgreedToModificationTerms: true,
         subdomain: true,
         businessName: true,
         accountName: true,
         accountNumber: true,
         bankName: true,
-        aggregatorId: true, // Added this for our sub-agent logic
+        aggregatorId: true,
       }
-      // -----------------------
     });
 
     return user;
 
   } catch (error) {
-    // Invalid token
     return null;
   }
 }
