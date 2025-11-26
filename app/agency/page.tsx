@@ -3,12 +3,14 @@
 import React, { useState } from 'react';
 import { 
   MagnifyingGlassIcon, 
-  ShieldCheckIcon, 
-  ArrowPathIcon, 
+  CheckCircleIcon, 
+  XCircleIcon, 
+  ClockIcon, 
+  ArrowPathIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon
+  EyeIcon,
+  XMarkIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
@@ -19,6 +21,10 @@ type ResultItem = {
   status: string;
   message: string | null;
   updatedAt: string;
+  institutionName?: string | null;
+  agentName?: string | null;
+  agentCode?: string;
+  bmsImportId?: string | null;
 };
 
 type AgentInfo = {
@@ -31,6 +37,10 @@ export default function AgencyPortalPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<{ agent: AgentInfo, results: ResultItem[] } | null>(null);
+  const [selectedResult, setSelectedResult] = useState<ResultItem | null>(null); 
+
+  // --- Filtering State ---
+  const [filterStatus, setFilterStatus] = useState('ALL'); 
 
   const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,15 +71,28 @@ export default function AgencyPortalPage() {
     }
   };
 
+  // Filter logic
+  const filteredResults = data?.results.filter(item => {
+    if (filterStatus === 'ALL') return true;
+    
+    // Normalize status checking (handle spaces, casing)
+    const s = item.status?.toUpperCase() || '';
+    if (filterStatus === 'SUCCESS' && (s.includes('SUCCESS') || s.includes('APPROVED'))) return true;
+    if (filterStatus === 'FAILED' && (s.includes('FAIL') || s.includes('REJECT'))) return true;
+    if (filterStatus === 'PENDING' && s.includes('PENDING')) return true;
+    
+    return false;
+  }) || [];
+
   const getStatusBadge = (status: string) => {
-    const s = status.toUpperCase();
-    if (s === 'APPROVED' || s === 'SUCCESS') return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800"><CheckCircleIcon className="w-3 h-3" /> SUCCESS</span>;
-    if (s === 'REJECTED' || s === 'FAILED') return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800"><XCircleIcon className="w-3 h-3" /> REJECTED</span>;
+    const s = status?.toUpperCase() || '';
+    if (s.includes('APPROVED') || s.includes('SUCCESS')) return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800"><CheckCircleIcon className="w-3 h-3" /> SUCCESS</span>;
+    if (s.includes('REJECT') || s.includes('FAIL')) return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800"><XCircleIcon className="w-3 h-3" /> REJECTED</span>;
     return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800"><ClockIcon className="w-3 h-3" /> PENDING</span>;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       
       {/* Header */}
       <div className="text-center mb-10">
@@ -89,7 +112,7 @@ export default function AgencyPortalPage() {
         <form onSubmit={handleCheck} className="relative">
           <input
             type="text"
-            maxLength={6}
+            maxLength={8}
             className="block w-full rounded-2xl border-0 py-4 pl-5 pr-12 text-gray-900 shadow-xl ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-lg sm:leading-6 text-center font-mono tracking-widest uppercase"
             placeholder="ENTER CODE"
             value={agentCode}
@@ -97,7 +120,7 @@ export default function AgencyPortalPage() {
           />
           <button
             type="submit"
-            disabled={isLoading || agentCode.length < 6}
+            disabled={isLoading || agentCode.length < 4}
             className="absolute right-2 top-2 bottom-2 aspect-square bg-blue-600 rounded-xl text-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 transition-all"
           >
             {isLoading ? <ArrowPathIcon className="w-6 h-6 animate-spin" /> : <MagnifyingGlassIcon className="w-6 h-6" />}
@@ -114,7 +137,7 @@ export default function AgencyPortalPage() {
 
       {/* Results Section */}
       {data && (
-        <div className="w-full max-w-4xl mt-10 space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        <div className="w-full max-w-5xl mt-10 space-y-6 animate-in fade-in slide-in-from-bottom-4">
           
           {/* Agent Header */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -130,6 +153,23 @@ export default function AgencyPortalPage() {
             )}
           </div>
 
+          {/* Filter Toolbar */}
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+            {['ALL', 'SUCCESS', 'PENDING', 'FAILED'].map(status => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all
+                  ${filterStatus === status 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
+                  }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
           {/* Table Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
@@ -138,19 +178,20 @@ export default function AgencyPortalPage() {
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ticket Number</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">BVN / Feedback</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Message / BVN</th>
                     <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {data.results.length === 0 ? (
+                  {filteredResults.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                        No enrollment records found for this agent code.
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        No records found for status: <span className="font-bold">{filterStatus}</span>
                       </td>
                     </tr>
                   ) : (
-                    data.results.map((row) => (
+                    filteredResults.map((row) => (
                       <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-gray-900">
                           {row.ticketNumber}
@@ -158,15 +199,24 @@ export default function AgencyPortalPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(row.status)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
+                        <td className="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">
                           {row.bvn ? (
                             <span className="font-mono font-bold text-green-700 tracking-wider">{row.bvn}</span>
                           ) : (
-                            <span className="text-red-600 italic">{row.message || 'Processing...'}</span>
+                            <span className="text-red-600 italic">{row.message || '-'}</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-xs text-gray-500">
                           {new Date(row.updatedAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button 
+                            onClick={() => setSelectedResult(row)}
+                            className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
+                            title="View Details"
+                          >
+                            <EyeIcon className="w-5 h-5" />
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -178,6 +228,77 @@ export default function AgencyPortalPage() {
         </div>
       )}
 
+      {/* --- DETAIL MODAL --- */}
+      {selectedResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+              <h3 className="text-xl font-bold text-gray-900">Full Details</h3>
+              <button 
+                onClick={() => setSelectedResult(null)}
+                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <XMarkIcon className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-sm">
+              
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Ticket Number:</span>
+                  <span className="font-mono font-bold">{selectedResult.ticketNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                   <span className="text-gray-500">Status:</span>
+                   {getStatusBadge(selectedResult.status)}
+                </div>
+                <div className="flex justify-between">
+                   <span className="text-gray-500">Updated:</span>
+                   <span className="font-medium">{new Date(selectedResult.updatedAt).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="border-b pb-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase">Institution</p>
+                  <p className="font-medium text-gray-900">{selectedResult.institutionName || 'N/A'}</p>
+                </div>
+                <div className="border-b pb-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase">Agent Name (On Report)</p>
+                  <p className="font-medium text-gray-900">{selectedResult.agentName || 'N/A'}</p>
+                </div>
+                <div className="border-b pb-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase">Agent Code</p>
+                  <p className="font-medium text-gray-900 font-mono">{selectedResult.agentCode || 'N/A'}</p>
+                </div>
+                <div className="border-b pb-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase">BMS Import ID</p>
+                  <p className="font-medium text-gray-900 font-mono">{selectedResult.bmsImportId || 'N/A'}</p>
+                </div>
+                
+                {selectedResult.bvn && (
+                  <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                    <p className="text-xs font-bold text-green-600 uppercase">Generated BVN</p>
+                    <p className="text-2xl font-mono font-bold text-green-900 tracking-widest">{selectedResult.bvn}</p>
+                  </div>
+                )}
+
+                {selectedResult.message && !selectedResult.bvn && (
+                   <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                    <p className="text-xs font-bold text-red-600 uppercase">Rejection/Error Message</p>
+                    <p className="text-base font-medium text-red-900 mt-1">{selectedResult.message}</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+
+
