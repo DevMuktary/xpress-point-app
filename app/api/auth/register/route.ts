@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendOtpMessage } from '@/lib/whatsapp'; 
+import { generateUniqueAgentCode } from '@/lib/agentCode'; // <--- IMPORT THIS
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -15,8 +16,8 @@ export async function POST(request: Request) {
       phone, 
       password,
       aggregatorId,
-      businessName, // <-- New field
-      address       // <-- New field
+      businessName, 
+      address       
     } = body;
 
     if (!firstName || !lastName || !email || !phone || !password) {
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     if (existingUser) {
       return NextResponse.json(
         { error: 'An account with this email or phone number already exists.' },
-        { status: 409 } // 409 Conflict
+        { status: 409 } 
       );
     }
     
@@ -62,7 +63,10 @@ export async function POST(request: Request) {
     // 2. Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 3. Create user
+    // 3. Generate Unique Agent Code
+    const agentCode = await generateUniqueAgentCode(); // <--- NEW LOGIC
+
+    // 4. Create user
     const user = await prisma.user.create({
       data: {
         firstName,
@@ -71,15 +75,16 @@ export async function POST(request: Request) {
         phoneNumber: phone,
         passwordHash,
         role: 'AGENT',
+        agentCode: agentCode, // <--- SAVE CODE
         aggregatorId: aggregatorId || null,
-        businessName: businessName || null, // <-- Save new field
-        address: address || null,         // <-- Save new field
+        businessName: businessName || null, 
+        address: address || null,         
       }
     });
     
-    // 4. Create and send OTP
+    // 5. Create and send OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
 
     await prisma.otp.create({
       data: {
