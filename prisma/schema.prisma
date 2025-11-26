@@ -25,6 +25,11 @@ model User {
   nin                          String?
   hasAgreedToModificationTerms Boolean  @default(false) @map("has_agreed_to_mod_terms")
   
+  // --- NEW FIELD: AGENT CODE ---
+  // This is the 6-digit code used for checking results on the agency portal
+  agentCode                    String?  @unique @map("agent_code") 
+  // -----------------------------
+
   // --- AGGREGATOR FIELDS ---
   subdomain                    String?  @unique
   accountName                  String?  @map("account_name")
@@ -131,10 +136,7 @@ model Service {
   
   platformPrice     Decimal  @default(0.00) @map("platform_price") @db.Decimal(10, 2)
   defaultAgentPrice Decimal  @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
-  
-  // --- THIS IS THE NEW FIELD FOR THE PUSH STRATEGY ---
   defaultCommission Decimal  @default(0.00) @map("default_commission") @db.Decimal(10, 2)
-  // -------------------------------------------------
 
   isActive          Boolean  @default(true) @map("is_active")
   productCode       String?  @map("product_code")
@@ -160,6 +162,29 @@ enum RequestStatus {
   COMPLETED
   FAILED
 }
+
+// --- NEW MODEL: BVN ENROLLMENT RESULTS (From Excel) ---
+model BvnEnrollmentResult {
+  id               String   @id @default(uuid())
+  
+  // Fields mapped from the CSV/Excel Header
+  ticketNumber     String   @unique @map("ticket_number") // TICKET_NUMBER (Unique identifier)
+  bvn              String?  @map("bvn")                   // BVN
+  institutionName  String?  @map("institution_name")      // AGT_MGT_INST_NAME
+  agentName        String?  @map("agent_name")            // AGENT_NAME
+  agentCode        String   @map("agent_code")            // AGENT_CODE (This links to User.agentCode)
+  bmsImportId      String?  @map("bms_import_id")         // BMS_IMPORT_ID
+  status           String   @map("status")                // VALIDATION_STATUS (e.g., PENDING, REJECTED)
+  message          String?  @map("message")               // VALIDATION_MESSAGE (e.g., ID NOT CLEAR)
+  
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // We index agentCode for fast searching on the agency portal
+  @@index([agentCode])
+  @@map("bvn_enrollment_results")
+}
+// -------------------------------------------------------
 
 model PersonalizationRequest {
   id            String        @id @default(uuid())
@@ -364,6 +389,9 @@ model BvnRequest {
   retrievalResult     String?       @map("retrieval_result")
   newspaperUrl        String?       @map("newspaper_url")
   
+  // For Admin Uploads to BvnEnrollmentResult linkage if needed, but Agent Code is primary
+  adminResultUrl      String?       @map("admin_result_url")
+
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
 
