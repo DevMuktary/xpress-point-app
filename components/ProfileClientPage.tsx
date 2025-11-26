@@ -11,7 +11,8 @@ import {
   ClockIcon, 
   CheckBadgeIcon, 
   BuildingLibraryIcon, 
-  DocumentDuplicateIcon 
+  DocumentDuplicateIcon,
+  IdentificationIcon
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
@@ -41,8 +42,8 @@ const InfoCard = ({ label, value, icon: Icon, copyable = false }: any) => {
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
         <div className="flex items-center gap-2 mt-0.5">
-          <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
-          {copyable && (
+          <p className="text-sm font-semibold text-gray-900 truncate">{value || 'N/A'}</p>
+          {copyable && value && (
             <button 
               onClick={handleCopy}
               className="text-gray-400 hover:text-blue-600 transition-colors"
@@ -60,7 +61,6 @@ const InfoCard = ({ label, value, icon: Icon, copyable = false }: any) => {
 export default function ProfileClientPage({ user, walletBalance, commissionBalance, totalTransactions }: Props) {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SECURITY'>('OVERVIEW');
 
-  // Format Date
   const joinDate = new Date(user.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -72,13 +72,10 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
       
       {/* --- 1. Profile Header Card --- */}
       <div className="relative overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-200">
-        {/* Decorative Background */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-blue-600 to-blue-800" />
         
         <div className="relative px-6 pt-16 pb-6">
           <div className="flex flex-col md:flex-row items-end md:items-center gap-6">
-            
-            {/* Avatar */}
             <div className="relative">
               <div className="h-24 w-24 rounded-full border-4 border-white bg-white shadow-md overflow-hidden flex items-center justify-center">
                 {user.image ? (
@@ -88,7 +85,7 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
                     width={96} 
                     height={96} 
                     className="object-cover" 
-                    fallbackSrc="/logos/default.png" // <-- FIXED HERE
+                    fallbackSrc="/logos/default.png"
                   />
                 ) : (
                   <UserCircleIcon className="h-20 w-20 text-gray-300" />
@@ -101,7 +98,6 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
               )}
             </div>
 
-            {/* User Info */}
             <div className="flex-1 mb-2">
               <h2 className="text-2xl font-bold text-gray-900">
                 {user.firstName} {user.lastName}
@@ -117,17 +113,9 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
                 </span>
               </div>
             </div>
-
-            {/* Action Button (Optional) */}
-            <div className="flex gap-3">
-              <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
-                Edit Profile
-              </button>
-            </div>
           </div>
         </div>
         
-        {/* Navigation Tabs */}
         <div className="flex px-6 border-t border-gray-100 bg-gray-50/50">
           <button
             onClick={() => setActiveTab('OVERVIEW')}
@@ -146,12 +134,43 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
 
       {/* --- 2. Tab Content --- */}
       
-      {/* === OVERVIEW TAB === */}
       {activeTab === 'OVERVIEW' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Left Column: Personal Info */}
           <div className="lg:col-span-2 space-y-6">
+            {/* --- NEW: Agency Portal Access Card --- */}
+            <div className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-6">
+               <h3 className="text-lg font-bold text-blue-900 mb-2">Agency Portal Access</h3>
+               <p className="text-sm text-blue-700 mb-4">
+                 Use this unique Agent Code to check your bulk enrollment results on the Agency Portal.
+               </p>
+               <div className="flex items-center gap-4">
+                  <div className="flex-1 bg-white p-3 rounded-lg border border-blue-200 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase">Agent Code</p>
+                      <p className="text-xl font-mono font-bold text-gray-900">{user.agentCode || 'Not Generated'}</p>
+                    </div>
+                    {user.agentCode && (
+                      <button 
+                        onClick={() => { navigator.clipboard.writeText(user.agentCode); alert('Copied!') }}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <DocumentDuplicateIcon className="h-6 w-6" />
+                      </button>
+                    )}
+                  </div>
+                  <a 
+                    href="https://agency.xpresspoint.net" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="px-4 py-3 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                  >
+                    Go to Portal
+                  </a>
+               </div>
+            </div>
+            {/* ---------------------------------------- */}
+
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -163,34 +182,8 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
                 <InfoCard label="Member Since" value={joinDate} icon={ClockIcon} />
               </div>
             </div>
-
-            {/* Identity Status */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-               <h3 className="text-lg font-bold text-gray-900 mb-4">Identity Verification</h3>
-               <div className={`flex items-center gap-4 p-4 rounded-xl border ${user.isIdentityVerified ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}`}>
-                 <div className={`p-2 rounded-full ${user.isIdentityVerified ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
-                   <ShieldCheckIcon className="h-6 w-6" />
-                 </div>
-                 <div className="flex-1">
-                   <p className="font-semibold text-gray-900">
-                     {user.isIdentityVerified ? 'Identity Verified' : 'Identity Unverified'}
-                   </p>
-                   <p className="text-sm text-gray-600">
-                     {user.isIdentityVerified 
-                       ? 'Your account is fully verified. You have access to all services.' 
-                       : 'Please complete your KYC verification to unlock higher limits.'}
-                   </p>
-                 </div>
-                 {!user.isIdentityVerified && (
-                   <button className="px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700">
-                     Verify Now
-                   </button>
-                 )}
-               </div>
-            </div>
           </div>
 
-          {/* Right Column: Financials & Stats */}
           <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Financial Overview</h3>
@@ -225,11 +218,9 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
         </div>
       )}
 
-      {/* === SECURITY TAB === */}
       {activeTab === 'SECURITY' && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 max-w-2xl">
           <h3 className="text-lg font-bold text-gray-900 mb-6">Security Settings</h3>
-          
           <div className="space-y-6">
             <div className="pb-6 border-b border-gray-100">
               <div className="flex items-start justify-between">
@@ -239,17 +230,12 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
                    </div>
                    <div>
                      <p className="font-semibold text-gray-900">Password</p>
-                     <p className="text-sm text-gray-500 mt-1">
-                       Last changed: Never (or fetch date)
-                     </p>
+                     <p className="text-sm text-gray-500 mt-1">Last changed: Never</p>
                    </div>
                 </div>
-                <button className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                  Update
-                </button>
+                <button className="text-sm font-medium text-blue-600 hover:text-blue-700">Update</button>
               </div>
             </div>
-
             <div className="flex items-start justify-between">
               <div className="flex gap-4">
                  <div className="p-2 bg-gray-100 text-gray-600 rounded-lg h-fit">
@@ -257,14 +243,10 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
                  </div>
                  <div>
                    <p className="font-semibold text-gray-900">Two-Factor Authentication</p>
-                   <p className="text-sm text-gray-500 mt-1">
-                     Add an extra layer of security to your account.
-                   </p>
+                   <p className="text-sm text-gray-500 mt-1">Add an extra layer of security.</p>
                  </div>
               </div>
-              <button className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                Enable
-              </button>
+              <button className="text-sm font-medium text-blue-600 hover:text-blue-700">Enable</button>
             </div>
           </div>
         </div>
