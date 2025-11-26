@@ -12,53 +12,29 @@ export default async function AdminRequestsPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // 1. Fetch counts for specific manual services
   const [
     ninModCount,
     ninDelinkCount,
-    
-    // BVN Broken Down
+    // BVN
     bvnRetrievalCount,
     bvnModCount,
-    bvnEnrollmentCount,
+    bvnEnrollmentSetupCount, // Count of agents waiting for setup
     bvnNibssCount,
-
-    // Other Manual Services
+    // Others
     cacCount,
     tinCount,
     jambCount,
     resultCount,
     newspaperCount
   ] = await Promise.all([
-    // NIN (Manual Only)
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
     
-    // BVN (Specific IDs)
-    prisma.bvnRequest.count({ 
-      where: { 
-        status: 'PENDING',
-        serviceId: { in: ['BVN_RETRIEVAL_PHONE', 'BVN_RETRIEVAL_CRM'] } 
-      } 
-    }),
-    prisma.bvnRequest.count({ 
-      where: { 
-        status: 'PENDING',
-        serviceId: { startsWith: 'BVN_MOD' } 
-      } 
-    }),
-    prisma.bvnRequest.count({ 
-      where: { 
-        status: 'PENDING',
-        serviceId: 'BVN_ENROLLMENT_ANDROID'
-      } 
-    }),
-    prisma.bvnRequest.count({ 
-      where: { 
-        status: 'PENDING',
-        serviceId: 'BVN_VNIN_TO_NIBSS'
-      } 
-    }),
+    // BVN
+    prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: { in: ['BVN_RETRIEVAL_PHONE', 'BVN_RETRIEVAL_CRM'] } } }),
+    prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: { startsWith: 'BVN_MOD' } } }),
+    prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: 'BVN_ENROLLMENT_ANDROID' } }), // Setup requests
+    prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: 'BVN_VNIN_TO_NIBSS' } }),
 
     // Others
     prisma.cacRequest.count({ where: { status: 'PENDING' } }),
@@ -68,16 +44,13 @@ export default async function AdminRequestsPage() {
     prisma.newspaperRequest.count({ where: { status: 'PENDING' } })
   ]);
 
-  // 2. Organize into a stats object
   const stats = {
     ninMod: ninModCount,
     ninDelink: ninDelinkCount,
-    
     bvnRetrieval: bvnRetrievalCount,
     bvnMod: bvnModCount,
-    bvnEnrollment: bvnEnrollmentCount,
+    bvnEnrollmentSetup: bvnEnrollmentSetupCount,
     bvnNibss: bvnNibssCount,
-
     cac: cacCount,
     tin: tinCount,
     jamb: jambCount,
@@ -87,7 +60,6 @@ export default async function AdminRequestsPage() {
 
   return (
     <div className="w-full max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link href="/admin/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
@@ -96,12 +68,10 @@ export default async function AdminRequestsPage() {
           <ClipboardDocumentListIcon className="h-8 w-8" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manual Request Manager</h1>
-          <p className="text-sm text-gray-500">Manage all pending applications requiring manual attention.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Request Manager</h1>
+          <p className="text-sm text-gray-500">Central hub for all manual service requests.</p>
         </div>
       </div>
-
-      {/* Client Component */}
       <AdminRequestsHubClientPage stats={stats} />
     </div>
   );
