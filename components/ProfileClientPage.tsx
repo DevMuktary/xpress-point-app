@@ -11,12 +11,10 @@ import {
   ClockIcon, 
   CheckBadgeIcon, 
   BuildingLibraryIcon, 
-  DocumentDuplicateIcon,
-  IdentificationIcon
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
-// --- Types ---
 type Props = {
   user: any;
   walletBalance: number;
@@ -24,7 +22,6 @@ type Props = {
   totalTransactions: number;
 };
 
-// --- Helper: Info Card ---
 const InfoCard = ({ label, value, icon: Icon, copyable = false }: any) => {
   const [copied, setCopied] = useState(false);
 
@@ -98,11 +95,12 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
               )}
             </div>
 
-            <div className="flex-1 mb-2">
-              <h2 className="text-2xl font-bold text-gray-900">
+            <div className="flex-1 mb-2 w-full">
+              {/* FIX: Name scaling for mobile */}
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 break-words leading-tight">
                 {user.firstName} {user.lastName}
               </h2>
-              <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-600">
                 <span className="flex items-center gap-1">
                   <EnvelopeIcon className="h-4 w-4" />
                   {user.email}
@@ -133,44 +131,9 @@ export default function ProfileClientPage({ user, walletBalance, commissionBalan
       </div>
 
       {/* --- 2. Tab Content --- */}
-      
       {activeTab === 'OVERVIEW' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
           <div className="lg:col-span-2 space-y-6">
-            {/* --- NEW: Agency Portal Access Card --- */}
-            <div className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-6">
-               <h3 className="text-lg font-bold text-blue-900 mb-2">Agency Portal Access</h3>
-               <p className="text-sm text-blue-700 mb-4">
-                 Use this unique Agent Code to check your bulk enrollment results on the Agency Portal.
-               </p>
-               <div className="flex items-center gap-4">
-                  <div className="flex-1 bg-white p-3 rounded-lg border border-blue-200 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-gray-400 uppercase">Agent Code</p>
-                      <p className="text-xl font-mono font-bold text-gray-900">{user.agentCode || 'Not Generated'}</p>
-                    </div>
-                    {user.agentCode && (
-                      <button 
-                        onClick={() => { navigator.clipboard.writeText(user.agentCode); alert('Copied!') }}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <DocumentDuplicateIcon className="h-6 w-6" />
-                      </button>
-                    )}
-                  </div>
-                  <a 
-                    href="https://agency.xpresspoint.net" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="px-4 py-3 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 whitespace-nowrap"
-                  >
-                    Go to Portal
-                  </a>
-               </div>
-            </div>
-            {/* ---------------------------------------- */}
-
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
