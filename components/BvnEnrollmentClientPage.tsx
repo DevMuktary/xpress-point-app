@@ -1,4 +1,4 @@
-"use client"; 
+"use client";
 
 import React, { useState, useMemo } from 'react';
 import { 
@@ -360,27 +360,12 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
                     <span className="text-sm font-semibold text-gray-900">₦{fee}</span>
                   </div>
                 </div>
-
-                <div className="mt-4 text-sm text-gray-700">
-                  <p>
-                    To check your enrollment reports visit: 
-                    <a 
-                      href="https://agency.xpresspoint.net" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="font-semibold underline text-blue-600 ml-1"
-                    >
-                      https://agency.xpresspoint.net
-                    </a>
-                  </p>
-                </div>
-                
               </div>
             </div>
             
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               <Link
-                href="/dashboard/history/bvn"
+                href="/dashboard/history/bvn/enrollment"
                 className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
               >
                 Check History
