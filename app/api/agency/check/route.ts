@@ -4,54 +4,51 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { agentCode } = body;
+    // Clean whitespace from the input code
+    const agentCode = body.agentCode?.trim();
 
-    if (!agentCode || agentCode.length !== 6) {
-      return NextResponse.json({ error: 'Invalid Agent Code.' }, { status: 400 });
+    if (!agentCode) {
+      return NextResponse.json({ error: 'Agent Code is required.' }, { status: 400 });
     }
 
-    // 1. Verify Agent Code Exists
-    const agent = await prisma.user.findUnique({
-      where: { agentCode: agentCode },
-      select: { 
-        firstName: true, 
-        lastName: true, 
-        businessName: true 
-      }
-    });
-
-    if (!agent) {
-      return NextResponse.json({ error: 'Agent Code not found.' }, { status: 404 });
-    }
-
-    // 2. Fetch Results
-    // We fetch the last 100 records for this agent
+    // 1. Search the Uploaded Results Table directly
+    // We do NOT check the User table anymore. We check if this code exists in the uploaded reports.
     const results = await prisma.bvnEnrollmentResult.findMany({
       where: { agentCode: agentCode },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: 'desc' }, // Show most recent updates first
       take: 100,
-      select: {
-        id: true,
-        ticketNumber: true,
-        bvn: true,
-        status: true,
-        message: true,
-        updatedAt: true,
-        agentName: true // Just in case the CSV name differs slightly
-      }
     });
 
-    // 3. Serialize Dates
+    if (results.length === 0) {
+      return NextResponse.json({ error: 'No records found for this Agent Code. Please check the code or check back later.' }, { status: 404 });
+    }
+
+    // 2. Extract Agent Info from the file data itself
+    // Since all rows for this code *should* belong to the same agent, we pick the first one.
+    const identityRow = results[0];
+    
+    const agentInfo = {
+      name: identityRow.agentName || 'Unknown Agent', 
+      business: identityRow.institutionName || 'NIBSS Agent' 
+    };
+
+    // 3. Serialize Dates for the frontend
     const serializedResults = results.map(r => ({
-      ...r,
-      updatedAt: r.updatedAt.toISOString()
+      id: r.id,
+      ticketNumber: r.ticketNumber,
+      bvn: r.bvn,
+      status: r.status,
+      message: r.message,
+      updatedAt: r.updatedAt.toISOString(),
+      // Pass these along just in case we want to show them per row
+      institutionName: r.institutionName,
+      agentName: r.agentName,
+      agentCode: r.agentCode,
+      bmsImportId: r.bmsImportId
     }));
 
     return NextResponse.json({ 
-      agent: {
-        name: `${agent.firstName} ${agent.lastName}`,
-        business: agent.businessName
-      },
+      agent: agentInfo,
       results: serializedResults 
     });
 
@@ -60,3 +57,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "An internal server error occurred." }, { status: 500 });
   }
 }
+
+
