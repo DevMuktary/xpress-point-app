@@ -353,7 +353,7 @@ export default function VninToNibssClientPage({ fee }: Props) {
             
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               <Link
-                href="/dashboard/history/bvn"
+                href="/dashboard/history/bvn/nibss"
                 className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
               >
                 Check History
