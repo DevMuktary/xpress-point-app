@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
-import { processCommission } from '@/lib/commission'; // <--- THE FIX
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -31,7 +30,6 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Set Price (Standardized to Default Agent Price) ---
-    // Using defaultAgentPrice for everyone
     const price = new Decimal(service.defaultAgentPrice);
     
     // --- 3. Check Wallet ---
@@ -51,11 +49,9 @@ export async function POST(request: Request) {
         data: { balance: { decrement: priceAsString } },
       });
 
-      // b) PROCESS COMMISSION (The Definite Fix)
-      // This calculates and credits the aggregator instantly
-      await processCommission(tx, user.id, service.id);
+      // NOTE: Commission is NOT paid here. It is paid by Admin on Completion.
 
-      // c) Create CAC Request
+      // b) Create CAC Request
       await tx.cacRequest.create({
         data: {
           userId: user.id,
@@ -70,7 +66,7 @@ export async function POST(request: Request) {
         },
       });
 
-      // d) Log Transaction
+      // c) Log Transaction
       await tx.transaction.create({
         data: {
           userId: user.id,
