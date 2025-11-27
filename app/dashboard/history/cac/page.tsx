@@ -34,7 +34,7 @@ export default async function CacHistoryPage() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/services/cac" className="text-gray-500 hover:text-gray-900">
+        <Link href="/dashboard/history" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <div className="p-2 bg-green-100 rounded-lg text-green-700">
