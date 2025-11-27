@@ -4,46 +4,49 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, NewspaperIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import NewspaperHistoryClientPage from '@/components/NewspaperHistoryClientPage'; // We will create this next
+import NewspaperHistoryClientPage from '@/components/NewspaperHistoryClientPage';
 
-// This is a Server Component. It fetches data on the server.
 export default async function NewspaperHistoryPage() {
   const user = await getUserFromSession();
   if (!user) {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get the user's existing requests from our database
   const requests = await prisma.newspaperRequest.findMany({
     where: { userId: user.id },
-    orderBy: { createdAt: 'desc' }, // Show newest first
-    // "World-class" include to get the service name
+    orderBy: { createdAt: 'desc' },
     include: {
-      service: {
-        select: {
-          name: true
-        }
-      }
+      service: { select: { name: true } }
     }
   });
 
+  const serializedRequests = requests.map(req => ({
+    id: req.id,
+    serviceName: req.service.name,
+    status: req.status,
+    statusMessage: req.statusMessage,
+    formData: req.formData,
+    publicationUrl: req.publicationUrl,
+    pageNumber: req.pageNumber,
+    createdAt: req.createdAt.toISOString(),
+  }));
+
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
+    <div className="w-full max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/history" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        <NewspaperIcon className="h-8 w-8 text-gray-900" />
-        <h1 className="text-2xl font-bold text-gray-900">
-          Newspaper History
-        </h1>
+        <div className="p-2 bg-gray-100 rounded-lg text-gray-700">
+          <NewspaperIcon className="h-8 w-8" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Newspaper History</h1>
+          <p className="text-sm text-gray-500">Track your Change of Name publications.</p>
+        </div>
       </div>
       
-      {/* 2. Pass the requests (from the server) to the 
-           interactive Client Component, which will handle the rest.
-      */}
-      <NewspaperHistoryClientPage initialRequests={requests} />
+      <NewspaperHistoryClientPage initialRequests={serializedRequests} />
     </div>
   );
 }
