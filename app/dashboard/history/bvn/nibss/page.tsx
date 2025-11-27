@@ -31,7 +31,7 @@ export default async function BvnNibssHistoryPage() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/history/bvn" className="text-gray-500 hover:text-gray-900">
+        <Link href="/dashboard/history" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <GlobeAltIcon className="h-8 w-8 text-gray-900" />
