@@ -82,7 +82,7 @@ export default function DashboardSidebar({ userRole }: Props) {
       <div className="flex items-center gap-3 px-6 h-24 flex-shrink-0">
         <div className="relative h-10 w-10 overflow-hidden rounded-xl shadow-sm border border-gray-100">
            <SafeImage 
-            src="/logos/logo.png" 
+            src="/public/logos/logo.png" 
             alt="XP" 
             fill
             className="object-cover"
