@@ -1,243 +1,116 @@
-"use client"; // This is an interactive component
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { CacRequest, Service, RequestStatus } from '@prisma/client';
+import React, { useState } from 'react';
 import { 
-  CheckCircleIcon,
-  XCircleIcon,
-  ArrowPathIcon,
-  ClockIcon,
-  MagnifyingGlassIcon,
-  DocumentArrowDownIcon,
-  DocumentMagnifyingGlassIcon
+  CheckCircleIcon, 
+  XCircleIcon, 
+  ArrowPathIcon, 
+  ClockIcon, 
+  MagnifyingGlassIcon, 
+  DocumentMagnifyingGlassIcon,
+  DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
-import Loading from '@/app/loading';
 
-// "World-class" type for the request + its service name
-type CacHistoryRequest = CacRequest & {
-  service: { name: string };
+type RequestItem = {
+  id: string;
+  serviceName: string;
+  status: string;
+  statusMessage: string | null;
+  formData: any;
+  certificateUrl: string | null;
+  statusReportUrl: string | null;
+  createdAt: string;
 };
 
-// Define the props to receive the initial data from the server
-type Props = {
-  initialRequests: CacHistoryRequest[];
-};
-
-export default function CacHistoryClientPage({ initialRequests }: Props) {
-  
-  // --- State Management ---
-  const [allRequests, setAllRequests] = useState(initialRequests);
-  const [isLoading, setIsLoading] = useState(false); // Only for future refreshes
-  const [error, setError] = useState<string | null>(null);
-
-  // --- "World-Class" Filter States ---
+export default function CacHistoryClientPage({ initialRequests }: { initialRequests: RequestItem[] }) {
+  const [requests] = useState(initialRequests);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // --- "World-Class" API Fetch on Load ---
-  const fetchHistory = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/services/cac/history');
-      if (!res.ok) {
-        throw new Error('Failed to fetch history.');
-      }
-      const data = await res.json();
-      setAllRequests(data.requests);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // UseEffect to load data on mount (good practice, though we have initial)
-  useEffect(() => {
-    fetchHistory();
-  }, []);
+  const filteredRequests = requests.filter(req => {
+    const d = req.formData || {};
+    const searchStr = `${req.serviceName} ${d.bizName1 || ''} ${d.fullBizName || ''}`.toLowerCase();
+    return searchStr.includes(searchTerm.toLowerCase());
+  });
 
-  // --- "World-Class" Filtering Logic ---
-  const filteredRequests = useMemo(() => {
-    return allRequests.filter(req => {
-      const formData = req.formData as any;
-      const bizName = formData.bizName1 || formData.fullBizName || '';
-      const matchesSearch = bizName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = (statusFilter === 'ALL' || req.status === statusFilter);
-      return matchesSearch && matchesStatus;
-    });
-  }, [allRequests, searchTerm, statusFilter]);
-
-  // Helper to format the date
-  const formatDate = (dateString: Date) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-  
-  // Helper to get "world-class" status info
-  const getStatusInfo = (status: RequestStatus) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'COMPLETED':
-        return { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Completed' };
-      case 'PROCESSING':
-        return { color: 'bg-blue-100 text-blue-800', icon: ArrowPathIcon, text: 'Processing' };
-      case 'PENDING':
-        return { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon, text: 'Pending' };
-      case 'FAILED':
-        return { color: 'bg-red-100 text-red-800', icon: XCircleIcon, text: 'Failed' };
-      default:
-        return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
+      case 'COMPLETED': return { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Completed' };
+      case 'PROCESSING': return { color: 'bg-blue-100 text-blue-800', icon: ArrowPathIcon, text: 'Processing' };
+      case 'FAILED': return { color: 'bg-red-100 text-red-800', icon: XCircleIcon, text: 'Failed' };
+      default: return { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon, text: 'Pending' };
     }
   };
-  
-  // Helper for the "smart" button
-  const renderActionButton = (request: CacHistoryRequest) => {
-    switch (request.status) {
-      case 'COMPLETED':
-        return (
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* "World-Class" button for Certificate */}
-            {request.certificateUrl ? (
-              <a 
-                href={request.certificateUrl}
-                target="_blank" rel="noopener noreferrer" download
-                className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 flex items-center justify-center gap-2"
-              >
-                <DocumentArrowDownIcon className="h-5 w-5" />
-                Download Certificate
-              </a>
-            ) : (
-              <span className="flex-1 text-sm text-gray-500 text-center">No Certificate</span>
-            )}
-            
-            {/* "World-Class" button for Status Report */}
-            {request.statusReportUrl ? (
-              <a 
-                href={request.statusReportUrl}
-                target="_blank" rel="noopener noreferrer" download
-                className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 flex items-center justify-center gap-2"
-              >
-                <DocumentArrowDownIcon className="h-5 w-5" />
-                Download Status Report
-              </a>
-            ) : (
-              <span className="flex-1 text-sm text-gray-500 text-center">No Report</span>
-            )}
-          </div>
-        );
-      case 'FAILED':
-        return (
-          <div className="text-sm text-center text-red-600 p-2 rounded-lg bg-red-50 border border-red-200">
-            <p className="font-semibold">Sorry, this failed 😞</p>
-            <p className="text-xs">{request.statusMessage || 'Please contact support.'}</p>
-          </div>
-        );
-      default: // PENDING or PROCESSING
-        return (
-          <div className="text-sm text-center text-yellow-800 p-2 rounded-lg bg-yellow-50 border border-yellow-200">
-            <p className="font-semibold">{request.status}</p>
-            <p className="text-xs">{request.statusMessage}</p>
-          </div>
-        );
-    }
-  };
-
 
   return (
     <div className="space-y-6">
-      {isLoading && <Loading />}
-
-      {/* --- 1. "World-Class" Filter & Search Bar --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by Business Name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 p-2.5 pl-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="PROCESSING">Processing</option> 
-          <option value="COMPLETED">Completed</option>
-          <option value="FAILED">Failed</option>
-        </select>
+      {/* Search */}
+      <div className="relative">
+        <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+        <input
+          type="text" placeholder="Search by Business Name..." value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 p-2.5 pl-10"
+        />
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
-          {error}
+      {filteredRequests.length === 0 ? (
+        <div className="py-12 text-center text-gray-500">
+           <DocumentMagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-300" />
+           <p className="mt-2 font-semibold">No Records Found</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredRequests.map((req) => {
+            const statusInfo = getStatusInfo(req.status);
+            const d = req.formData || {};
+
+            return (
+              <div key={req.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-bold text-gray-900">{req.serviceName}</h3>
+                    <p className="text-xs text-gray-500 mt-1">{new Date(req.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                    <statusInfo.icon className={`h-3 w-3 ${req.status === 'PROCESSING' ? 'animate-spin' : ''}`} />
+                    {statusInfo.text}
+                  </span>
+                </div>
+
+                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mb-3">
+                  <p><strong>Business:</strong> {d.bizName1 || d.fullBizName || 'N/A'}</p>
+                  <p><strong>Proprietor:</strong> {d.propFirstName} {d.propLastName}</p>
+                </div>
+
+                {/* Admin Message */}
+                {req.statusMessage && (
+                  <div className="mt-3 text-sm text-gray-600 bg-blue-50 p-2 rounded border border-blue-100">
+                    <span className="font-bold text-xs text-blue-500 uppercase block">Update</span>
+                    {req.statusMessage}
+                  </div>
+                )}
+
+                {/* Download Buttons */}
+                {req.status === 'COMPLETED' && (req.certificateUrl || req.statusReportUrl) && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-3">
+                    {req.certificateUrl && (
+                      <a href={req.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">
+                        <DocumentArrowDownIcon className="h-4 w-4" /> Download Certificate
+                      </a>
+                    )}
+                    {req.statusReportUrl && (
+                      <a href={req.statusReportUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700">
+                        <DocumentArrowDownIcon className="h-4 w-4" /> Download Status Report
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
-
-      {/* --- 2. The "One-by-One" Card List (Your "Stunning" Design) --- */}
-      <div className="space-y-4">
-        {!isLoading && filteredRequests.length === 0 && (
-          <div className="py-12 text-center text-gray-500">
-            <DocumentMagnifyingGlassIcon className="mx-auto h-12 w-12" />
-            <p className="mt-2 font-semibold">No Requests Found</p>
-            <p className="text-sm">No CAC requests match your filters.</p>
-          </div>
-        )}
-
-        {filteredRequests.map((request) => {
-          const statusInfo = getStatusInfo(request.status);
-          const formData = request.formData as any;
-          const bizName = formData.bizName1 || formData.fullBizName;
-
-          return (
-            <div 
-              key={request.id} 
-              className="rounded-lg border border-gray-200 bg-white shadow-sm"
-            >
-              <div className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
-                  {/* Left Side (Service & Business Name) */}
-                  <div>
-                    <p className="text-base font-semibold text-gray-900">
-                      {request.service.name}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {bizName}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatDate(request.createdAt)}
-                    </p>
-                  </div>
-                  
-                  {/* Right Side (Status Badge) */}
-                  <div className="mt-4 sm:mt-0 sm:ml-4">
-                    <span 
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusInfo.color}`}
-                    >
-                      <statusInfo.icon className={`h-4 w-4 ${statusInfo.text === 'Processing' ? 'animate-spin' : ''}`} />
-                      {statusInfo.text}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* --- "World-Class" Action Footer --- */}
-              <div className="border-t border-gray-100 bg-gray-50 p-4">
-                {renderActionButton(request)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
+
