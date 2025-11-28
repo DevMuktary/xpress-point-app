@@ -51,12 +51,12 @@ export default async function AdminDashboardPage() {
   ]);
 
   // 2. Fetch Transaction Stats for Profit Calculation
-  // We fetch 'SERVICE_CHARGE' transactions that are 'COMPLETED'
+  // We fetch 'SERVICE_CHARGE' transactions that are 'COMPLETED' to calculate revenue/profit
   const transactions = await prisma.transaction.findMany({
     where: {
       type: 'SERVICE_CHARGE',
       status: 'COMPLETED',
-      serviceId: { not: null } // Must be linked to a service
+      serviceId: { not: null }
     },
     select: {
       amount: true,
@@ -69,30 +69,77 @@ export default async function AdminDashboardPage() {
     }
   });
 
-  // 3. Fetch Job Counts (Manual Requests)
-  // We sum up pending counts from all tables (Simplified for performance: Checking main ones)
-  const [ninPending, bvnPending, cacPending, tinPending, jambPending, totalSuccessful] = await Promise.all([
+  // 3. Fetch Job Counts (True Status)
+  // We sum up PENDING counts for the "To Do" list
+  // We sum up COMPLETED counts for the "Success" list
+  const [
+    // Pending Counts (Manual Queues)
+    ninModPending,
+    ninDelinkPending,
+    bvnPending,
+    cacPending,
+    tinPending,
+    jambPending,
+    resultPending,
+    newspaperPending,
+    
+    // Completed Counts (All Services)
+    ninModSuccess,
+    ninDelinkSuccess,
+    ninValSuccess,
+    ipeSuccess,
+    personalizationSuccess,
+    bvnSuccess,
+    cacSuccess,
+    tinSuccess,
+    jambSuccess,
+    resultSuccess,
+    newspaperSuccess,
+    vtuSuccess,
+    examPinSuccess
+  ] = await Promise.all([
+    // --- Pending (Work to do) ---
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
+    prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
     prisma.bvnRequest.count({ where: { status: 'PENDING' } }),
     prisma.cacRequest.count({ where: { status: 'PENDING' } }),
     prisma.tinRequest.count({ where: { status: 'PENDING' } }),
     prisma.jambRequest.count({ where: { status: 'PENDING' } }),
-    prisma.transaction.count({ where: { status: 'COMPLETED', type: 'SERVICE_CHARGE' } })
+    prisma.resultRequest.count({ where: { status: 'PENDING' } }),
+    prisma.newspaperRequest.count({ where: { status: 'PENDING' } }),
+
+    // --- Successful (Completed Jobs) ---
+    prisma.modificationRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.delinkRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.validationRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.ipeRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.personalizationRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.bvnRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.cacRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.tinRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.jambRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.resultRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.newspaperRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.vtuRequest.count({ where: { status: 'COMPLETED' } }),
+    prisma.examPinRequest.count({ where: { status: 'COMPLETED' } })
   ]);
 
-  const totalPendingJobs = ninPending + bvnPending + cacPending + tinPending + jambPending;
+  const totalPendingJobs = ninModPending + ninDelinkPending + bvnPending + cacPending + tinPending + jambPending + resultPending + newspaperPending;
+
+  const totalSuccessful = 
+    ninModSuccess + ninDelinkSuccess + ninValSuccess + ipeSuccess + personalizationSuccess + 
+    bvnSuccess + cacSuccess + tinSuccess + jambSuccess + resultSuccess + 
+    newspaperSuccess + vtuSuccess + examPinSuccess;
 
   // 4. Calculate Profit
-  // Logic: Sum of (Transaction Amount (Revenue) - Service Platform Price (Cost))
-  // Note: Transaction amount is stored as negative for charges, so we use absolute value.
   let totalProfit = new Decimal(0);
   let totalRevenue = new Decimal(0);
 
   for (const tx of transactions) {
     if (tx.service) {
-      const revenue = tx.amount.abs(); // What agent paid (e.g. 1000)
-      const cost = tx.service.platformPrice; // What it costs you (e.g. 700)
-      const profit = revenue.minus(cost); // 300
+      const revenue = tx.amount.abs(); // What agent paid
+      const cost = tx.service.platformPrice; // What it costs you
+      const profit = revenue.minus(cost); 
 
       totalRevenue = totalRevenue.plus(revenue);
       totalProfit = totalProfit.plus(profit);
