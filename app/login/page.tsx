@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation'; // Import useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Loading from '@/app/loading';
 import { EyeIcon, EyeSlashIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // Get URL parameters
+  const searchParams = useSearchParams(); 
   
   // --- Form States ---
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -19,15 +19,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // --- THIS IS THE FIX ---
-  // We check for an error message from the URL when the page loads
+  // --- Check for URL Errors ---
   useEffect(() => {
     const urlError = searchParams.get('error');
     if (urlError) {
-      setError(urlError.replace(/\+/g, ' ')); // Show the message
+      setError(urlError.replace(/\+/g, ' ')); 
     }
   }, [searchParams]);
-  // -----------------------
 
   // --- Form Submission Handler ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,7 +38,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          loginIdentifier,
+          identifier: loginIdentifier, // <--- FIXED: Mapped to 'identifier' for backend compatibility
           password,
         }),
       });
@@ -50,6 +48,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed. Please check your credentials.');
       }
 
+      // Redirect to dashboard
       window.location.href = '/dashboard';
 
     } catch (err: any) {
@@ -74,7 +73,7 @@ export default function LoginPage() {
             </h2>
           </div>
 
-          {/* --- "Refurbished" Error/Message Display --- */}
+          {/* --- Error Message Display --- */}
           {error && (
             <div className="rounded-lg bg-red-50 p-4">
               <div className="flex">
@@ -89,7 +88,6 @@ export default function LoginPage() {
               </div>
             </div>
           )}
-          {/* ------------------------------------------- */}
 
           {/* Login Form */}
           <form 
