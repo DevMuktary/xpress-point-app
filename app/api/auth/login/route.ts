@@ -9,15 +9,22 @@ const JWT_SECRET = process.env.JWT_SECRET;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    // We accept 'email' from the frontend form, but treat it as an 'identifier' (Email or Phone)
     const { email, password } = body;
 
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+      return NextResponse.json({ error: 'Email/Phone and password are required' }, { status: 400 });
     }
 
-    // 1. Find User
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+    // 1. Find User by Email OR Phone Number
+    // We use findFirst because findUnique does not support OR logic directly
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email.toLowerCase() }, // Check if input is an email
+          { phoneNumber: email }          // Check if input is a phone number
+        ]
+      }
     });
 
     if (!user) {
@@ -28,7 +35,7 @@ export async function POST(request: Request) {
     if (user.isBlocked) {
       return NextResponse.json(
         { error: 'Your account has been suspended. Please contact support.' }, 
-        { status: 403 } // 403 Forbidden
+        { status: 403 } 
       );
     }
     // -----------------------------
