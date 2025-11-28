@@ -1,4 +1,4 @@
-*import React from 'react';
+import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -13,8 +13,7 @@ import {
   CurrencyDollarIcon,
   DocumentTextIcon,
   ChartBarIcon,
-  CheckCircleIcon,
-  XCircleIcon
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 // --- Stat Card Component ---
@@ -236,4 +235,6 @@ export default async function AdminDashboardPage() {
       </div>
     </div>
   );
-}*
+}
+
+
