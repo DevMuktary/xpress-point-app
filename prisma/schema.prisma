@@ -24,7 +24,7 @@ model User {
   bvn                          String?
   nin                          String?
   hasAgreedToModificationTerms Boolean  @default(false) @map("has_agreed_to_mod_terms")
-  
+  isBlocked                    Boolean  @default(false) @map("is_blocked")
   // --- NEW FIELD: AGENT CODE ---
   // This is the 6-digit code used for checking results on the agency portal
   agentCode                    String?  @unique @map("agent_code") 
