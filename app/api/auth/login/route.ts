@@ -9,20 +9,24 @@ const JWT_SECRET = process.env.JWT_SECRET;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // We accept 'email' from the frontend form, but treat it as an 'identifier' (Email or Phone)
-    const { email, password } = body;
+    
+    // --- ROBUST INPUT CHECK ---
+    // We look for 'email', 'phone', or 'identifier' in the request body
+    // This fixes the "missing field" error if frontend sends { phone: "..." }
+    const loginId = body.email || body.phone || body.identifier || body.phoneNumber;
+    const { password } = body;
 
-    if (!email || !password) {
+    if (!loginId || !password) {
       return NextResponse.json({ error: 'Email/Phone and password are required' }, { status: 400 });
     }
 
     // 1. Find User by Email OR Phone Number
-    // We use findFirst because findUnique does not support OR logic directly
+    // We search for the loginId in both fields
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: email.toLowerCase() }, // Check if input is an email
-          { phoneNumber: email }          // Check if input is a phone number
+          { email: loginId.toLowerCase() }, 
+          { phoneNumber: loginId }          
         ]
       }
     });
@@ -38,7 +42,6 @@ export async function POST(request: Request) {
         { status: 403 } 
       );
     }
-    // -----------------------------
 
     // 3. Check Password
     const passwordMatch = await bcrypt.compare(password, user.passwordHash);
