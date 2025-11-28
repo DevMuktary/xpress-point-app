@@ -30,9 +30,10 @@ export async function getUserFromSession() {
         role: true,
         isEmailVerified: true,
         isIdentityVerified: true,
+        isBlocked: true, // <--- Fetch this field
         bvn: true,
         nin: true,
-        agentCode: true, // <--- ADD THIS
+        agentCode: true,
         hasAgreedToModificationTerms: true,
         subdomain: true,
         businessName: true,
@@ -42,6 +43,13 @@ export async function getUserFromSession() {
         aggregatorId: true,
       }
     });
+
+    // --- THE BLOCK LOGIC ---
+    // If user doesn't exist OR is blocked, return null.
+    // This effectively logs them out immediately.
+    if (!user || user.isBlocked) {
+      return null;
+    }
 
     return user;
 
