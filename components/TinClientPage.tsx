@@ -22,23 +22,29 @@ import Link from 'next/link';
 // --- Props Definition ---
 type Props = {
   prices: Record<string, number>; 
+  availability: Record<string, boolean>; // <--- ADDED THIS
 };
 
-// --- Helper Components ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
-  title: string, description: string, selected: boolean, onClick: () => void
+// --- UPDATED Helper Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
+  title: string, description: string, selected: boolean, onClick: () => void, disabled?: boolean
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2 w-full
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
+      ${disabled
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -88,8 +94,8 @@ const NoticeBox = () => (
 );
 
 // --- MAIN COMPONENT ---
-export default function TinClientPage({ prices }: Props) {
-  
+export default function TinClientPage({ prices, availability }: Props) {
+   
   // --- State Management ---
   const [serviceType, setServiceType] = useState<'REG' | 'RETRIEVAL' | null>(null);
   const [subType, setSubType] = useState<'PERSONAL' | 'BUSINESS' | null>(null);
@@ -142,7 +148,7 @@ export default function TinClientPage({ prices }: Props) {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    
+     
     setStatusReportFile(file);
     setIsUploading(true);
     setUploadError(null);
@@ -177,15 +183,15 @@ export default function TinClientPage({ prices }: Props) {
       setSubmitError("Please wait for the Status Report to finish uploading.");
       return;
     }
-    
+     
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- Step 2: Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsSubmitting(true);
-    
+     
     let formData: any = {};
 
     if (serviceType === 'REG' && subType === 'PERSONAL') {
@@ -227,7 +233,7 @@ export default function TinClientPage({ prices }: Props) {
       setIsSubmitting(false);
     }
   };
-  
+   
   return (
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
@@ -281,12 +287,14 @@ export default function TinClientPage({ prices }: Props) {
                   title="Personal"
                   description={`Fee: ₦${prices[`TIN_${serviceType}_PERSONAL`]?.toLocaleString() || '...'}`}
                   selected={subType === 'PERSONAL'}
+                  disabled={!availability[`TIN_${serviceType}_PERSONAL`]} // <--- Check availability
                   onClick={() => setSubType('PERSONAL')}
                 />
                 <ModTypeButton
                   title="Business"
                   description={`Fee: ₦${prices[`TIN_${serviceType}_BUSINESS`]?.toLocaleString() || '...'}`}
                   selected={subType === 'BUSINESS'}
+                  disabled={!availability[`TIN_${serviceType}_BUSINESS`]} // <--- Check availability
                   onClick={() => setSubType('BUSINESS')}
                 />
               </div>
