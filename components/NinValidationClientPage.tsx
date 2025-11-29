@@ -16,25 +16,35 @@ import { ValidationRequest } from '@prisma/client';
 // --- Types ---
 type Props = {
   prices: { [key: string]: number };
+  availability: { [key: string]: boolean }; // <--- ADDED THIS
   initialRequests: ValidationRequest[];
 };
 type ServiceID = 'NIN_VALIDATION_47' | 'NIN_VALIDATION_48' | 'NIN_VALIDATION_49' | 'NIN_VALIDATION_50';
 
-// --- "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
   title: string,
   description: string,
   selected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  disabled?: boolean // <--- Added disabled support
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+      ${disabled
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
+      }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -79,16 +89,16 @@ const NoticeBox = () => (
 );
 
 // --- Main Component ---
-export default function NinValidationClientPage({ prices, initialRequests }: Props) {
+export default function NinValidationClientPage({ prices, initialRequests, availability }: Props) {
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  
+   
   // Form Data State
   const [nin, setNin] = useState('');
-  
+   
   // History State
   const [requests, setRequests] = useState(initialRequests);
 
@@ -132,7 +142,7 @@ export default function NinValidationClientPage({ prices, initialRequests }: Pro
       setIsLoading(false);
     }
   };
-  
+   
   return (
     <div className="space-y-6">
       {isLoading && <Loading />}
@@ -153,14 +163,39 @@ export default function NinValidationClientPage({ prices, initialRequests }: Pro
 
       <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
+          
           {/* 1. Select Service Type */}
           <div>
             <label className="text-lg font-bold text-gray-900">1. Select Validation Reason</label>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <ModTypeButton title="No Record" description={`Fee: ₦${prices.NIN_VALIDATION_47 || 0}`} selected={serviceId === 'NIN_VALIDATION_47'} onClick={() => setServiceId('NIN_VALIDATION_47')} />
-              <ModTypeButton title="Sim Card Issues" description={`Fee: ₦${prices.NIN_VALIDATION_48 || 0}`} selected={serviceId === 'NIN_VALIDATION_48'} onClick={() => setServiceId('NIN_VALIDATION_48')} />
-              <ModTypeButton title="Bank Validation" description={`Fee: ₦${prices.NIN_VALIDATION_49 || 0}`} selected={serviceId === 'NIN_VALIDATION_49'} onClick={() => setServiceId('NIN_VALIDATION_49')} />
-              <ModTypeButton title="Photographer Error" description={`Fee: ₦${prices.NIN_VALIDATION_50 || 0}`} selected={serviceId === 'NIN_VALIDATION_50'} onClick={() => setServiceId('NIN_VALIDATION_50')} />
+              <ModTypeButton 
+                title="No Record" 
+                description={`Fee: ₦${prices.NIN_VALIDATION_47 || 0}`} 
+                selected={serviceId === 'NIN_VALIDATION_47'} 
+                disabled={!availability['NIN_VALIDATION_47']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_VALIDATION_47')} 
+              />
+              <ModTypeButton 
+                title="Sim Card Issues" 
+                description={`Fee: ₦${prices.NIN_VALIDATION_48 || 0}`} 
+                selected={serviceId === 'NIN_VALIDATION_48'} 
+                disabled={!availability['NIN_VALIDATION_48']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_VALIDATION_48')} 
+              />
+              <ModTypeButton 
+                title="Bank Validation" 
+                description={`Fee: ₦${prices.NIN_VALIDATION_49 || 0}`} 
+                selected={serviceId === 'NIN_VALIDATION_49'} 
+                disabled={!availability['NIN_VALIDATION_49']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_VALIDATION_49')} 
+              />
+              <ModTypeButton 
+                title="Photographer Error" 
+                description={`Fee: ₦${prices.NIN_VALIDATION_50 || 0}`} 
+                selected={serviceId === 'NIN_VALIDATION_50'} 
+                disabled={!availability['NIN_VALIDATION_50']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_VALIDATION_50')} 
+              />
             </div>
           </div>
 
