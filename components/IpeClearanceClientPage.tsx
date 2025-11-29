@@ -14,11 +14,14 @@ import {
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { IpeRequest, RequestStatus } from '@prisma/client';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- Types ---
 type Props = {
   initialRequests: IpeRequest[];
   serviceFee: number;
+  isActive: boolean; // <--- ADDED THIS
 };
 
 // --- Reusable Input Component ---
@@ -62,7 +65,7 @@ const NoticeBox = () => (
 );
 
 // --- Main Component ---
-export default function IpeClearanceClientPage({ initialRequests, serviceFee }: Props) {
+export default function IpeClearanceClientPage({ initialRequests, serviceFee, isActive }: Props) {
 
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +88,7 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee }: 
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -112,7 +115,7 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee }: 
       setIsLoading(false);
     }
   };
-  
+   
   const getStatusInfo = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED':
@@ -127,6 +130,15 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee }: 
         return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
     }
   };
+
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The IPE Clearance service is currently unavailable. Please check back later." 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
