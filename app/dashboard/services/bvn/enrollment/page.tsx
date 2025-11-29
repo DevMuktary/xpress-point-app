@@ -5,7 +5,6 @@ import { ChevronLeftIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outl
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import BvnEnrollmentClientPage from '@/components/BvnEnrollmentClientPage';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export default async function BvnEnrollmentPage() {
   const user = await getUserFromSession();
@@ -13,11 +12,12 @@ export default async function BvnEnrollmentPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get Service Price
+  // 1. Get Service Price & Availability
   const serviceId = 'BVN_ENROLLMENT_ANDROID';
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   
   const fee = service ? Number(service.defaultAgentPrice) : 0;
+  const isActive = service ? service.isActive : false; // <--- Fetch Availability
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -35,8 +35,8 @@ export default async function BvnEnrollmentPage() {
         </div>
       </div>
 
-      {/* Client Component */}
-      <BvnEnrollmentClientPage fee={fee} />
+      {/* Client Component with Availability Prop */}
+      <BvnEnrollmentClientPage fee={fee} isActive={isActive} />
     </div>
   );
 }
