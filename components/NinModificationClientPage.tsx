@@ -15,7 +15,7 @@ import {
   ArrowPathIcon,
   CalendarDaysIcon,
   XMarkIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -28,7 +28,7 @@ type Props = {
 };
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
 
-// --- Consent Modal ---
+// --- Consent Modal (With FULL Terms) ---
 const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -54,9 +54,32 @@ const ConsentModal = ({ onAgree }: { onAgree: () => void }) => {
           </h2>
         </div>
         <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3 text-sm text-gray-700">
-          <p>Before you proceed, you must read and agree to the following terms.</p>
-          {/* ... (Consent text content remains the same) ... */}
-          <p>I have read, understood, and agreed to all the terms above.</p>
+          <p>Before you proceed, you must read and agree to the following terms. This is a one-time agreement.</p>
+          
+          <h4 className="font-bold text-gray-900">1. Authorization to Act on Your Behalf</h4>
+          <p>I, the user, authorize Xpress Point and its trusted agents to access and use my personal data, including my NIN, to process the modification requested. I understand that Xpress Point is an independent agent and is <span className="font-bold">not</span> affiliated with NIMC.</p>
+          
+          <h4 className="font-bold text-gray-900">2. Your Voluntary Consent</h4>
+          <p>NIMC recommends that NIN modifications be done personally. By agreeing, I confirm that due to technical difficulty, illiteracy, or convenience, I <span className="font-bold">voluntarily authorize</span> Xpress Point to perform this modification on my behalf. This applies whether I am the NIN owner or an agent acting with the full consent of the owner.</p>
+          
+          <h4 className="font-bold text-gray-900">3. Service Fees & No-Refund Policy</h4>
+          <p>I agree to pay the non-refundable service fee. I understand that wallet funds are <span className="font-bold">non-withdrawable</span>. If a service fails due to an Admin or provider error (as specified in our auto-refund logic), the fee will be credited to my wallet, but it cannot be withdrawn. <span className="font-bold">A ₦500 charge for wrong submissions will be deducted from any refund.</span></p>
+          
+          <h4 className="font-bold text-gray-900">4. Your Responsibilities</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li>I confirm all information I provide (like "New First Name" or "New Address") is 100% correct.</li>
+            <li>I will <span className="font-bold">not</span> submit the same request on another platform while it is <span className="font-bold">PROCESSING</span> here. Doing so will forfeit my payment.</li>
+            <li>If submitting for someone else, I confirm I have the NIN owner's full legal authorization.</li>
+          </ul>
+          
+          <h4 className="font-bold text-gray-900">5. Provider Delays & Service Terms</h4>
+          <ul className="list-disc list-inside space-y-1">
+            <li><span className="font-bold">Bank/SIM Updates:</span> I understand that modifications reflect immediately on the NIMC portal, but banks and SIM providers may take a long time to sync. If I need this for an urgent bank transaction, I will not proceed.</li>
+            <li><span className="font-bold">NIMC Delays:</span> If NIMC's network is down, I agree to wait patiently and will not submit duplicate requests.</li>
+            <li><span className="font-bold">Alias Emails:</span> I understand that this platform uses secure, platform-owned "alias emails" to process all modifications.</li>
+          </ul>
+          
+          <p>I have read, understood, and agreed to all the terms above. I authorize Xpress Point to proceed with my NIN modification.</p>
         </div>
         <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
           <Link
@@ -89,12 +112,26 @@ const NoteModal = ({ onClose }: { onClose: () => void }) => (
         </h2>
       </div>
       <div className="p-6 max-h-[70vh] overflow-y-auto space-y-3 text-sm text-gray-700">
-        <p>Modification will be processed and submitted on self service in 2 to 7 days. Approval and validation is up to NIMC.</p>
+        <p><span className="font-bold">NOTE:</span> Modification will be processed and submitted on self service in 2 to 7 days. Approval and validation is up to NIMC.</p>
+        <ul className="list-disc list-outside pl-5 space-y-2">
+          <li>Our work is for Agents that know the process involved.</li>
+          <li>Our only job is to Submit and get you the enrollment slip with a new Tracking ID.</li>
+          <li>Approval and Validation is up to NIMC.</li>
+          <li>Submit only Fresh Modification. Contact admin for any Modification that is not fresh.</li>
+        </ul>
+        <p><span className="font-bold">Please Take Note:</span> All Funds on the website can only be used for services on the website.</p>
+        <p>Make sure you submit a <span className="font-bold">New Valid Fresh Email Address & its Password</span> when requesting the Modification.</p>
       </div>
       <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+        <Link
+          href="/dashboard/services/nin"
+          className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
+        >
+          Go Back
+        </Link>
         <button
           onClick={onClose}
-          className="w-full rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+          className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
         >
           I Understand
         </button>
@@ -334,7 +371,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices, av
           </div>
           <div className="ml-3">
             <p className="text-sm font-bold text-red-800">
-              Submit only Fresh Modification. We charge ₦500 for Invalid/Duplicate submissions. No refunds.
+              Submit only Fresh Modification, we charge ₦500 for Invalid Modification. You cannot submit the same modification request to another platform while we process it. Violating this policy will result in no refund.
             </p>
           </div>
         </div>
@@ -347,7 +384,10 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices, av
             <div className="ml-3">
               <h3 className="text-sm font-bold text-green-800">Request Submitted Successfully!</h3>
               <div className="mt-2 text-sm text-green-700">
-                <p>Your request is now <strong className="font-semibold">PENDING</strong>. Check History for updates.</p>
+                <p>
+                  Your request is now <strong className="font-semibold">PENDING</strong>. 
+                  You can monitor its status on the <Link href="/dashboard/history/modification" className="font-semibold underline hover:text-green-600">NIN Modification History</Link> page.
+                </p>
               </div>
             </div>
           </div>
@@ -497,7 +537,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices, av
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               <button
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors border-r border-gray-200"
               >
                 CANCEL
               </button>
