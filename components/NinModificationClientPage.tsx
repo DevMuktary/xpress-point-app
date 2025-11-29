@@ -15,8 +15,7 @@ import {
   ArrowPathIcon,
   CalendarDaysIcon,
   XMarkIcon,
-  InformationCircleIcon,
-  CheckCircleIcon
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
