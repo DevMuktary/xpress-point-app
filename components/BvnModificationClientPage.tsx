@@ -13,7 +13,6 @@ import {
   ExclamationTriangleIcon,
   PencilSquareIcon,
   InformationCircleIcon,
-  ArrowUpTrayIcon,
   CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
@@ -22,6 +21,7 @@ import Link from 'next/link';
 // --- Type Definitions ---
 type Props = {
   prices: { [key: string]: number };
+  availability: { [key: string]: boolean }; // <--- ADDED THIS
 };
 type BankType = 'Agency BVN' | 'B.O.A' | 'NIBSS Microfinance' | 'Enterprise Bank' | 'Heritage Bank' | 'FCMB' | 'First Bank' | 'Keystone Bank';
 type ModType = 'BVN_MOD_NAME' | 'BVN_MOD_DOB' | 'BVN_MOD_PHONE' | 'BVN_MOD_NAME_DOB' | 'BVN_MOD_NAME_PHONE' | 'BVN_MOD_DOB_PHONE';
@@ -39,21 +39,30 @@ const modTypes: { id: ModType, name: string }[] = [
   { id: 'BVN_MOD_DOB_PHONE', name: 'DOB & Phone' },
 ];
 
-// --- "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
   title: string,
   description: string,
   selected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  disabled?: boolean // <--- Added disabled prop
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+      ${disabled 
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected 
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' 
+          : 'border-gray-300 bg-white hover:border-gray-400'
+      }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -149,12 +158,12 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
 );
 
 // --- The Main Component ---
-export default function BvnModificationClientPage({ prices }: Props) {
-  
+export default function BvnModificationClientPage({ prices, availability }: Props) {
+   
   // --- State Management ---
   const [bankType, setBankType] = useState<BankType | null>(null);
   const [serviceId, setServiceId] = useState<ModType | null>(null);
-  
+   
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -260,7 +269,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -313,7 +322,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
       setIsLoading(false);
     }
   };
-  
+   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
@@ -337,7 +346,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
       {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
-          
+           
           {/* --- Step 1: Select Institution --- */}
           {!bankType && (
             <div>
@@ -371,15 +380,20 @@ export default function BvnModificationClientPage({ prices }: Props) {
               
               <label className="text-lg font-semibold text-gray-900">2. Select Modification Type</label>
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                {modTypes.map(mod => (
-                  <ModTypeButton
-                    key={mod.id}
-                    title={mod.name}
-                    description={`Fee: ₦${prices[mod.id] || 'N/A'}`}
-                    selected={false}
-                    onClick={() => setServiceId(mod.id)}
-                  />
-                ))}
+                {modTypes.map(mod => {
+                    // Check availability for this specific mod
+                    const isAvailable = availability[mod.id] ?? false; 
+                    return (
+                      <ModTypeButton
+                        key={mod.id}
+                        title={mod.name}
+                        description={`Fee: ₦${prices[mod.id] || 'N/A'}`}
+                        selected={false}
+                        disabled={!isAvailable} // <--- Disable if not active
+                        onClick={() => setServiceId(mod.id)}
+                      />
+                    );
+                })}
               </div>
             </div>
           )}
@@ -387,7 +401,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
           {/* --- Step 3: Enter Details --- */}
           {bankType && serviceId && (
             <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
-              
+               
               {/* --- NOTIFICATION BLOCK --- */}
               <NoticeBox />
               {/* -------------------------- */}
@@ -420,7 +434,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
                       <DataInput label="New First Name*" id="new-fname" value={newFirstName} onChange={setNewFirstName} Icon={UserIcon} />
                       <DataInput label="New Last Name*" id="new-lname" value={newLastName} onChange={setNewLastName} Icon={UserIcon} />
                       <DataInput label="New Middle Name (Optional)" id="new-mname" value={newMiddleName} onChange={setNewMiddleName} Icon={UserIcon} isRequired={false} />
-                    
+                     
                       {/* --- Marriage Logic --- */}
                       <div className="pt-4 border-t border-gray-200">
                         <label className="block text-sm font-medium text-gray-700">Is this for female change of SurName?</label>
@@ -491,7 +505,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
               </div>
             </div>
           )}
-          
+           
           {/* --- Submit Button --- */}
           {serviceId && (
             <div className="border-t border-gray-200 pt-6">
@@ -507,7 +521,7 @@ export default function BvnModificationClientPage({ prices }: Props) {
               </button>
             </div>
           )}
-          
+           
         </form>
       </div>
 
