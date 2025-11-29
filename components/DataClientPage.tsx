@@ -2,29 +2,23 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  CheckCircleIcon,
   PhoneIcon,
-  WifiIcon,
   ArrowPathIcon,
-  ClockIcon,
   DocumentMagnifyingGlassIcon,
   ChevronLeftIcon,
-  XMarkIcon,
-  IdentificationIcon,
-  ClipboardIcon,
-  ClipboardDocumentCheckIcon
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
-import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
 import { VtuRequest } from '@prisma/client';
 
-// --- "World-Class" Type Definitions ---
+// --- Type Definitions ---
 type DataPlan = {
   id: string;
   name: string;
   duration: string;
   price: number;
+  isActive: boolean; // <--- Added isActive
 };
 type DataPlansObject = {
   [network: string]: {
@@ -38,7 +32,6 @@ type Props = {
   dataPlans: DataPlansObject;
 };
 type Network = 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE';
-// ------------------------------------
 
 // --- "Modern Button" Components ---
 const NetworkButton = ({ logo, title, selected, onClick }: {
@@ -73,26 +66,36 @@ const CategoryButton = ({ title, selected, onClick }: {
   </button>
 );
 
-const PlanButton = ({ name, duration, price, selected, onClick }: {
+// --- UPDATED Plan Button ---
+const PlanButton = ({ name, duration, price, selected, onClick, disabled = false }: {
   name: string,
   duration: string,
   price: number,
   selected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  disabled?: boolean // <--- Support disabled state
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2 flex flex-col
-      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+      ${disabled 
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected 
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' 
+          : 'border-gray-300 bg-white hover:border-gray-400'
+      }`}
   >
-    <span className="font-bold text-lg text-gray-900">{name}</span>
-    <span className="text-sm text-gray-500">{duration}</span>
-    <span className="mt-2 text-sm font-semibold text-blue-600">₦{price}</span>
+    <span className={`font-bold text-lg ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{name}</span>
+    <span className={`text-sm ${disabled ? 'text-gray-300' : 'text-gray-500'}`}>{duration}</span>
+    <span className={`mt-2 text-sm font-semibold ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+      {disabled ? 'Unavailable' : `₦${price}`}
+    </span>
   </button>
 );
 
-// --- "World-Class" Reusable Input Component ---
+// --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
   label: string,
   id: string,
@@ -124,10 +127,9 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
-// --- The Main "World-Class" Component ---
+// --- The Main Component ---
 export default function DataClientPage({ dataPlans }: Props) {
   
-  // --- State Management ---
   const [requests, setRequests] = useState<VtuRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -135,13 +137,11 @@ export default function DataClientPage({ dataPlans }: Props) {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [receipt, setReceipt] = useState<any | null>(null); 
 
-  // --- "World-Class" Form State ---
   const [network, setNetwork] = useState<Network | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
 
-  // --- "World-Class" API Fetch on Load ---
   useEffect(() => {
     fetchHistory();
   }, []);
@@ -160,7 +160,6 @@ export default function DataClientPage({ dataPlans }: Props) {
     }
   };
   
-  // --- "World-Class" UI Logic ---
   const handleNetworkSelect = (net: Network) => {
     setNetwork(net);
     const firstCategory = Object.keys(dataPlans[net].categories)[0];
@@ -180,7 +179,6 @@ export default function DataClientPage({ dataPlans }: Props) {
     setPhoneNumber('');
   };
 
-  // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -198,7 +196,6 @@ export default function DataClientPage({ dataPlans }: Props) {
     setIsConfirmModalOpen(true);
   };
   
-  // --- This is the *final* submit, called by the modal's "YES" button ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -244,8 +241,6 @@ export default function DataClientPage({ dataPlans }: Props) {
   
   const totalFee = selectedPlan?.price || 0;
 
-  // --- THIS IS THE "WORLD-CLASS" FIX ---
-  // We create stable, typed variables for our categories and plans
   const currentCategories = useMemo(() => {
     if (!network) return {};
     return dataPlans[network].categories;
@@ -253,10 +248,8 @@ export default function DataClientPage({ dataPlans }: Props) {
 
   const currentPlans: DataPlan[] = useMemo(() => {
     if (!network || !category) return [];
-    // The 'as any' is gone, we now safely access the key
     return currentCategories[category] || []; 
   }, [network, category, currentCategories]);
-  // -------------------------------------
   
   return (
     <div className="space-y-6">
@@ -266,8 +259,7 @@ export default function DataClientPage({ dataPlans }: Props) {
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- 1. "Modern Buttons" for Network Type --- */}
-          {/* This is "world-class" - it only shows if no plan is selected */}
+          {/* --- 1. Select Network --- */}
           {!selectedPlan && (
             <div>
               <label className="text-lg font-semibold text-gray-900">
@@ -287,14 +279,13 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
           )}
 
-          {/* --- 2. "Stunning" 2-Column Grid for Category --- */}
+          {/* --- 2. Select Data Category --- */}
           {network && !selectedPlan && (
             <div className="border-t border-gray-200 pt-6">
               <label className="text-lg font-semibold text-gray-900">
                 2. Select Data Category
               </label>
               <div className="mt-2 grid grid-cols-2 gap-3">
-                {/* "Refurbished" to use the new 'currentCategories' variable */}
                 {Object.keys(currentCategories).map(cat => (
                   <CategoryButton
                     key={cat}
@@ -307,21 +298,21 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
           )}
 
-          {/* --- 3. "Stunning" 2-Column Grid for Plan --- */}
+          {/* --- 3. Select Data Plan --- */}
           {network && category && !selectedPlan && (
             <div className="border-t border-gray-200 pt-6">
               <label className="text-lg font-semibold text-gray-900">
                 3. Select Data Plan
               </label>
               <div className="mt-2 grid grid-cols-2 gap-3">
-                {/* "Refurbished" to use the new 'currentPlans' variable */}
                 {currentPlans.map((plan) => (
                   <PlanButton
                     key={plan.id}
                     name={plan.name}
                     duration={plan.duration}
                     price={plan.price}
-                    selected={false} // It's never "selected" in this view
+                    selected={false}
+                    disabled={!plan.isActive} // <--- Disable if inactive
                     onClick={() => handlePlanSelect(plan)}
                   />
                 ))}
@@ -329,10 +320,9 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
           )}
 
-          {/* --- 4. Form Fields (YOUR "WORLD-CLASS" UI FLOW) --- */}
+          {/* --- 4. Form Fields --- */}
           {selectedPlan && (
             <div className="space-y-4">
-              {/* "Stunning" Summary of Selected Plan */}
               <div>
                 <label className="text-lg font-semibold text-gray-900">
                   Selected Plan
@@ -347,7 +337,7 @@ export default function DataClientPage({ dataPlans }: Props) {
                   </div>
                   <button 
                     type="button" 
-                    onClick={() => setSelectedPlan(null)} // This goes back
+                    onClick={() => setSelectedPlan(null)}
                     className="mt-2 text-sm font-medium text-blue-600 hover:underline"
                   >
                     Change Plan
@@ -369,7 +359,6 @@ export default function DataClientPage({ dataPlans }: Props) {
                 placeholder="080..."
               />
               
-              {/* --- 5. Submit Button (MOVED) --- */}
               <div className="pt-2">
                 {submitError && (
                   <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
@@ -429,7 +418,7 @@ export default function DataClientPage({ dataPlans }: Props) {
         </div>
       </div>
 
-      {/* --- Your "World-Class" Confirmation Modal --- */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
@@ -467,7 +456,7 @@ export default function DataClientPage({ dataPlans }: Props) {
         </div>
       )}
       
-      {/* --- Your "Stunning" Receipt Modal --- */}
+      {/* --- Receipt Modal --- */}
       {receipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
@@ -511,14 +500,8 @@ export default function DataClientPage({ dataPlans }: Props) {
             </div>
             
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <Link
-                href="/dashboard/services/vtu"
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
-              >
-                Return to VTU
-              </Link>
               <button
-                onClick={() => setReceipt(null)} // "Buy More"
+                onClick={() => setReceipt(null)}
                 className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
               >
                 Buy More
