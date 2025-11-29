@@ -9,11 +9,32 @@ if (!WHATSAPP_API_TOKEN || !WHATSAPP_FROM_PHONE_ID) {
   console.error("CRITICAL: WhatsApp environment variables are not set.");
 }
 
+// --- Helper: Format Phone Number for Meta ---
+// Converts "+234..." or "080..." to "23480..."
+function formatPhoneNumber(phone: string): string {
+  if (!phone) return '';
+
+  // 1. Remove all spaces, dashes, parentheses
+  let clean = phone.replace(/[\s-()]/g, '');
+
+  // 2. If it starts with +234, remove the +
+  if (clean.startsWith('+234')) {
+    clean = clean.substring(1);
+  }
+  // 3. If it starts with 0 (e.g., 080...), replace leading 0 with 234
+  else if (clean.startsWith('0')) {
+    clean = '234' + clean.substring(1);
+  }
+  
+  // 4. Ensure no plus signs remain
+  return clean.replace('+', '');
+}
+
 // --- Existing OTP Function ---
 export async function sendOtpMessage(to: string, otpCode: string) {
   if (!WHATSAPP_API_TOKEN || !WHATSAPP_FROM_PHONE_ID) return;
   
-  const formattedTo = to.replace('+', '').replace(/\s/g, '');
+  const formattedTo = formatPhoneNumber(to);
 
   const payload = {
     messaging_product: 'whatsapp',
@@ -46,23 +67,23 @@ export async function sendOtpMessage(to: string, otpCode: string) {
     });
     console.log(`WhatsApp OTP sent to: ${formattedTo}`);
   } catch (error: any) {
-    console.error("WhatsApp OTP Error:", error.response?.data?.error || error.message);
+    // Log detailed error from Meta
+    console.error("WhatsApp OTP Error:", JSON.stringify(error.response?.data?.error, null, 2));
   }
 }
 
-// --- NEW: Status Notification Function ---
+// --- Status Notification Function ---
 export async function sendStatusNotification(to: string, serviceName: string, newStatus: string) {
   if (!WHATSAPP_API_TOKEN || !WHATSAPP_FROM_PHONE_ID) return;
 
-  // Clean phone number
-  const formattedTo = to.replace('+', '').replace(/\s/g, '');
+  const formattedTo = formatPhoneNumber(to);
 
   const payload = {
     messaging_product: 'whatsapp',
     to: formattedTo,
     type: 'template',
     template: {
-      name: 'request_status_update', // <--- MAKE SURE YOU CREATE THIS TEMPLATE IN META
+      name: 'request_status_update',
       language: { code: 'en_GB' },
       components: [
         {
@@ -85,7 +106,6 @@ export async function sendStatusNotification(to: string, serviceName: string, ne
     });
     console.log(`WhatsApp Status Update sent to: ${formattedTo}`);
   } catch (error: any) {
-    // We log error but don't crash the app if notification fails
-    console.error("WhatsApp Notification Error:", error.response?.data?.error || error.message);
+    console.error("WhatsApp Notification Error:", JSON.stringify(error.response?.data?.error, null, 2));
   }
 }
