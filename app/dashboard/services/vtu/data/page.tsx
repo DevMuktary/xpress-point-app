@@ -6,14 +6,18 @@ import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import DataClientPage from '@/components/DataClientPage';
 import SafeImage from '@/components/SafeImage';
-import { Decimal } from '@prisma/client/runtime/library';
+// 1. Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
+// Updated Type Definition to include isActive
 type DataPlan = {
   id: string;
   name: string;
   duration: string;
   price: number;
+  isActive: boolean; // <--- Added
 };
+
 type DataPlansObject = {
   [network: string]: {
     logo: string;
@@ -34,10 +38,8 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
   services.sort((a, b) => a.defaultAgentPrice.comparedTo(b.defaultAgentPrice));
 
   for (const service of services) {
-    // --- THIS IS THE FIX ---
-    // All users (Agents and Aggregators) see the *same* price.
     const price = service.defaultAgentPrice.toNumber();
-    // -----------------------
+    const isActive = service.isActive; // <--- Capture status
     
     let network: string | null = null;
     let category: string | null = null;
@@ -89,6 +91,7 @@ function buildDataPlans(services: any[], userRole: string): DataPlansObject {
         name: name,
         duration: duration,
         price: price,
+        isActive: isActive, // <--- Add to object
       });
     }
   }
@@ -101,14 +104,34 @@ export default async function DataPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
+  // --- 1. Fetch Services (Fetch ALL to check status) ---
   const dataServices = await prisma.service.findMany({
     where: { 
       category: {
         startsWith: 'VTU_DATA'
       },
-      isActive: true
+      // REMOVED "isActive: true" so we fetch disabled ones too
     },
   });
+
+  // --- 2. Global Unavailability Check ---
+  // If we found no services, or ALL found services are inactive
+  const allServicesDown = dataServices.length > 0 && dataServices.every(s => !s.isActive);
+
+  if (allServicesDown) {
+    return (
+      <div className="w-full max-w-3xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/dashboard/services/vtu" className="text-gray-500 hover:text-gray-900">
+            <ChevronLeftIcon className="h-6 w-6" />
+          </Link>
+          <WifiIcon className="h-8 w-8 text-gray-900" />
+          <h1 className="text-2xl font-bold text-gray-900">Buy Data</h1>
+        </div>
+        <ServiceUnavailable message="All Data services are currently undergoing maintenance. Please check back later." />
+      </div>
+    );
+  }
 
   const dataPlans = buildDataPlans(dataServices, user.role);
 
