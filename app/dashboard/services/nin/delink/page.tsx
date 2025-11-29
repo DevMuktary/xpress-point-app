@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon, LinkIcon } from '@heroicons/react/24/outline'; // Changed icon
+import { ChevronLeftIcon } from '@heroicons/react/24/outline'; 
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import DelinkClientPage from '@/components/DelinkClientPage';
@@ -15,14 +15,15 @@ export default async function NinDelinkPage() {
   }
 
   // --- THIS IS THE FIX ---
-  // 1. Get the price for this service
+  // 1. Get the price and status for this service
   const service = await prisma.service.findUnique({ where: { id: 'NIN_DELINK' } });
   if (!service) {
     throw new Error("NIN_DELINK service not found.");
   }
 
-  // 2. All users see the 'defaultAgentPrice'
+  // 2. Get Fee & Active Status
   const serviceFee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive;
   // -----------------------
 
   return (
@@ -45,8 +46,8 @@ export default async function NinDelinkPage() {
         </h1>
       </div>
       
-      {/* 3. Pass the price to the Client Component */}
-      <DelinkClientPage serviceFee={serviceFee} />
+      {/* 3. Pass props to the Client Component */}
+      <DelinkClientPage serviceFee={serviceFee} isActive={isActive} />
     </div>
   );
 }
