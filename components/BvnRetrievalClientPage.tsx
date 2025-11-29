@@ -7,7 +7,6 @@ import {
   PhoneIcon,
   UserIcon,
   IdentificationIcon,
-  ArrowUpTrayIcon,
   ArrowPathIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
@@ -17,27 +16,34 @@ import Link from 'next/link';
 // --- Type Definitions ---
 type Props = {
   prices: { [key: string]: number }; 
+  availability: { [key: string]: boolean }; // <--- ADDED availability prop
 };
 type ServiceID = 'BVN_RETRIEVAL_PHONE' | 'BVN_RETRIEVAL_CRM';
 
-// --- "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
   title: string,
   description: string,
   selected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  disabled?: boolean // <--- Added disabled support
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
+      ${disabled
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -121,8 +127,8 @@ const NoticeBox = () => (
 );
 
 // --- The Main Component ---
-export default function BvnRetrievalClientPage({ prices }: Props) {
-  
+export default function BvnRetrievalClientPage({ prices, availability }: Props) {
+   
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -134,7 +140,7 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
   const [fullName, setFullName] = useState('');
   const [agentCode, setAgentCode] = useState('');
   const [ticketId, setTicketId] = useState('');
-  
+   
   // --- File Upload State ---
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
@@ -196,7 +202,7 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -237,7 +243,7 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
       setIsLoading(false);
     }
   };
-  
+   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
@@ -281,12 +287,14 @@ export default function BvnRetrievalClientPage({ prices }: Props) {
                 title="With Phone Number"
                 description={`Fee: ₦${prices.BVN_RETRIEVAL_PHONE || 0}`}
                 selected={serviceId === 'BVN_RETRIEVAL_PHONE'}
+                disabled={!availability['BVN_RETRIEVAL_PHONE']} // <--- Apply Availability Check
                 onClick={() => setServiceId('BVN_RETRIEVAL_PHONE')}
               />
               <ModTypeButton
                 title="With C.R.M"
                 description={`Fee: ₦${prices.BVN_RETRIEVAL_CRM || 0}`}
                 selected={serviceId === 'BVN_RETRIEVAL_CRM'}
+                disabled={!availability['BVN_RETRIEVAL_CRM']} // <--- Apply Availability Check
                 onClick={() => setServiceId('BVN_RETRIEVAL_CRM')}
               />
             </div>
