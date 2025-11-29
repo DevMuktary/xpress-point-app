@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { processCommission } from '@/lib/commission'; // Import the helper
+import { sendStatusNotification } from '@/lib/whatsapp'; // <--- Import
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -19,9 +20,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // 1. Get the request
+    // 1. Get the request & include User to get phone number
     const delinkRequest = await prisma.delinkRequest.findUnique({
       where: { id: requestId },
+      include: { user: true } // <--- Ensure user is included
     });
 
     if (!delinkRequest) {
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
           }
         });
 
-        // --- PAY COMMISSION (The Definite Fix) ---
+        // --- PAY COMMISSION ---
         await processCommission(tx, delinkRequest.userId, SERVICE_ID);
       } 
       
@@ -78,7 +80,6 @@ export async function POST(request: Request) {
               userId: delinkRequest.userId,
               serviceId: SERVICE_ID,
               type: 'SERVICE_CHARGE',
-              // Optional: match exact timestamp or description if needed for strictness
             },
             orderBy: { createdAt: 'desc' }
           });
@@ -107,6 +108,20 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // --- SEND WHATSAPP NOTIFICATION (After DB Transaction) ---
+    if (delinkRequest?.user?.phoneNumber) {
+        let statusText = action;
+        if (action === 'COMPLETED') statusText = 'COMPLETED (Successful)';
+        if (action === 'FAILED') statusText = 'FAILED (Please check dashboard)';
+        
+        await sendStatusNotification(
+            delinkRequest.user.phoneNumber, 
+            "NIN Delink", 
+            statusText
+        );
+    }
+    // ---------------------------------------------------------
 
     return NextResponse.json({ success: true });
 
