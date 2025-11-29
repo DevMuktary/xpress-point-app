@@ -19,8 +19,9 @@ export default async function NecoPinPage() {
     throw new Error("NECO_PIN service not found.");
   }
 
-  // --- THIS IS THE FIX ---
+  // --- Get Fee & Status ---
   const serviceFee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive;
   // -----------------------
 
   return (
@@ -41,7 +42,8 @@ export default async function NecoPinPage() {
           NECO Result Pin
         </h1>
       </div>
-      <NecoPinClientPage serviceId={SERVICE_ID} serviceFee={serviceFee} />
+      {/* Pass isActive to the client */}
+      <NecoPinClientPage serviceId={SERVICE_ID} serviceFee={serviceFee} isActive={isActive} />
     </div>
   );
 }
