@@ -5,17 +5,19 @@ import {
   CheckCircleIcon,
   XMarkIcon,
   IdentificationIcon,
-  ArrowUpTrayIcon,
   ArrowPathIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- Type Definitions ---
 type Props = {
   fee: number;
+  isActive: boolean; // <--- ADDED THIS
 };
 
 // --- Reusable Input Component ---
@@ -112,10 +114,10 @@ const VninTermsModal = ({ onClose }: { onClose: () => void }) => (
 
 
 // --- The Main Component ---
-export default function VninToNibssClientPage({ fee }: Props) {
-  
+export default function VninToNibssClientPage({ fee, isActive }: Props) {
+   
   const serviceId = 'BVN_VNIN_TO_NIBSS';
-  
+   
   // --- State Management ---
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export default function VninToNibssClientPage({ fee }: Props) {
 
   // --- Form Data State ---
   const [ticketId, setTicketId] = useState('');
-  
+   
   // --- File Upload State ---
   const [vninSlipFile, setVninSlipFile] = useState<File | null>(null);
   const [vninSlipUrl, setVninSlipUrl] = useState<string | null>(null);
@@ -176,7 +178,7 @@ export default function VninToNibssClientPage({ fee }: Props) {
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -222,6 +224,15 @@ export default function VninToNibssClientPage({ fee }: Props) {
     setReceipt(null);
   };
   
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The VNIN to NIBSS service is currently undergoing maintenance. Please check back later." 
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
