@@ -1,25 +1,19 @@
-"use client"; // This is an interactive component
+"use client"; 
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CheckCircleIcon,
-  ExclamationTriangleIcon,
   PhoneIcon,
   ArrowPathIcon,
-  ClockIcon,
-  MagnifyingGlassIcon,
-  DocumentArrowDownIcon,
   DocumentMagnifyingGlassIcon,
-  ChevronLeftIcon,
   XMarkIcon,
   ClipboardIcon,
-  ClipboardDocumentCheckIcon,
-  IdentificationIcon
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
-import Link from 'next/link';
-import SafeImage from '@/components/SafeImage';
-import { ExamPinRequest, RequestStatus, Service } from '@prisma/client';
+import { ExamPinRequest } from '@prisma/client';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- "Sleek Copy Button" Component ---
 const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
@@ -64,15 +58,7 @@ const PinCard = ({ pinData }: { pinData: any }) => (
 
 // --- "World-Class" Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "", maxLength = 524288 }: {
-  label: string,
-  id: string,
-  value: string,
-  onChange: (value: string) => void,
-  Icon: React.ElementType,
-  type?: string,
-  isRequired?: boolean,
-  placeholder?: string,
-  maxLength?: number
+  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string, maxLength?: number
 }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -81,14 +67,9 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         <Icon className="h-5 w-5 text-gray-400" />
       </div>
       <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
-        required={isRequired}
-        placeholder={placeholder}
-        maxLength={maxLength}
+        required={isRequired} placeholder={placeholder} maxLength={maxLength}
       />
     </div>
   </div>
@@ -98,17 +79,18 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
 type Props = {
   serviceId: string;
   serviceFee: number;
+  isActive: boolean; // <--- ADDED THIS
 };
 
 // --- The Main "World-Class" Component ---
-export default function WaecPinClientPage({ serviceId, serviceFee }: Props) {
-  
+export default function WaecPinClientPage({ serviceId, serviceFee, isActive }: Props) {
+   
   // --- State Management ---
   const [requests, setRequests] = useState<ExamPinRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // For main submit
+  const [isLoading, setIsLoading] = useState(false); 
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<any | null>(null); // Your "Sweet Alert"
+  const [success, setSuccess] = useState<any | null>(null); 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   // --- Form Data State ---
@@ -133,7 +115,7 @@ export default function WaecPinClientPage({ serviceId, serviceFee }: Props) {
       setIsHistoryLoading(false);
     }
   };
-  
+   
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,7 +130,7 @@ export default function WaecPinClientPage({ serviceId, serviceFee }: Props) {
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- This is the *final* submit, called by the modal's "YES" button ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -159,7 +141,7 @@ export default function WaecPinClientPage({ serviceId, serviceFee }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          serviceId: serviceId, // <-- Using prop
+          serviceId: serviceId,
           phoneNumber,
           quantity
         }),
@@ -170,10 +152,10 @@ export default function WaecPinClientPage({ serviceId, serviceFee }: Props) {
         throw new Error(data.error || 'Submission failed.');
       }
       
-      setSuccess(data); // Your "Sweet Alert"
+      setSuccess(data); 
       setPhoneNumber('');
       setQuantity(1);
-      fetchHistory(); // Refresh the history list
+      fetchHistory(); 
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -181,10 +163,18 @@ export default function WaecPinClientPage({ serviceId, serviceFee }: Props) {
       setIsLoading(false);
     }
   };
-  
-  // --- "World-Class" Dynamic Price (FIXED) ---
+   
   const totalFee = useMemo(() => serviceFee * quantity, [quantity, serviceFee]);
-  
+
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The WAEC Result Pin service is currently unavailable. Please check back later." 
+      />
+    );
+  }
+   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
