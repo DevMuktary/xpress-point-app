@@ -12,7 +12,6 @@ import {
   ArrowPathIcon,
   BriefcaseIcon,
   BuildingOfficeIcon,
-  XMarkIcon,
   DocumentTextIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
@@ -21,24 +20,30 @@ import Link from 'next/link';
 
 // --- Props Definition ---
 type Props = {
-  prices: Record<string, number>; // Received from server
+  prices: Record<string, number>; 
+  availability: Record<string, boolean>; // <--- ADDED THIS
 };
 
-// --- Helper Components ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
-  title: string, description: string, selected: boolean, onClick: () => void
+// --- UPDATED Helper Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
+  title: string, description: string, selected: boolean, onClick: () => void, disabled?: boolean
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2 w-full
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
+      ${disabled 
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -88,8 +93,8 @@ const NoticeBox = () => (
 );
 
 // --- MAIN COMPONENT ---
-export default function CacClientPage({ prices }: Props) {
-  
+export default function CacClientPage({ prices, availability }: Props) {
+   
   // --- UI State ---
   const [serviceType, setServiceType] = useState<'REG_BN' | 'DOC_RETRIEVAL' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,11 +112,11 @@ export default function CacClientPage({ prices }: Props) {
   const [bizLga, setBizLga] = useState('');
   const [bizPhone, setBizPhone] = useState('');
   const [bizEmail, setBizEmail] = useState('');
-  
+   
   // --- Retrieval Fields ---
   const [docType, setDocType] = useState<'Certificate' | 'Status Report' | null>(null);
   const [fullBizName, setFullBizName] = useState(''); 
-  const [bizNumber, setBizNumber] = useState('');     
+  const [bizNumber, setBizNumber] = useState('');      
 
   // --- Proprietor Fields (Shared) ---
   const [propFirstName, setPropFirstName] = useState('');
@@ -128,7 +133,7 @@ export default function CacClientPage({ prices }: Props) {
   const [passportFile, setPassportFile] = useState<File | null>(null);
   const [passportUrl, setPassportUrl] = useState<string | null>(null);
   const [isUploadingPassport, setIsUploadingPassport] = useState(false);
-  
+   
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
@@ -278,12 +283,14 @@ export default function CacClientPage({ prices }: Props) {
                 title="Business Name Registration"
                 description={`Fee: ₦${prices['CAC_REG_BN']?.toLocaleString() || '...'}`}
                 selected={serviceType === 'REG_BN'}
+                disabled={!availability['CAC_REG_BN']} // <--- Apply Availability Check
                 onClick={() => setServiceType('REG_BN')}
               />
               <ModTypeButton
                 title="Document Retrieval"
                 description={`Fee: ₦${prices['CAC_DOC_RETRIEVAL']?.toLocaleString() || '...'}`}
                 selected={serviceType === 'DOC_RETRIEVAL'}
+                disabled={!availability['CAC_DOC_RETRIEVAL']} // <--- Apply Availability Check
                 onClick={() => setServiceType('DOC_RETRIEVAL')}
               />
             </div>
@@ -342,7 +349,7 @@ export default function CacClientPage({ prices }: Props) {
             <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-6">
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <h3 className="font-bold text-blue-900 mb-4">Document Details</h3>
-                
+                 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Document Type*</label>
                   <div className="grid grid-cols-2 gap-3">
