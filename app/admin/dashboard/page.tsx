@@ -14,9 +14,8 @@ import {
   DocumentTextIcon,
   ChartBarIcon,
   CheckCircleIcon,
-  ArrowPathIcon,
   WalletIcon,
-  WrenchScrewdriverIcon // <--- Added this icon
+  WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
 
 // --- Stat Card Component ---
@@ -52,49 +51,31 @@ export default async function AdminDashboardPage() {
 
   // --- 1. Execute Main Queries ---
   const [
-    // User Stats
     totalAgents,
     totalAggregators,
-    
-    // Financial Stats
     pendingPayouts,
-    walletAggregate, // Total User Funds
-    
-    // Monthly Transactions (For Profit Calc)
+    walletAggregate,
     monthlyTransactions,
-
-    // --- WORKFLOW COUNTS ---
-    
-    // 1. Pending (To Do)
+    // Pending Counts
     ninModPending, ninDelinkPending, bvnPending, cacPending, 
     tinPending, jambPending, resultPending, newspaperPending,
-
-    // 2. Processing (In Progress)
-    ninModProcessing, ninDelinkProcessing, ninValProcessing, ipeProcessing, 
-    persProcessing, bvnProcessing, cacProcessing, tinProcessing, 
-    jambProcessing, resultProcessing, newspaperProcessing,
-
-    // 3. Completed (Success)
+    // Completed Counts
     ninModSuccess, ninDelinkSuccess, ninValSuccess, ipeSuccess, 
     persSuccess, bvnSuccess, cacSuccess, tinSuccess, 
     jambSuccess, resultSuccess, newspaperSuccess, vtuSuccess, examPinSuccess
-
   ] = await Promise.all([
-    // User Counts
     prisma.user.count({ where: { role: 'AGENT' } }),
     prisma.user.count({ where: { role: 'AGGREGATOR' } }),
-    
-    // Financials
     prisma.withdrawalRequest.count({ where: { status: 'PENDING' } }),
     prisma.wallet.aggregate({ _sum: { balance: true } }),
     
-    // Monthly Transactions (Service Charges Only)
+    // Monthly Transactions
     prisma.transaction.findMany({
       where: {
         type: 'SERVICE_CHARGE',
         status: 'COMPLETED',
         serviceId: { not: null },
-        createdAt: { gte: firstDayOfMonth } // Only this month
+        createdAt: { gte: firstDayOfMonth }
       },
       select: {
         amount: true,
@@ -102,7 +83,7 @@ export default async function AdminDashboardPage() {
       }
     }),
 
-    // --- PENDING COUNTS ---
+    // PENDING
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
     prisma.bvnRequest.count({ where: { status: 'PENDING' } }),
@@ -112,20 +93,7 @@ export default async function AdminDashboardPage() {
     prisma.resultRequest.count({ where: { status: 'PENDING' } }),
     prisma.newspaperRequest.count({ where: { status: 'PENDING' } }),
 
-    // --- PROCESSING COUNTS ---
-    prisma.modificationRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.delinkRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.validationRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.ipeRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.personalizationRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.bvnRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.cacRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.tinRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.jambRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.resultRequest.count({ where: { status: 'PROCESSING' } }),
-    prisma.newspaperRequest.count({ where: { status: 'PROCESSING' } }),
-
-    // --- COMPLETED COUNTS ---
+    // COMPLETED
     prisma.modificationRequest.count({ where: { status: 'COMPLETED' } }),
     prisma.delinkRequest.count({ where: { status: 'COMPLETED' } }),
     prisma.validationRequest.count({ where: { status: 'COMPLETED' } }),
@@ -142,30 +110,22 @@ export default async function AdminDashboardPage() {
   ]);
 
   // --- 2. Calculations ---
-  
-  // A. Job Aggregates
   const totalPendingJobs = ninModPending + ninDelinkPending + bvnPending + cacPending + tinPending + jambPending + resultPending + newspaperPending;
-  
-  const totalProcessingJobs = ninModProcessing + ninDelinkProcessing + ninValProcessing + ipeProcessing + persProcessing + bvnProcessing + cacProcessing + tinProcessing + jambProcessing + resultProcessing + newspaperProcessing;
-
   const totalSuccessful = ninModSuccess + ninDelinkSuccess + ninValSuccess + ipeSuccess + persSuccess + bvnSuccess + cacSuccess + tinSuccess + jambSuccess + resultSuccess + newspaperSuccess + vtuSuccess + examPinSuccess;
 
-  // B. Monthly Profit Calculation
   let monthlyProfit = new Decimal(0);
   for (const tx of monthlyTransactions) {
     if (tx.service) {
-      const revenue = tx.amount.abs(); // Agent Price
-      const cost = tx.service.platformPrice; // Base Cost
+      const revenue = tx.amount.abs();
+      const cost = tx.service.platformPrice;
       const profit = revenue.minus(cost); 
       monthlyProfit = monthlyProfit.plus(profit);
     }
   }
 
-  // C. Total User Funds (Liabilities)
   const totalUserFunds = walletAggregate._sum.balance || new Decimal(0);
 
-
-  // Main Admin Tools Navigation
+  // --- 3. Admin Tools Configuration ---
   const adminTools = [
     {
       title: "Manage Requests",
@@ -176,13 +136,13 @@ export default async function AdminDashboardPage() {
     },
     {
       title: "Manage Payouts",
-      description: "Process pending withdrawal requests from Aggregators.",
+      description: "Process pending withdrawal requests.",
       href: "/admin/payouts",
       logo: BanknotesIcon,
       color: "text-green-600"
     },
     {
-      title: "User Operations", // <--- NEW CARD YOU ASKED FOR
+      title: "User Operations", // <--- Funding & Blocking
       description: "Search specific users to Fund Wallet or Block Account.",
       href: "/admin/users/manage",
       logo: WrenchScrewdriverIcon,
@@ -208,7 +168,14 @@ export default async function AdminDashboardPage() {
       href: "/admin/pricing/commissions",
       logo: ShieldCheckIcon,
       color: "text-purple-600"
-    }
+    },
+    {
+      title: "Transaction Log", // <--- This is back
+      description: "View all financial activities across the platform.",
+      href: "/admin/transactions",
+      logo: DocumentTextIcon,
+      color: "text-gray-600"
+    },
   ];
 
   return (
@@ -249,7 +216,7 @@ export default async function AdminDashboardPage() {
 
       {/* --- Operational Stats Row --- */}
       <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Operations</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
           title="Pending Manual Jobs" 
           value={totalPendingJobs} 
@@ -258,17 +225,10 @@ export default async function AdminDashboardPage() {
           href="/admin/requests"
         />
         <StatCard 
-          title="Processing Jobs" 
-          value={totalProcessingJobs} 
-          icon={ArrowPathIcon} 
-          color={totalProcessingJobs > 0 ? "bg-indigo-500" : "bg-gray-400"}
-          href="/admin/requests"
-        />
-        <StatCard 
           title="Total Agents" 
           value={totalAgents} 
           icon={UsersIcon} 
-          color="bg-blue-500" 
+          color="bg-indigo-500" 
           href="/admin/users?role=AGENT"
         />
         <StatCard 
