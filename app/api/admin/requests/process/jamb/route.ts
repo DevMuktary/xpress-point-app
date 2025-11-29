@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { processCommission } from '@/lib/commission';
+import { sendStatusNotification } from '@/lib/whatsapp'; // <--- Import
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -18,8 +19,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
+    // 1. Get the request & include User to get phone number
     const jambRequest = await prisma.jambRequest.findUnique({
       where: { id: requestId },
+      include: { user: true } // <--- Ensure user is included
     });
 
     if (!jambRequest) {
@@ -95,6 +98,24 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // --- SEND WHATSAPP NOTIFICATION (After DB Transaction) ---
+    if (jambRequest?.user?.phoneNumber) {
+        let statusText = action;
+        // Customize success message based on type (Code or Slip)
+        if (action === 'COMPLETED') {
+            if (profileCodeResult) statusText = 'COMPLETED (Profile Code Ready)';
+            else statusText = 'COMPLETED (Slip Ready)';
+        }
+        if (action === 'FAILED') statusText = 'FAILED (Please check dashboard)';
+        
+        await sendStatusNotification(
+            jambRequest.user.phoneNumber, 
+            "JAMB Service", 
+            statusText
+        );
+    }
+    // ---------------------------------------------------------
 
     return NextResponse.json({ success: true });
 
