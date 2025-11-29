@@ -10,6 +10,11 @@ import {
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
+// --- Props Definition ---
+type Props = {
+  fee: number;
+};
+
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick }: {
   title: string,
@@ -44,17 +49,47 @@ const NoticeBox = () => (
   </div>
 );
 
+// --- Reusable Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, maxLength = 524288 }: {
+  label: string,
+  id: string,
+  value: string,
+  onChange: (value: string) => void,
+  Icon: React.ElementType,
+  type?: string,
+  isRequired?: boolean,
+  maxLength?: number
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+    <div className="relative mt-1">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        required={isRequired}
+        maxLength={maxLength}
+      />
+    </div>
+  </div>
+);
+
 // --- The Main Component ---
-export default function NewspaperClientPage() {
+export default function NewspaperClientPage({ fee }: Props) {
   const router = useRouter();
-  
+   
   // --- State Management ---
   const [modType, setModType] = useState<'NAME_CHANGE' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null); 
   const [hasAttested, setHasAttested] = useState(false); 
-  
+   
   // --- Form Data State (for Change of Name) ---
   const [oldFirstName, setOldFirstName] = useState('');
   const [oldLastName, setOldLastName] = useState('');
@@ -116,7 +151,7 @@ export default function NewspaperClientPage() {
       setIsSubmitting(false);
     }
   };
-  
+   
   return (
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
@@ -157,7 +192,7 @@ export default function NewspaperClientPage() {
             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
               <ModTypeButton
                 title="Change of Name"
-                description="Fee: ₦4500"
+                description={`Fee: ₦${fee.toLocaleString()}`} // Use dynamic fee
                 selected={modType === 'NAME_CHANGE'}
                 onClick={() => setModType('NAME_CHANGE')}
               />
@@ -229,7 +264,7 @@ export default function NewspaperClientPage() {
                 disabled={isSubmitting || !hasAttested}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Publication Request (Fee: ₦4500)'}
+                {isSubmitting ? 'Submitting...' : `Submit Publication Request (Fee: ₦${fee.toLocaleString()})`}
               </button>
             </div>
           )}
@@ -238,33 +273,3 @@ export default function NewspaperClientPage() {
     </div>
   );
 }
-
-// --- Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, maxLength = 524288 }: {
-  label: string,
-  id: string,
-  value: string,
-  onChange: (value: string) => void,
-  Icon: React.ElementType,
-  type?: string,
-  isRequired?: boolean,
-  maxLength?: number
-}) => (
-  <div>
-    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
-    <div className="relative mt-1">
-      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-        <Icon className="h-5 w-5 text-gray-400" />
-      </div>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        required={isRequired}
-        maxLength={maxLength}
-      />
-    </div>
-  </div>
-);
