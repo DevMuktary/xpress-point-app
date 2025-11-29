@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import VerifyByPhoneClientPage from '@/components/VerifyByPhoneClientPage'; // We will create this
+import VerifyByPhoneClientPage from '@/components/VerifyByPhoneClientPage';
+import SafeImage from '@/components/SafeImage';
 
 export default async function VerifyByPhonePage() {
   const user = await getUserFromSession();
@@ -12,14 +13,15 @@ export default async function VerifyByPhonePage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get the price for this service (it's the same as NIN_LOOKUP)
+  // 1. Get the price and status for this service
   const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
   if (!service) {
     throw new Error("NIN_LOOKUP service not found.");
   }
 
-  // 2. All users see the 'defaultAgentPrice'
+  // 2. Get Fee & Active Status
   const serviceFee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive;
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -32,8 +34,8 @@ export default async function VerifyByPhonePage() {
         </div>
       </div>
       
-      {/* 3. Pass the price to the Client Component */}
-      <VerifyByPhoneClientPage serviceFee={serviceFee} />
+      {/* 3. Pass props to the Client Component */}
+      <VerifyByPhoneClientPage serviceFee={serviceFee} isActive={isActive} />
     </div>
   );
 }
