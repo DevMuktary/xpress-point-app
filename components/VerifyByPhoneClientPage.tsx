@@ -7,15 +7,17 @@ import {
   PhoneIcon, 
   InformationCircleIcon, 
   XMarkIcon,
-  ChevronLeftIcon // <-- THIS IS THE FIX
+  ChevronLeftIcon 
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import SafeImage from '@/components/SafeImage';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- (Helper functions) ---
 function displayField(value: any): string {
   if (value === null || value === undefined || value === "" || value === "****") {
-    return ''; // Return blank
+    return ''; 
   }
   return decodeHtmlEntities(value.toString());
 }
@@ -44,7 +46,7 @@ type NinData = {
   surname: string;   
   middlename: string;
   birthdate: string;
-  nin: string;       
+  nin: string;        
   trackingId: string;
   residence_AdressLine1?: string;
   birthlga?: string;
@@ -77,9 +79,9 @@ const exampleImageMap = {
 };
 
 // --- Main Component ---
-export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: number }) {
+export default function VerifyByPhoneClientPage({ serviceFee, isActive }: { serviceFee: number, isActive: boolean }) {
   const [searchValue, setSearchValue] = useState('');
-  
+   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -107,13 +109,13 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
       setIsLoading(false);
       return;
     }
-    
+     
     if (searchValue.length !== 11) {
       setError("Phone number must be exactly 11 digits.");
       setIsLoading(false);
       return;
     }
-    
+     
     if (!searchValue.startsWith('0')) {
       setError("Invalid Phone. A phone number must start with '0'.");
       setIsLoading(false);
@@ -145,10 +147,10 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
 
   const confirmGenerateSlip = async () => {
     if (!verificationData || !modalState.slipType) return;
-    
+     
     const { verificationId } = verificationData;
     const { slipType } = modalState;
-    
+     
     setModalState({ isOpen: false, slipType: null, price: 0, exampleImage: '' });
     setIsLoading(true);
     setError(null);
@@ -177,7 +179,7 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
       setIsLoading(false);
     }
   };
-  
+   
   const downloadPdf = (buffer: ArrayBuffer, filename: string) => {
     const blob = new Blob([buffer], { type: 'application/pdf' });
     const url = window.URL.createObjectURL(blob);
@@ -189,7 +191,7 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   };
-  
+   
   const handleSlipClick = (slipType: 'Regular' | 'Standard' | 'Premium') => {
     if (!verificationData) return;
     setModalState({
@@ -236,7 +238,7 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
       </form>
     </div>
   );
-  
+   
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -329,8 +331,20 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
     </div>
   );
 
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The Verify by Phone service is currently unavailable. Please check back later." 
+      />
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-3xl mx-auto">
+      {isLoading && <Loading />}
+      
+      {/* ... (Error/Success Messages) ... */}
       {error && (
         <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-sm font-medium text-red-700">
           {error}
@@ -341,6 +355,7 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
           {success}
         </div>
       )}
+
       {!verificationData ? renderSearchForm() : renderResults(verificationData)}
       
       {/* Confirmation Modal */}
@@ -374,6 +389,9 @@ export default function VerifyByPhoneClientPage({ serviceFee }: { serviceFee: nu
                 <strong className="text-2xl font-bold text-blue-600">
                   ₦{modalState.price}
                 </strong>.
+              </p>
+              <p className="text-center text-sm text-gray-500">
+                Are you sure you want to continue?
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
