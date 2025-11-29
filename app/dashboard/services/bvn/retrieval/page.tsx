@@ -1,11 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon, DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import BvnRetrievalClientPage from '@/components/BvnRetrievalClientPage';
 import SafeImage from '@/components/SafeImage';
+// 1. Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 export default async function BvnRetrievalPage() {
   const user = await getUserFromSession();
@@ -13,23 +15,40 @@ export default async function BvnRetrievalPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // --- THIS IS THE FIX (Part 1) ---
-  // Fetch prices from the database
-  const [phoneService, crmService] = await Promise.all([
-    prisma.service.findUnique({ where: { id: 'BVN_RETRIEVAL_PHONE' } }),
-    prisma.service.findUnique({ where: { id: 'BVN_RETRIEVAL_CRM' } })
-  ]);
+  // 2. Define IDs and Fetch Data (Price + Availability)
+  const serviceIds = ['BVN_RETRIEVAL_PHONE', 'BVN_RETRIEVAL_CRM'];
+  
+  const services = await prisma.service.findMany({
+    where: { id: { in: serviceIds } },
+    select: { id: true, defaultAgentPrice: true, isActive: true }
+  });
 
-  if (!phoneService || !crmService) {
-    throw new Error("BVN Retrieval services not found.");
+  // 3. Global Unavailability Check
+  // If we found no services, or ALL found services are inactive
+  const allServicesDown = services.length > 0 && services.every(s => !s.isActive);
+
+  if (allServicesDown) {
+    return (
+      <div className="w-full max-w-3xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/dashboard/services/bvn" className="text-gray-500 hover:text-gray-900">
+            <ChevronLeftIcon className="h-6 w-6" />
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">BVN Retrieval</h1>
+        </div>
+        <ServiceUnavailable message="All BVN Retrieval services are currently undergoing maintenance. Please check back later." />
+      </div>
+    );
   }
 
-  // Use the correct variables we fetched
-  const priceMap = {
-    BVN_RETRIEVAL_PHONE: phoneService.defaultAgentPrice.toNumber(),
-    BVN_RETRIEVAL_CRM: crmService.defaultAgentPrice.toNumber()
-  };
-  // -----------------------
+  // 4. Create Maps
+  const priceMap: { [key: string]: number } = {};
+  const availabilityMap: { [key: string]: boolean } = {};
+
+  services.forEach(service => {
+    priceMap[service.id] = service.defaultAgentPrice.toNumber();
+    availabilityMap[service.id] = service.isActive;
+  });
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -49,9 +68,9 @@ export default async function BvnRetrievalPage() {
           BVN Retrieval
         </h1>
       </div>
-      
-      {/* Pass the prices to the client */}
-      <BvnRetrievalClientPage prices={priceMap} />
+       
+      {/* 5. Pass both maps to the client */}
+      <BvnRetrievalClientPage prices={priceMap} availability={availabilityMap} />
     </div>
   );
 }
