@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
-import JambProfileCodeClientPage from '@/components/JambProfileCodeClientPage'; // We will create this next
+import { prisma } from '@/lib/prisma'; // Import Prisma
+import JambProfileCodeClientPage from '@/components/JambProfileCodeClientPage';
 import SafeImage from '@/components/SafeImage';
 
 // This is a Server Component.
@@ -12,6 +13,21 @@ export default async function JambProfileCodePage() {
   if (!user) {
     redirect('/login?error=Please+login+to+continue');
   }
+
+  // --- Fetch Service Data ---
+  const SERVICE_ID = 'JAMB_PROFILE_CODE';
+  const service = await prisma.service.findUnique({
+    where: { id: SERVICE_ID },
+  });
+
+  if (!service) {
+    // Ideally handle this gracefully, but for now throw error or redirect
+    throw new Error(`Service ${SERVICE_ID} not found.`);
+  }
+
+  const fee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive;
+  // --------------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -33,8 +49,8 @@ export default async function JambProfileCodePage() {
         </h1>
       </div>
       
-      {/* --- We render the Client Component --- */}
-      <JambProfileCodeClientPage />
+      {/* --- Render Client Component with Dynamic Props --- */}
+      <JambProfileCodeClientPage fee={fee} isActive={isActive} />
     </div>
   );
 }
