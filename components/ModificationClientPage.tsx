@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { PersonalizationRequest, RequestStatus } from '@prisma/client';
 import { 
   ExclamationTriangleIcon, 
   IdentificationIcon,
@@ -13,10 +12,9 @@ import {
   HomeIcon,
   MapPinIcon,
   CheckCircleIcon,
-  ArrowUpTrayIcon,
   ArrowPathIcon,
   CalendarDaysIcon,
-  XMarkIcon // For the modal close button
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -24,12 +22,14 @@ import Link from 'next/link';
 // Define the props to receive the initial data from the server
 type Props = {
   hasAlreadyAgreed: boolean;
+  prices: { [key: string]: number };
+  availability: { [key: string]: boolean }; // <--- ADDED THIS
 };
 
-// Define the "modern button" types
+// Define the types
 type ModType = 'NAME' | 'PHONE' | 'ADDRESS' | 'DOB';
 
-// --- The "World-Class" Consent Text (Refurbished) ---
+// --- Consent Text ---
 const ConsentText = () => (
   <div className="space-y-4 text-sm text-gray-700 max-h-[60vh] overflow-y-auto pr-2">
     <p>Before you proceed, you must read and agree to the following terms. This is a one-time agreement.</p>
@@ -55,43 +55,45 @@ const ConsentText = () => (
   </div>
 );
 
-// --- The "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
   title: string,
   description: string,
   selected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  disabled?: boolean // <--- Added disabled support
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
+      ${disabled
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
-// --- The Main "World-Class" Component ---
-export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
+// --- The Main Component ---
+export default function ModificationClientPage({ hasAlreadyAgreed, prices, availability }: Props) {
   const router = useRouter();
-  
+   
   // --- State Management ---
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
   const [modType, setModType] = useState<ModType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
-  // --- THIS IS THE FIX (Part 1) ---
-  // State for your new confirmation modal
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  // ---------------------------------
-  
+   
   // --- Form Data State ---
   const [nin, setNin] = useState('');
   const [phone, setPhone] = useState('');
@@ -110,7 +112,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
   const [attestationUrl, setAttestationUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // --- "World-Class" Dynamic Pricing Logic ---
+  // --- Pricing Logic ---
   const isDobGap = useMemo(() => {
     if (modType !== 'DOB' || !oldDob || !newDob) return false;
     try {
@@ -123,13 +125,15 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       return false;
     }
   }, [oldDob, newDob, modType]);
-  
+   
   const getFee = () => {
-    if (modType === 'NAME') return 2000;
-    if (modType === 'PHONE') return 1000;
-    if (modType === 'ADDRESS') return 1500;
+    // Fallback prices if map is missing, but server usually provides them
+    if (modType === 'NAME') return prices['NIN_MOD_NAME'] || 2000;
+    if (modType === 'PHONE') return prices['NIN_MOD_PHONE'] || 1000;
+    if (modType === 'ADDRESS') return prices['NIN_MOD_ADDRESS'] || 1500;
     if (modType === 'DOB') {
-      return isDobGap ? 15000 + 7000 : 15000;
+      const baseFee = prices['NIN_MOD_DOB'] || 15000;
+      return isDobGap ? baseFee + 7000 : baseFee;
     }
     return 0;
   };
@@ -155,13 +159,12 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
     setAttestation(file);
     setIsUploading(true);
     setSubmitError(null);
-    setAttestationUrl(null); // Reset on new file
-    
+    setAttestationUrl(null); 
+     
     try {
       const formData = new FormData();
       formData.append('attestation', file);
 
-      // This now calls our "refurbished" file.io API
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -174,20 +177,18 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       setAttestationUrl(data.url);
     } catch (err: any) {
       setSubmitError(err.message);
-      setAttestation(null); // Clear the file on error
+      setAttestation(null); 
     } finally {
       setIsUploading(false);
     }
   };
 
-  // --- THIS IS THE FIX (Part 2) ---
-  // This is the *first* step of submitting
+  // --- Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
-    e.preventDefault(); // Stop the form from submitting
+    e.preventDefault(); 
     setSubmitError(null);
     setSuccess(null);
 
-    // Run all our "world-class" validation
     if (!modType) {
       setSubmitError("Please select a modification type.");
       return;
@@ -196,17 +197,15 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       setSubmitError("Please wait for the Attestation Document to finish uploading.");
       return;
     }
-    
-    // If all validation passes, open your modal
+     
     setIsConfirmModalOpen(true);
   };
-  
-  // --- THIS IS THE FIX (Part 3) ---
-  // This is the *final* submit, called by the modal's "YES" button
+   
+  // --- Final Submit ---
   const handleFinalSubmit = async () => {
-    setIsConfirmModalOpen(false); // Close the modal
-    setIsSubmitting(true); // Start the global loader
-    
+    setIsConfirmModalOpen(false); 
+    setIsSubmitting(true); 
+     
     let serviceId = '';
     let formData: any = { nin, phone, email, password };
 
@@ -255,8 +254,8 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
       setIsSubmitting(false);
     }
   };
-  
-  // --- This is the "Refurbished" Consent Form ---
+   
+  // --- Consent Form ---
   if (!hasAgreed) {
     return (
       <div className="rounded-2xl bg-white p-6 shadow-lg">
@@ -288,7 +287,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
     );
   }
 
-  // --- This is the "World-Class" Submission Form ---
+  // --- Main Form ---
   return (
     <div className="space-y-6">
       {(isSubmitting) && <Loading />}
@@ -312,7 +311,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
         </div>
       </div>
       
-      {/* --- Your "Sweet Alert" Style Message --- */}
+      {/* --- Success Message --- */}
       {success && (
         <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
           <div className="flex">
@@ -338,11 +337,10 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
 
       {/* --- 2. The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg">
-        {/* --- THIS IS THE FIX (Part 4) --- */}
-        {/* The form now calls the 'handleOpenConfirmModal' function first */}
+        
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* --- "Modern Buttons" for Mod Type --- */}
+          {/* --- Buttons for Mod Type --- */}
           <div>
             <label className="text-lg font-semibold text-gray-900">
               1. Select Modification Type
@@ -350,26 +348,30 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
               <ModTypeButton
                 title="Change of Name"
-                description="Fee: ₦2000"
+                description={`Fee: ₦${prices['NIN_MOD_NAME']?.toLocaleString() || '...'}`}
                 selected={modType === 'NAME'}
+                disabled={!availability['NIN_MOD_NAME']} // <--- Disable if offline
                 onClick={() => setModType('NAME')}
               />
               <ModTypeButton
                 title="Change of Phone"
-                description="Fee: ₦1000"
+                description={`Fee: ₦${prices['NIN_MOD_PHONE']?.toLocaleString() || '...'}`}
                 selected={modType === 'PHONE'}
+                disabled={!availability['NIN_MOD_PHONE']} // <--- Disable if offline
                 onClick={() => setModType('PHONE')}
               />
               <ModTypeButton
                 title="Change of Address"
-                description="Fee: ₦1500"
+                description={`Fee: ₦${prices['NIN_MOD_ADDRESS']?.toLocaleString() || '...'}`}
                 selected={modType === 'ADDRESS'}
+                disabled={!availability['NIN_MOD_ADDRESS']} // <--- Disable if offline
                 onClick={() => setModType('ADDRESS')}
               />
               <ModTypeButton
                 title="Change of Date of Birth"
-                description="Fee: ₦15000 (Base)"
+                description={`Fee: ₦${prices['NIN_MOD_DOB']?.toLocaleString() || '...'}`}
                 selected={modType === 'DOB'}
+                disabled={!availability['NIN_MOD_DOB']} // <--- Disable if offline
                 onClick={() => setModType('DOB')}
               />
             </div>
@@ -447,7 +449,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                 </>
               )}
 
-              {/* --- Your Required Email/Password Fields --- */}
+              {/* --- Common Email/Password Fields --- */}
               <DataInput label="Your Current Phone Number*" id="phone" value={phone} onChange={setPhone} Icon={PhoneIcon} type="tel" maxLength={11} />
               <DataInput label="New Valid Fresh Email*" id="email" value={email} onChange={setEmail} Icon={EnvelopeIcon} type="email" />
               <DataInput label="Email Password*" id="password" value={password} onChange={setPassword} Icon={LockClosedIcon} type="password" />
@@ -461,21 +463,20 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                 <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
               )}
               <button
-                type="submit" // This now opens the modal
+                type="submit"
                 disabled={isSubmitting || (modType === 'DOB' && isUploading)}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSubmitting ? 'Submitting...' : `Submit Modification (Fee: ₦${getFee()})`}
+                {isSubmitting ? 'Submitting...' : `Submit Modification (Fee: ₦${getFee().toLocaleString()})`}
               </button>
             </div>
           )}
         </form>
       </div>
 
-      {/* --- THIS IS THE FIX (Part 5) --- */}
-      {/* Your "World-Class" Confirmation Modal */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
@@ -486,7 +487,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            
+             
             {/* Modal Body */}
             <div className="p-6">
               <p className="text-center text-gray-600">
@@ -494,10 +495,10 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                 is non-refundable as per the terms you agreed to.
               </p>
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{getFee()}
+                Total Fee: ₦{getFee().toLocaleString()}
               </p>
             </div>
-            
+             
             {/* Modal Footer */}
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               <button
@@ -507,7 +508,7 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
                 CANCEL
               </button>
               <button
-                onClick={handleFinalSubmit} // This is the REAL submit
+                onClick={handleFinalSubmit}
                 className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
               >
                 YES, SUBMIT
@@ -516,12 +517,11 @@ export default function ModificationClientPage({ hasAlreadyAgreed }: Props) {
           </div>
         </div>
       )}
-      {/* ------------------------------- */}
     </div>
   );
 }
 
-// --- "World-Class" Reusable Input Component ---
+// --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, maxLength = 524288 }: {
   label: string,
   id: string,
@@ -543,7 +543,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm"
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         required={isRequired}
         maxLength={maxLength}
       />
