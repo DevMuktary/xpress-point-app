@@ -16,27 +16,37 @@ import { VtuRequest } from '@prisma/client';
 
 // --- Type Definitions ---
 type Props = {
-  prices: { [key: string]: number }; // Expect a price map
+  prices: { [key: string]: number }; 
+  availability: { [key: string]: boolean }; // <--- ADDED THIS
 };
 
-// --- "Modern Button" Component ---
-const NetworkButton = ({ logo, title, selected, onClick }: {
+// --- UPDATED "Modern Button" Component ---
+const NetworkButton = ({ logo, title, selected, onClick, disabled = false }: {
   logo: string,
   title: string,
   selected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  disabled?: boolean // <--- Added disabled support
 }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`rounded-lg p-4 text-left transition-all border-2 flex flex-col items-center justify-center
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
+    disabled={disabled}
+    className={`rounded-lg p-4 text-left transition-all border-2 flex flex-col items-center justify-center relative
+      ${disabled
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
     <SafeImage src={logo} alt={title} width={40} height={40} className="rounded-full" fallbackSrc="/logos/default.png" />
     <span className="mt-2 text-sm font-semibold text-gray-900">{title}</span>
+    {disabled && (
+        <span className="absolute top-2 right-2 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800">
+          Off
+        </span>
+    )}
   </button>
 );
 
@@ -81,23 +91,20 @@ const serviceIdMap: { [key: string]: string } = {
 };
 
 // --- The Main Component ---
-export default function AirtimeClientPage({ prices }: Props) {
-  
+export default function AirtimeClientPage({ prices, availability }: Props) {
+   
   type Network = 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE';
   const [network, setNetwork] = useState<Network | null>(null);
-  
+   
   // --- State Management ---
   const [requests, setRequests] = useState<VtuRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<any | null>(null); // For success modal
+  const [receipt, setReceipt] = useState<any | null>(null); 
 
-  // --- THIS IS THE FIX ---
-  // The missing state definition
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  // -----------------------
-  
+   
   // --- Form Data State ---
   const [phoneNumber, setPhoneNumber] = useState('');
   const [amount, setAmount] = useState('');
@@ -120,7 +127,7 @@ export default function AirtimeClientPage({ prices }: Props) {
       setIsHistoryLoading(false);
     }
   };
-  
+   
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +149,7 @@ export default function AirtimeClientPage({ prices }: Props) {
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- This is the *final* submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -187,7 +194,7 @@ export default function AirtimeClientPage({ prices }: Props) {
   const closeReceiptModal = () => {
     setReceipt(null);
   };
-  
+   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
@@ -204,21 +211,25 @@ export default function AirtimeClientPage({ prices }: Props) {
               <NetworkButton
                 title="MTN" logo="/logos/mtn.png"
                 selected={network === 'MTN'}
+                disabled={!availability['AIRTIME_MTN']} // <--- Apply Availability Check
                 onClick={() => setNetwork('MTN')}
               />
               <NetworkButton
                 title="Glo" logo="/logos/glo.png"
                 selected={network === 'GLO'}
+                disabled={!availability['AIRTIME_GLO']} // <--- Apply Availability Check
                 onClick={() => setNetwork('GLO')}
               />
               <NetworkButton
                 title="Airtel" logo="/logos/airtel.png"
                 selected={network === 'AIRTEL'}
+                disabled={!availability['AIRTIME_AIRTEL']} // <--- Apply Availability Check
                 onClick={() => setNetwork('AIRTEL')}
               />
               <NetworkButton
                 title="9mobile" logo="/logos/9mobile.png"
                 selected={network === '9MOBILE'}
+                disabled={!availability['AIRTIME_9MOBILE']} // <--- Apply Availability Check
                 onClick={() => setNetwork('9MOBILE')}
               />
             </div>
@@ -389,17 +400,11 @@ export default function AirtimeClientPage({ prices }: Props) {
             </div>
             
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <Link
-                href="/dashboard/services/vtu"
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
-              >
-                Return to VTU
-              </Link>
               <button
                 onClick={closeReceiptModal}
                 className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
               >
-                Buy More
+                OK
               </button>
             </div>
           </div>
