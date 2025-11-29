@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import VninToNibssClientPage from '@/components/VninToNibssClientPage';
@@ -16,12 +16,14 @@ export default async function VninToNibssPage() {
   const service = await prisma.service.findUnique({
     where: { id: 'BVN_VNIN_TO_NIBSS' },
   });
+  
   if (!service) {
     throw new Error("BVN_VNIN_TO_NIBSS service not found.");
   }
 
-  // --- THIS IS THE FIX ---
+  // --- Get Fee & Status ---
   const serviceFee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive; 
   // -----------------------
 
   return (
@@ -42,7 +44,8 @@ export default async function VninToNibssPage() {
           VNIN to NIBSS
         </h1>
       </div>
-      <VninToNibssClientPage fee={serviceFee} />
+      {/* Pass isActive to the client */}
+      <VninToNibssClientPage fee={serviceFee} isActive={isActive} />
     </div>
   );
 }
