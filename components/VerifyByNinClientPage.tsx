@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { IdentificationIcon, InformationCircleIcon, ChevronLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import SafeImage from '@/components/SafeImage';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- Helper Functions ---
 function displayField(value: any): string {
@@ -84,7 +86,7 @@ const exampleImageMap = {
 };
 
 // --- Main Component ---
-export default function VerifyByNinClientPage({ serviceFee }: { serviceFee: number }) {
+export default function VerifyByNinClientPage({ serviceFee, isActive }: { serviceFee: number, isActive: boolean }) {
   const [searchValue, setSearchValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +175,7 @@ export default function VerifyByNinClientPage({ serviceFee }: { serviceFee: numb
       setIsLoading(false);
     }
   };
-  
+   
   const downloadPdf = (buffer: ArrayBuffer, filename: string) => {
     const blob = new Blob([buffer], { type: 'application/pdf' });
     const url = window.URL.createObjectURL(blob);
@@ -185,7 +187,7 @@ export default function VerifyByNinClientPage({ serviceFee }: { serviceFee: numb
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   };
-  
+   
   const handleSlipClick = (slipType: 'Regular' | 'Standard' | 'Premium') => {
     if (!verificationData) return;
     setModalState({
@@ -232,7 +234,7 @@ export default function VerifyByNinClientPage({ serviceFee }: { serviceFee: numb
       </form>
     </div>
   );
-  
+   
   const renderResults = (data: VerificationResponse) => (
     <div className="rounded-2xl bg-white shadow-lg">
       <div className="p-6">
@@ -321,10 +323,22 @@ export default function VerifyByNinClientPage({ serviceFee }: { serviceFee: numb
     </div>
   );
 
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <div className="w-full max-w-3xl mx-auto">
+        <ServiceUnavailable 
+          message="The NIN Lookup service is currently undergoing maintenance. Please check back later." 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto">
       {isLoading && <Loading />}
       
+      {/* ... (Search Header, Error/Success Messages) ... */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
