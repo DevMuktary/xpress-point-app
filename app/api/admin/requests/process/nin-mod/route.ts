@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { processCommission } from '@/lib/commission'; // <--- IMPORT THIS
+import { sendStatusNotification } from '@/lib/whatsapp'; // <--- Import
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -19,9 +20,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // 1. Get the request
+    // 1. Get the request & include User to get phone number
     const modRequest = await prisma.modificationRequest.findUnique({
       where: { id: requestId },
+      include: { user: true } // <--- Ensure user is included
     });
 
     if (!modRequest) {
@@ -57,10 +59,7 @@ export async function POST(request: Request) {
           }
         });
 
-        // B. PAY COMMISSION (The Logic Moved Here)
-        // This finds the Agent's aggregator and pays them NOW.
-        // modRequest.userId is the Agent.
-        // modRequest.serviceId is the Service they performed.
+        // B. PAY COMMISSION
         await processCommission(tx, modRequest.userId, modRequest.serviceId);
       } 
       
@@ -74,8 +73,6 @@ export async function POST(request: Request) {
         });
 
         // --- Refund Logic ---
-        // Since we never paid commission, we only need to refund the User's base fee.
-        // We don't need to reverse any commission from the Aggregator. Safe and Easy.
         if (refund) {
           const transaction = await tx.transaction.findFirst({
             where: {
@@ -108,6 +105,20 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // --- SEND WHATSAPP NOTIFICATION (After DB Transaction) ---
+    if (modRequest?.user?.phoneNumber) {
+        let statusText = action;
+        if (action === 'COMPLETED') statusText = 'COMPLETED (Successful)';
+        if (action === 'FAILED') statusText = 'FAILED (Please check dashboard)';
+        
+        await sendStatusNotification(
+            modRequest.user.phoneNumber, 
+            "NIN Modification", 
+            statusText
+        );
+    }
+    // ---------------------------------------------------------
 
     return NextResponse.json({ success: true });
 
