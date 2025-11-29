@@ -15,7 +15,8 @@ import {
   ChartBarIcon,
   CheckCircleIcon,
   ArrowPathIcon,
-  WalletIcon
+  WalletIcon,
+  WrenchScrewdriverIcon // <--- Added this icon
 } from '@heroicons/react/24/outline';
 
 // --- Stat Card Component ---
@@ -175,14 +176,21 @@ export default async function AdminDashboardPage() {
     },
     {
       title: "Manage Payouts",
-      description: "Process pending withdrawal requests.",
+      description: "Process pending withdrawal requests from Aggregators.",
       href: "/admin/payouts",
       logo: BanknotesIcon,
       color: "text-green-600"
     },
     {
-      title: "Manage Users",
-      description: "View, search, fund, and suspend users.",
+      title: "User Operations", // <--- NEW CARD YOU ASKED FOR
+      description: "Search specific users to Fund Wallet or Block Account.",
+      href: "/admin/users/manage",
+      logo: WrenchScrewdriverIcon,
+      color: "text-slate-700"
+    },
+    {
+      title: "View All Users",
+      description: "See a list of all Agents and Aggregators.",
       href: "/admin/users",
       logo: UserGroupIcon,
       color: "text-blue-600"
@@ -200,14 +208,7 @@ export default async function AdminDashboardPage() {
       href: "/admin/pricing/commissions",
       logo: ShieldCheckIcon,
       color: "text-purple-600"
-    },
-    {
-      title: "Transaction Log",
-      description: "View all financial activities.",
-      href: "/admin/transactions",
-      logo: DocumentTextIcon,
-      color: "text-gray-600"
-    },
+    }
   ];
 
   return (
@@ -217,7 +218,7 @@ export default async function AdminDashboardPage() {
       </h1>
       
       {/* --- Financial Stats Row --- */}
-      <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Financial Overview</h2>
+      <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Financial Overview (Current Month)</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
           title="Monthly Profit" 
@@ -308,5 +309,3 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
-
-
