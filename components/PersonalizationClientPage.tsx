@@ -15,10 +15,13 @@ import {
 import Loading from '@/app/loading';
 import { PersonalizationRequest, RequestStatus } from '@prisma/client';
 import CopyButton from '@/components/CopyButton'; 
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 type Props = {
   initialRequests: PersonalizationRequest[];
   serviceFee: number;
+  isActive: boolean; // <--- ADDED THIS
 };
 
 // --- Reusable Input Component ---
@@ -41,13 +44,13 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
-export default function PersonalizationClientPage({ initialRequests, serviceFee }: Props) {
+export default function PersonalizationClientPage({ initialRequests, serviceFee, isActive }: Props) {
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false);
-  
+   
   // We use a map to track which *specific* card is loading
   const [checkingIds, setCheckingIds] = useState<{[key: string]: boolean}>({});
-  
+   
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -58,7 +61,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
   // --- INDIVIDUAL CHECK STATUS FUNCTION ---
   const handleCheckStatus = async (trackingId: string) => {
     setCheckingIds(prev => ({ ...prev, [trackingId]: true })); // Start loading for this card
-    
+     
     try {
       const response = await fetch('/api/services/nin/personalization-check', {
         method: 'POST',
@@ -97,7 +100,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -133,7 +136,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
   const closeReceiptModal = () => {
     setReceipt(null);
   };
-  
+   
   const getStatusInfo = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED':
@@ -148,6 +151,15 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
         return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
     }
   };
+
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The Personalize NIN service is currently unavailable. Please check back later." 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -200,7 +212,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
             Icon={IdentificationIcon} 
             placeholder="Enter the Tracking ID"
           />
-          
+           
           <div className="border-t border-gray-200 pt-6">
             {submitError && (
               <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
@@ -208,7 +220,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+              className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
             >
               {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
             </button>
@@ -246,7 +258,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
                       {new Date(request.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  
+                   
                   <div className="flex flex-col items-end gap-2">
                     <span 
                       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusInfo.color}`}
@@ -282,28 +294,28 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
                 )}
 
                 {request.status === 'PROCESSING' && (
-                   <p className="text-sm text-blue-600 italic mt-1">
-                     {request.statusMessage || "Processing..."}
-                   </p>
+                    <p className="text-sm text-blue-600 italic mt-1">
+                      {request.statusMessage || "Processing..."}
+                    </p>
                 )}
 
                 {request.status === 'COMPLETED' && (
-                   <div className="space-y-2">
-                     <p className="text-sm text-green-700">
-                       {request.statusMessage || "Successfully Personalized."}
-                     </p>
-                     {resultNin && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <p className="text-xs text-gray-500 mb-1">New NIN:</p>
-                          <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-md">
-                            <span className="font-mono text-lg font-bold text-gray-900 tracking-wider">
-                              {resultNin}
-                            </span>
-                            <CopyButton textToCopy={resultNin} />
-                          </div>
-                        </div>
-                     )}
-                   </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-green-700">
+                        {request.statusMessage || "Successfully Personalized."}
+                      </p>
+                      {resultNin && (
+                         <div className="mt-3 pt-3 border-t border-gray-100">
+                           <p className="text-xs text-gray-500 mb-1">New NIN:</p>
+                           <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-md">
+                             <span className="font-mono text-lg font-bold text-gray-900 tracking-wider">
+                               {resultNin}
+                             </span>
+                             <CopyButton textToCopy={resultNin} />
+                           </div>
+                         </div>
+                      )}
+                    </div>
                 )}
 
               </div>
@@ -314,34 +326,41 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
 
       {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-200 p-4 bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-900">
                 Please Confirm
               </h2>
-              <button onClick={() => setIsConfirmModalOpen(false)}>
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              <button onClick={() => setIsConfirmModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
             <div className="p-6">
-              <p className="text-center text-gray-600">
-                Are you sure you want to submit this request for <strong className="text-gray-900">{trackingId}</strong>?
+              <div className="mb-4 flex justify-center">
+                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <IdentificationIcon className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <p className="text-center text-gray-600 text-sm leading-relaxed">
+                Are you sure you want to submit this request for <br/>
+                <strong className="text-gray-900 text-base block mt-1">{trackingId}</strong>
               </p>
-              <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{fee}
-              </p>
+              <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
+                <p className="text-center text-2xl font-bold text-blue-700">₦{fee}</p>
+              </div>
             </div>
-            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+            <div className="grid grid-cols-2 gap-0 border-t border-gray-200">
               <button
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+                className="py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors border-r border-gray-200"
               >
                 CANCEL
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                className="py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 YES, SUBMIT
               </button>
@@ -352,7 +371,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee 
 
       {/* --- Success Modal (Receipt) --- */}
       {receipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             <div className="p-6">
               <div className="flex flex-col items-center justify-center">
