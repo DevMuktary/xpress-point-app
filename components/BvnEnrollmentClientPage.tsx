@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
   CheckCircleIcon,
   XMarkIcon,
@@ -16,10 +16,13 @@ import {
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
+// Import your Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- Type Definitions ---
 type Props = {
   fee: number;
+  isActive: boolean; // <--- ADDED THIS TO FIX THE BUILD ERROR
 };
 
 // --- Data for States, LGAs, and Zones ---
@@ -137,7 +140,7 @@ const NoticeBox = () => (
 );
 
 // --- The Main Component ---
-export default function BvnEnrollmentClientPage({ fee }: Props) {
+export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
   
   const serviceId = 'BVN_ENROLLMENT_ANDROID';
   
@@ -235,6 +238,15 @@ export default function BvnEnrollmentClientPage({ fee }: Props) {
     setReceipt(null);
   };
   
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The BVN Enrollment (Android) service is currently undergoing maintenance. Please check back later." 
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
