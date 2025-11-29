@@ -12,15 +12,27 @@ import {
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { ExamPinRequest } from '@prisma/client';
-import SafeImage from '@/components/SafeImage';
 
-// --- "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
-  title: string, description: string, selected: boolean, onClick: () => void
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
+  title: string, description: string, selected: boolean, onClick: () => void, disabled?: boolean
 }) => (
-  <button type="button" onClick={onClick} className={`rounded-lg p-4 text-left transition-all border-2 ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}>
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+  <button 
+    type="button" 
+    onClick={onClick} 
+    disabled={disabled}
+    className={`rounded-lg p-4 text-left transition-all border-2 
+      ${disabled 
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected 
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' 
+          : 'border-gray-300 bg-white hover:border-gray-400'
+      }`}
+  >
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -81,22 +93,25 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
+// --- Updated Props ---
 type Props = {
   utmeFee: number;
   deFee: number;
+  utmeActive: boolean; // <--- Added
+  deActive: boolean;   // <--- Added
 };
 
-export default function JambPinClientPage({ utmeFee, deFee }: Props) {
-  
+export default function JambPinClientPage({ utmeFee, deFee, utmeActive, deActive }: Props) {
+   
   type ServiceID = 'JAMB_UTME_PIN' | 'JAMB_DE_PIN';
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
-  
+   
   const fee = useMemo(() => {
     if (serviceId === 'JAMB_UTME_PIN') return utmeFee;
     if (serviceId === 'JAMB_DE_PIN') return deFee;
     return 0;
   }, [serviceId, utmeFee, deFee]);
-  
+   
   const [requests, setRequests] = useState<ExamPinRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -121,7 +136,7 @@ export default function JambPinClientPage({ utmeFee, deFee }: Props) {
       setIsHistoryLoading(false);
     }
   };
-  
+   
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -136,7 +151,7 @@ export default function JambPinClientPage({ utmeFee, deFee }: Props) {
     }
     setIsConfirmModalOpen(true);
   };
-  
+   
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -158,9 +173,9 @@ export default function JambPinClientPage({ utmeFee, deFee }: Props) {
       setIsLoading(false);
     }
   };
-  
+   
   const totalFee = useMemo(() => fee * quantity, [fee, quantity]);
-  
+   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
@@ -188,8 +203,20 @@ export default function JambPinClientPage({ utmeFee, deFee }: Props) {
           <div>
             <label className="text-lg font-semibold text-gray-900">1. Select PIN Type</label>
             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <ModTypeButton title="UTME PIN" description={`Fee: ₦${utmeFee}`} selected={serviceId === 'JAMB_UTME_PIN'} onClick={() => setServiceId('JAMB_UTME_PIN')} />
-              <ModTypeButton title="Direct Entry (DE) PIN" description={`Fee: ₦${deFee}`} selected={serviceId === 'JAMB_DE_PIN'} onClick={() => setServiceId('JAMB_DE_PIN')} />
+              <ModTypeButton 
+                title="UTME PIN" 
+                description={`Fee: ₦${utmeFee}`} 
+                selected={serviceId === 'JAMB_UTME_PIN'} 
+                disabled={!utmeActive} // <--- Disable if inactive
+                onClick={() => setServiceId('JAMB_UTME_PIN')} 
+              />
+              <ModTypeButton 
+                title="Direct Entry (DE) PIN" 
+                description={`Fee: ₦${deFee}`} 
+                selected={serviceId === 'JAMB_DE_PIN'} 
+                disabled={!deActive} // <--- Disable if inactive
+                onClick={() => setServiceId('JAMB_DE_PIN')} 
+              />
             </div>
           </div>
 
