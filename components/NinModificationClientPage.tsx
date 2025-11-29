@@ -1,4 +1,4 @@
-"use client";
+"use client"; // This is an interactive component
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -26,6 +26,7 @@ import Link from 'next/link';
 type Props = {
   hasAlreadyAgreed: boolean;
   prices: { [key: string]: number };
+  availability: { [key: string]: boolean }; // <--- ADDED THIS
 };
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
 
@@ -135,17 +136,30 @@ const NoteModal = ({ onClose }: { onClose: () => void }) => (
   </div>
 );
 
-const ModTypeButton = ({ title, description, selected, onClick }: {
-  title: string, description: string, selected: boolean, onClick: () => void
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
+  title: string,
+  description: string,
+  selected: boolean,
+  onClick: () => void,
+  disabled?: boolean // <--- Added disabled support
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+      ${disabled
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
+      }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -194,7 +208,7 @@ const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: 
   </div>
 );
 
-export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: Props) {
+export default function NinModificationClientPage({ hasAlreadyAgreed, prices, availability }: Props) {
   const router = useRouter();
   
   const [hasAgreed, setHasAgreed] = useState(hasAlreadyAgreed);
@@ -392,13 +406,38 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
+          {/* --- Buttons for Mod Type --- */}
           <div>
             <label className="text-lg font-semibold text-gray-900">1. Select Modification Type</label>
             <div className="mt-2 grid grid-cols-2 gap-3">
-              <ModTypeButton title="Change of Name" description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`} selected={serviceId === 'NIN_MOD_NAME'} onClick={() => setServiceId('NIN_MOD_NAME')} />
-              <ModTypeButton title="Change of Phone" description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`} selected={serviceId === 'NIN_MOD_PHONE'} onClick={() => setServiceId('NIN_MOD_PHONE')} />
-              <ModTypeButton title="Change of Address" description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`} selected={serviceId === 'NIN_MOD_ADDRESS'} onClick={() => setServiceId('NIN_MOD_ADDRESS')} />
-              <ModTypeButton title="Change of Date of Birth" description={`Fee: ₦${prices.NIN_MOD_DOB || 0} (Base)`} selected={serviceId === 'NIN_MOD_DOB'} onClick={() => setServiceId('NIN_MOD_DOB')} />
+              <ModTypeButton 
+                title="Change of Name" 
+                description={`Fee: ₦${prices.NIN_MOD_NAME || 0}`} 
+                selected={serviceId === 'NIN_MOD_NAME'} 
+                disabled={!availability['NIN_MOD_NAME']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_MOD_NAME')} 
+              />
+              <ModTypeButton 
+                title="Change of Phone" 
+                description={`Fee: ₦${prices.NIN_MOD_PHONE || 0}`} 
+                selected={serviceId === 'NIN_MOD_PHONE'} 
+                disabled={!availability['NIN_MOD_PHONE']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_MOD_PHONE')} 
+              />
+              <ModTypeButton 
+                title="Change of Address" 
+                description={`Fee: ₦${prices.NIN_MOD_ADDRESS || 0}`} 
+                selected={serviceId === 'NIN_MOD_ADDRESS'} 
+                disabled={!availability['NIN_MOD_ADDRESS']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_MOD_ADDRESS')} 
+              />
+              <ModTypeButton 
+                title="Change of Date of Birth" 
+                description={`Fee: ₦${prices.NIN_MOD_DOB || 0} (Base)`} 
+                selected={serviceId === 'NIN_MOD_DOB'} 
+                disabled={!availability['NIN_MOD_DOB']} // <--- Apply Availability
+                onClick={() => setServiceId('NIN_MOD_DOB')} 
+              />
             </div>
           </div>
 
@@ -436,13 +475,21 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
                   
                   {dobFeeText && (
                     <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
-                      <p className="text-sm font-bold text-yellow-800">{dobFeeText}</p>
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-bold text-yellow-800">Additional Fee</h3>
+                          <p className="text-sm text-yellow-700">The gap between DOBs is over 5 years. An additional ₦7,000 fee will be applied.</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
               )}
 
-              {/* --- Common Fields --- */}
+              {/* --- Common Email/Password Fields --- */}
               <DataInput label="Your Current Phone Number*" id="phone" value={formData.phone} onChange={(v) => handleInputChange('phone', v)} Icon={PhoneIcon} type="tel" maxLength={11} />
               <DataInput label="New Valid Fresh Email*" id="email" value={formData.email} onChange={(v) => handleInputChange('email', v)} Icon={EnvelopeIcon} type="email" />
               <DataInput label="Email Password*" id="password" value={formData.password} onChange={(v) => handleInputChange('password', v)} Icon={LockClosedIcon} type="password" />
@@ -500,7 +547,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
                 disabled={isSubmitting || isUploadingPassport || isUploadingAttestation || !passportUrl || (serviceId === 'NIN_MOD_DOB' && !attestationUrl)}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSubmitting ? 'Submitting...' : `Submit Modification (Fee: ₦${fee})`}
+                {isSubmitting ? 'Submitting...' : `Submit Modification (Fee: ₦${fee.toLocaleString()})`}
               </button>
             </div>
           )}
@@ -508,7 +555,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
       </div>
 
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
               <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
@@ -521,19 +568,19 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
                 Please confirm you have filled in the right details. This action is irreversible.
               </p>
               <p className="mt-4 text-center text-2xl font-bold text-blue-600">
-                Total Fee: ₦{fee}
+                Total Fee: ₦{fee.toLocaleString()}
               </p>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
               <button
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100"
+                className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors border-r border-gray-200"
               >
                 CANCEL
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-bold text-white transition-colors hover:bg-blue-700"
               >
                 YES, SUBMIT
               </button>
@@ -544,4 +591,3 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices }: 
     </div>
   );
 }
- 
