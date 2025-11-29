@@ -21,9 +21,9 @@ export default async function WaecPinPage() {
     throw new Error("WAEC_PIN service not found in database.");
   }
 
-  // --- THIS IS THE FIX ---
-  // All users see the 'defaultAgentPrice'
+  // --- Get Fee & Status ---
   const serviceFee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive;
   // -----------------------
 
   return (
@@ -44,9 +44,11 @@ export default async function WaecPinPage() {
           WAEC Result Pin
         </h1>
       </div>
+      {/* Pass isActive to the client */}
       <WaecPinClientPage 
         serviceId={SERVICE_ID} 
         serviceFee={serviceFee} 
+        isActive={isActive} 
       />
     </div>
   );
