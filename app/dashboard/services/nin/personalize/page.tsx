@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon, UserCircleIcon } from '@heroicons/react/24/outline'; // Changed icon
+import { ChevronLeftIcon, UserCircleIcon } from '@heroicons/react/24/outline'; 
 import SafeImage from '@/components/SafeImage';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -15,14 +15,15 @@ export default async function PersonalizeNinPage() {
   }
 
   // --- THIS IS THE FIX (Part 1) ---
-  // 1. Get the price for this service
+  // 1. Get the price and status for this service
   const service = await prisma.service.findUnique({ where: { id: 'NIN_PERSONALIZATION' } });
   if (!service) {
     throw new Error("NIN_PERSONALIZATION service not found.");
   }
 
-  // 2. All users see the 'defaultAgentPrice'
+  // 2. Get Fee & Active Status
   const serviceFee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive;
   // ------------------------------------
 
   // 3. Get the user's existing requests from our database
@@ -51,10 +52,11 @@ export default async function PersonalizeNinPage() {
         </h1>
       </div>
       
-      {/* 4. Pass both the requests AND the fee to the Client Component */}
+      {/* 4. Pass props to the Client Component */}
       <PersonalizationClientPage 
         initialRequests={requests} 
         serviceFee={serviceFee}
+        isActive={isActive}
       />
     </div>
   );
