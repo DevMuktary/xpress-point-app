@@ -20,16 +20,21 @@ export default async function BvnModificationPage() {
   
   const services = await prisma.service.findMany({
     where: { id: { in: serviceIds } },
-    select: { id: true, defaultAgentPrice: true }
+    select: { 
+      id: true, 
+      defaultAgentPrice: true,
+      isActive: true // <--- Fetch Availability
+    }
   });
 
-  // --- THIS IS THE FIX ---
-  // Create the Price Map for the client using only defaultAgentPrice
+  // Create Price Map AND Availability Map
   const priceMap: { [key: string]: number } = {};
+  const availabilityMap: { [key: string]: boolean } = {};
+
   services.forEach(service => {
     priceMap[service.id] = service.defaultAgentPrice.toNumber();
+    availabilityMap[service.id] = service.isActive;
   });
-  // -----------------------
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -37,11 +42,11 @@ export default async function BvnModificationPage() {
         <Link href="/dashboard/services/bvn" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        <SafeImage
-          src="/logos/bvn.png"
-          alt="BVN Logo"
-          width={40}
-          height={40}
+        <SafeImage 
+          src="/logos/bvn.png" 
+          alt="BVN Logo" 
+          width={40} 
+          height={40} 
           fallbackSrc="/logos/default.png"
           className="rounded-full"
         />
@@ -49,7 +54,13 @@ export default async function BvnModificationPage() {
           BVN Modification
         </h1>
       </div>
-      <BvnModificationClientPage prices={priceMap} />
+
+      {/* Pass Availability Map to Client */}
+      <BvnModificationClientPage 
+        prices={priceMap} 
+        availability={availabilityMap}
+        hasAlreadyAgreed={user.hasAgreedToModificationTerms}
+      />
     </div>
   );
 }
