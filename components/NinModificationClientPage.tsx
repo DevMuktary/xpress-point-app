@@ -15,9 +15,7 @@ import {
   ArrowPathIcon,
   CalendarDaysIcon,
   XMarkIcon,
-  InformationCircleIcon,
-  PhotoIcon,
-  DocumentTextIcon
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -26,7 +24,7 @@ import Link from 'next/link';
 type Props = {
   hasAlreadyAgreed: boolean;
   prices: { [key: string]: number };
-  availability: { [key: string]: boolean }; // <--- ADDED THIS
+  availability: { [key: string]: boolean }; // <--- ADDED THIS TO FIX THE ERROR
 };
 type ServiceID = 'NIN_MOD_NAME' | 'NIN_MOD_DOB' | 'NIN_MOD_PHONE' | 'NIN_MOD_ADDRESS';
 
@@ -136,13 +134,9 @@ const NoteModal = ({ onClose }: { onClose: () => void }) => (
   </div>
 );
 
-// --- UPDATED "Modern Button" Component ---
+// --- UPDATED Modern Button with Disabled State ---
 const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
-  title: string,
-  description: string,
-  selected: boolean,
-  onClick: () => void,
-  disabled?: boolean // <--- Added disabled support
+  title: string, description: string, selected: boolean, onClick: () => void, disabled?: boolean
 }) => (
   <button
     type="button"
@@ -555,7 +549,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices, av
       </div>
 
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
               <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
