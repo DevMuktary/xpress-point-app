@@ -17,29 +17,36 @@ import SafeImage from '@/components/SafeImage';
 
 // --- Types ---
 type Props = {
-  prices: Record<string, number>; // Received from server
+  prices: Record<string, number>; 
+  availability: Record<string, boolean>; // <--- ADDED THIS
 };
 
 type SlipType = 'JAMB_RESULT_SLIP' | 'JAMB_REG_SLIP' | 'JAMB_ADMISSION_LETTER';
 
-// --- "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
   title: string,
   description: string,
   selected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  disabled?: boolean // <--- Added disabled support
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
+      ${disabled
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
+          : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -87,8 +94,8 @@ const NoticeBox = () => (
 );
 
 // --- The Main Component ---
-export default function JambSlipsPage({ prices }: Props) {
-  
+export default function JambSlipsPage({ prices, availability }: Props) {
+   
   const [serviceId, setServiceId] = useState<SlipType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -120,7 +127,7 @@ export default function JambSlipsPage({ prices }: Props) {
     }
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -158,7 +165,7 @@ export default function JambSlipsPage({ prices }: Props) {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2014 }, (_, i) => currentYear - i);
 
-  
+   
   return (
     <div className="w-full max-w-3xl mx-auto">
       {(isSubmitting) && <Loading />}
@@ -208,7 +215,7 @@ export default function JambSlipsPage({ prices }: Props) {
       {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         
-        {/* --- NOTIFICATION BLOCK (Visible always or when service selected) --- */}
+        {/* --- NOTIFICATION BLOCK --- */}
         <NoticeBox />
         {/* -------------------------- */}
 
@@ -224,18 +231,21 @@ export default function JambSlipsPage({ prices }: Props) {
                 title="Original Result Slip"
                 description={`Fee: ₦${prices.JAMB_RESULT_SLIP?.toLocaleString() || '...'}`}
                 selected={serviceId === 'JAMB_RESULT_SLIP'}
+                disabled={!availability['JAMB_RESULT_SLIP']} // <--- Apply Check
                 onClick={() => setServiceId('JAMB_RESULT_SLIP')}
               />
               <ModTypeButton
                 title="Registration Slip"
                 description={`Fee: ₦${prices.JAMB_REG_SLIP?.toLocaleString() || '...'}`}
                 selected={serviceId === 'JAMB_REG_SLIP'}
+                disabled={!availability['JAMB_REG_SLIP']} // <--- Apply Check
                 onClick={() => setServiceId('JAMB_REG_SLIP')}
               />
               <ModTypeButton
                 title="Admission Letter"
                 description={`Fee: ₦${prices.JAMB_ADMISSION_LETTER?.toLocaleString() || '...'}`}
                 selected={serviceId === 'JAMB_ADMISSION_LETTER'}
+                disabled={!availability['JAMB_ADMISSION_LETTER']} // <--- Apply Check
                 onClick={() => setServiceId('JAMB_ADMISSION_LETTER')}
               />
             </div>
