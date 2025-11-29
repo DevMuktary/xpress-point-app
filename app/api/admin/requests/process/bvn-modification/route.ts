@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
-import { processCommission } from '@/lib/commission'; // Import the helper
+import { processCommission } from '@/lib/commission';
+import { sendStatusNotification } from '@/lib/whatsapp'; // <--- Import
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -20,9 +21,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // 1. Get the request
+    // 1. Get the request & include User to get phone number
     const bvnRequest = await prisma.bvnRequest.findUnique({
       where: { id: requestId },
+      include: { user: true } // <--- Ensure user is included
     });
 
     if (!bvnRequest) {
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
           }
         });
 
-        // --- PAY COMMISSION (The Definite Fix) ---
+        // --- PAY COMMISSION ---
         await processCommission(tx, bvnRequest.userId, bvnRequest.serviceId);
       } 
       
@@ -104,6 +106,20 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // --- SEND WHATSAPP NOTIFICATION (After DB Transaction) ---
+    if (bvnRequest?.user?.phoneNumber) {
+        let statusText = action;
+        if (action === 'COMPLETED') statusText = 'COMPLETED (Successful)';
+        if (action === 'FAILED') statusText = 'FAILED (Please check dashboard)';
+        
+        await sendStatusNotification(
+            bvnRequest.user.phoneNumber, 
+            "BVN Modification", 
+            statusText
+        );
+    }
+    // ---------------------------------------------------------
 
     return NextResponse.json({ success: true });
 
