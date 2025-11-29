@@ -8,6 +8,14 @@ import {
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
+
+// --- Type Definitions ---
+type Props = {
+  fee: number;
+  isActive: boolean;
+};
 
 // --- "World-Class" Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
@@ -40,12 +48,12 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
 );
 
 // --- The Main "World-Class" Component ---
-export default function JambProfileCodeClientPage() {
-  
+export default function JambProfileCodeClientPage({ fee, isActive }: Props) {
+   
   // --- State Management ---
   const serviceId = 'JAMB_PROFILE_CODE';
-  const fee = 500;
-  
+  // const fee = 500; // REMOVED: Now using prop
+   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -61,7 +69,7 @@ export default function JambProfileCodeClientPage() {
     setSuccess(null);
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- This is the *final* submit, called by the modal's "YES" button ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -91,7 +99,16 @@ export default function JambProfileCodeClientPage() {
       setIsSubmitting(false);
     }
   };
-  
+
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The JAMB Profile Code Retrieval service is currently unavailable. Please check back later." 
+      />
+    );
+  }
+   
   return (
     <div className="w-full max-w-3xl mx-auto">
       {(isSubmitting) && <Loading />}
@@ -110,7 +127,7 @@ export default function JambProfileCodeClientPage() {
               <div className="mt-2 text-sm text-blue-700">
                 <p>
                   Your request is now <strong className="font-semibold">PENDING</strong>. You can monitor its status on the
-                  <Link href="/dashboard/history/jamb" className="font-semibold underline hover:text-blue-600">
+                  <Link href="/dashboard/history/jamb" className="font-semibold underline hover:text-blue-600 ml-1">
                     JAMB History
                   </Link> page.
                 </p>
