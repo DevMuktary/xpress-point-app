@@ -12,6 +12,8 @@ import {
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { ExamPinRequest } from '@prisma/client';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
   const [copied, setCopied] = useState(false);
@@ -73,9 +75,10 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
 type Props = {
   serviceId: string;
   serviceFee: number;
+  isActive: boolean; // <--- ADDED THIS
 };
 
-export default function NabtebPinClientPage({ serviceId, serviceFee }: Props) {
+export default function NabtebPinClientPage({ serviceId, serviceFee, isActive }: Props) {
   const [requests, setRequests] = useState<ExamPinRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -100,7 +103,7 @@ export default function NabtebPinClientPage({ serviceId, serviceFee }: Props) {
       setIsHistoryLoading(false);
     }
   };
-  
+   
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -111,7 +114,7 @@ export default function NabtebPinClientPage({ serviceId, serviceFee }: Props) {
     }
     setIsConfirmModalOpen(true);
   };
-  
+   
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -133,9 +136,18 @@ export default function NabtebPinClientPage({ serviceId, serviceFee }: Props) {
       setIsLoading(false);
     }
   };
-  
+   
   const totalFee = useMemo(() => serviceFee * quantity, [quantity, serviceFee]);
-  
+
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The NABTEB Result Pin service is currently unavailable. Please check back later." 
+      />
+    );
+  }
+   
   return (
     <div className="space-y-6">
       {(isLoading) && <Loading />}
