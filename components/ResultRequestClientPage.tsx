@@ -29,23 +29,29 @@ type HistoryRequest = ResultRequest & {
 
 type Props = {
   initialRequests: HistoryRequest[];
+  availability: { [key: string]: boolean }; // <--- ADDED THIS
 };
 
-// --- "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick }: {
-  title: string, description: string, selected: boolean, onClick: () => void
+// --- UPDATED "Modern Button" Component ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
+  title: string, description: string, selected: boolean, onClick: () => void, disabled?: boolean
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2 w-full
-      ${selected
-        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-        : 'border-gray-300 bg-white hover:border-gray-400'
+      ${disabled 
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        : selected 
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' 
+          : 'border-gray-300 bg-white hover:border-gray-400'
       }`}
   >
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-blue-600 font-medium">{description}</p>
+    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        {disabled ? 'Unavailable' : description}
+    </p>
   </button>
 );
 
@@ -100,12 +106,12 @@ const NoticeBox = () => (
 );
 
 // --- The Main Component ---
-export default function ResultRequestClientPage({ initialRequests }: Props) {
-  
+export default function ResultRequestClientPage({ initialRequests, availability }: Props) {
+   
   // --- State Management ---
   type ServiceID = 'RESULT_REQUEST_WAEC' | 'RESULT_REQUEST_NECO' | 'RESULT_REQUEST_NABTEB';
   const [serviceId, setServiceId] = useState<ServiceID | null>(null);
-  
+   
   const [requests, setRequests] = useState(initialRequests);
   const [isLoading, setIsLoading] = useState(false); 
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -151,7 +157,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       setIsHistoryLoading(false);
     }
   };
-  
+   
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +169,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
     }
     setIsConfirmModalOpen(true);
   };
-  
+   
   // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
@@ -203,7 +209,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       setIsLoading(false);
     }
   };
-  
+   
   // --- Filtering Logic ---
   const filteredRequests = useMemo(() => {
     return requests.filter(req => {
@@ -222,7 +228,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       year: 'numeric',
     });
   };
-  
+   
   const getStatusInfo = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED': return { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Completed' };
@@ -232,7 +238,7 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
       default: return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
     }
   };
-  
+   
   const renderActionButton = (request: HistoryRequest) => {
     switch (request.status) {
       case 'COMPLETED':
@@ -312,18 +318,21 @@ export default function ResultRequestClientPage({ initialRequests }: Props) {
                 title="WAEC"
                 description="Fee: ₦1000"
                 selected={serviceId === 'RESULT_REQUEST_WAEC'}
+                disabled={!availability['RESULT_REQUEST_WAEC']} // <--- Apply Availability Check
                 onClick={() => setServiceId('RESULT_REQUEST_WAEC')}
               />
               <ModTypeButton
                 title="NECO"
                 description="Fee: ₦1000"
                 selected={serviceId === 'RESULT_REQUEST_NECO'}
+                disabled={!availability['RESULT_REQUEST_NECO']} // <--- Apply Availability Check
                 onClick={() => setServiceId('RESULT_REQUEST_NECO')}
               />
               <ModTypeButton
                 title="NABTEB"
                 description="Fee: ₦1000"
                 selected={serviceId === 'RESULT_REQUEST_NABTEB'}
+                disabled={!availability['RESULT_REQUEST_NABTEB']} // <--- Apply Availability Check
                 onClick={() => setServiceId('RESULT_REQUEST_NABTEB')}
               />
             </div>
