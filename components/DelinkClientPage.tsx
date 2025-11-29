@@ -15,10 +15,13 @@ import {
 import Loading from '@/app/loading';
 import Link from 'next/link';
 import { DelinkRequest, RequestStatus } from '@prisma/client';
+// Import the Unavailable Component
+import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- Props ---
 type Props = {
   serviceFee: number;
+  isActive: boolean; // <--- ADDED THIS
 };
 
 // --- Reusable Input Component ---
@@ -62,7 +65,7 @@ const NoticeBox = () => (
 );
 
 // --- Main Component ---
-export default function DelinkClientPage({ serviceFee }: Props) {
+export default function DelinkClientPage({ serviceFee, isActive }: Props) {
 
   const [requests, setRequests] = useState<DelinkRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -105,7 +108,7 @@ export default function DelinkClientPage({ serviceFee }: Props) {
     
     setIsConfirmModalOpen(true);
   };
-  
+   
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
@@ -132,7 +135,7 @@ export default function DelinkClientPage({ serviceFee }: Props) {
       setIsLoading(false);
     }
   };
-  
+   
   const getStatusInfo = (status: RequestStatus) => {
     switch (status) {
       case 'COMPLETED':
@@ -147,6 +150,15 @@ export default function DelinkClientPage({ serviceFee }: Props) {
         return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
     }
   };
+
+  // --- CHECK UNAVAILABILITY ---
+  if (!isActive) {
+    return (
+      <ServiceUnavailable 
+        message="The NIN Delink / Retrieve Email service is currently unavailable. Please check back later." 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
