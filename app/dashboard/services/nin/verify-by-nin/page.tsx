@@ -13,14 +13,15 @@ export default async function VerifyByNinPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
-  // 1. Get the price for this service
+  // 1. Get the price and status for this service
   const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
   if (!service) {
     throw new Error("NIN_LOOKUP service not found.");
   }
 
-  // 2. All users see the 'defaultAgentPrice'
+  // 2. Get Fee & Active Status
   const serviceFee = service.defaultAgentPrice.toNumber();
+  const isActive = service.isActive;
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -28,7 +29,6 @@ export default async function VerifyByNinPage() {
         <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
-        {/* Added the Logo for consistency */}
         <SafeImage
           src="/logos/nin.png"
           alt="NIN Logo"
@@ -40,8 +40,8 @@ export default async function VerifyByNinPage() {
         <h1 className="text-2xl font-bold text-gray-900">Verify by NIN</h1>
       </div>
       
-      {/* 3. Pass the price to the Client Component */}
-      <VerifyByNinClientPage serviceFee={serviceFee} />
+      {/* 3. Pass props to the Client Component */}
+      <VerifyByNinClientPage serviceFee={serviceFee} isActive={isActive} />
     </div>
   );
 }
