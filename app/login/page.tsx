@@ -38,7 +38,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          identifier: loginIdentifier, // <--- FIXED: Mapped to 'identifier' for backend compatibility
+          identifier: loginIdentifier, 
           password,
         }),
       });
@@ -140,6 +140,17 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
+                
+                {/* --- FORGOT PASSWORD LINK --- */}
+                <div className="flex justify-end mt-2">
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                {/* ---------------------------- */}
               </div>
             </div>
 
