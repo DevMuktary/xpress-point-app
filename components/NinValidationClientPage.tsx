@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { 
   CheckCircleIcon,
   XMarkIcon,
+  XCircleIcon,
   IdentificationIcon,
   ClockIcon,
   ArrowPathIcon,
