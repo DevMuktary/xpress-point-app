@@ -62,24 +62,22 @@ model User {
   vninRequests                 VninRequest[]
   npcRequests                  NpcRequest[]
   otps                         Otp[]
-  passwordResetTokens          PasswordResetToken[] // <--- ADDED THIS
+  passwordResetTokens          PasswordResetToken[]
   chatMessages                 ChatMessage[]
 
   @@map("users")
 }
 
-// --- NEW MODEL: PASSWORD RESET TOKEN ---
 model PasswordResetToken {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  token     String   @unique // The OTP or Hash
+  token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
 }
-// ---------------------------------------
 
 model Wallet {
   id                 String   @id @default(uuid())
@@ -220,21 +218,19 @@ model IpeRequest {
   @@map("ipe_requests")
 }
 
-// --- UPDATED VALIDATION REQUEST (Removed unique constraint for flexibility) ---
+// --- FIXED VALIDATION REQUEST ---
+// Using 'scode' to match existing API logic and prevent build errors
 model ValidationRequest {
   id            String        @id @default(uuid())
   userId        String        @map("user_id")
   nin           String        @map("nin")
   
-  // We removed 'scode' and replaced it with a simpler 'type' field for the manual process
-  // But for backward compatibility, we can keep 'scode' or map 'type' to it.
-  // Let's use 'type' to distinguish "No Record" vs "Record Update"
-  type          String        @default("NO_RECORD") 
+  scode         String        // 'NO_RECORD' or 'UPDATE_RECORD'
 
-  status        RequestStatus @default(PENDING) // Default is PENDING for manual
+  newTrackingId String?       @map("new_tracking_id")
+  status        RequestStatus @default(PENDING)
   statusMessage String?       @map("status_message")
   
-  // Admin response fields
   adminNote     String?       @map("admin_note")
   adminFileUrl  String?       @map("admin_file_url")
 
@@ -242,10 +238,9 @@ model ValidationRequest {
   updatedAt     DateTime      @updatedAt @map("updated_at")
   user          User          @relation(fields: [userId], references: [id])
   
-  // Removed @@unique to allow multiple requests if needed (e.g. one fails, try again)
   @@map("validation_requests")
 }
-// ---------------------------------------------------------------------------
+// -------------------------------
 
 model ModificationRequest {
   id              String        @id @default(uuid())
@@ -400,16 +395,21 @@ model BvnRequest {
   status              RequestStatus @default(PENDING)
   statusMessage       String?       @map("status_message")
   formData            Json
+  
   failedEnrollmentUrl String?       @map("failed_enrollment_url")
   vninSlipUrl         String?       @map("vnin_slip_url")
   uploadedSlipUrl     String?       @map("uploaded_slip_url")
   retrievalResult     String?       @map("retrieval_result")
   newspaperUrl        String?       @map("newspaper_url")
+  
   adminResultUrl      String?       @map("admin_result_url")
+
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
+
   user                User          @relation(fields: [userId], references: [id])
   service             Service       @relation(fields: [serviceId], references: [id])
+  
   @@map("bvn_requests")
 }
 
