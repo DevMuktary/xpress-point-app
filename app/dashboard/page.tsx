@@ -1,66 +1,66 @@
 // This is a Server Component that fetches data.
 import React from "react";
 import { redirect } from "next/navigation";
-import { getUserFromSession } from "@/lib/auth"; // We get the user to secure the page
+import { getUserFromSession } from "@/lib/auth"; 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { CreditCardIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
-// --- We import our "world-class" components ---
 import EmailVerifyAlert from "@/components/EmailVerifyAlert";
 import ServiceItemCard from "@/components/ServiceItemCard";
 import QuickActions from "@/components/QuickActions";
+import NotificationBanner from "@/components/NotificationBanner"; // <--- New
+import CommunityChat from "@/components/CommunityChat";         // <--- New
 
-// --- THIS IS THE "WORLD-CLASS" FIX ---
-// All services are now "refurbished" with a real link
+// --- Services List ---
 const allServices = [
   { 
     title: "NIN Services", 
     description: "Verify NIN, print slips, and manage modifications.", 
     logo: "/logos/nin.png", 
-    href: "/dashboard/services/nin" // (Already built)
+    href: "/dashboard/services/nin" 
   },
   { 
     title: "BVN Services", 
     description: "Verify BVN details, retrieve, and print verification.", 
     logo: "/logos/bvn.png", 
-    href: "/dashboard/services/bvn" // (New page)
+    href: "/dashboard/services/bvn" 
   },
   { 
     title: "JAMB Services", 
     description: "Print original results, admission letters, etc.", 
     logo: "/logos/jamb.png", 
-    href: "/dashboard/services/jamb" // (New page)
+    href: "/dashboard/services/jamb" 
   },
   { 
     title: "JTB-TIN", 
     description: "Register and retrieve JTB-TIN certificates.", 
     logo: "/logos/tin.png", 
-    href: "/dashboard/services/tin" // (New page)
+    href: "/dashboard/services/tin" 
   },
   { 
     title: "Result Checker", 
     description: "Get WAEC, NECO, and NABTEB result pins.", 
     logo: "/logos/waec.png", 
-    href: "/dashboard/services/exam-pins" // (New page)
+    href: "/dashboard/services/exam-pins" 
   },
   { 
     title: "CAC Services", 
     description: "Register your business name with the CAC.", 
     logo: "/logos/cac.png", 
-    href: "/dashboard/services/cac" // (New page)
+    href: "/dashboard/services/cac" 
   },
   { 
     title: "VTU Services", 
     description: "Buy airtime, data, and pay electricity bills.", 
     logo: "/logos/vtu.png", 
-    href: "/dashboard/services/vtu" // (New page)
+    href: "/dashboard/services/vtu" 
   },
   { 
     title: "Newspaper", 
     description: "Publish change of name and other notices.", 
     logo: "/logos/news.png", 
-    href: "/dashboard/services/newspaper" // (Already built)
+    href: "/dashboard/services/newspaper" 
   },
 ];
 // -----------------------------------------
@@ -90,9 +90,18 @@ export default async function DashboardPage() {
   }
   const walletBalance = finalWallet.balance;
 
+  // Fetch Banner Content
+  const bannerSetting = await prisma.systemSetting.findUnique({
+    where: { key: 'dashboard_banner' }
+  });
+  const bannerContent = bannerSetting?.value || null;
+
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto relative">
       
+      {/* --- Notification Banner (Admin Controlled) --- */}
+      {bannerContent && <NotificationBanner content={bannerContent} />}
+
       {/* --- Email Verification Alert --- */}
       {!user.isEmailVerified && (
         <EmailVerifyAlert />
@@ -143,6 +152,9 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* --- Community Chat Widget --- */}
+      <CommunityChat currentUser={user} />
     </div>
   );
 }
