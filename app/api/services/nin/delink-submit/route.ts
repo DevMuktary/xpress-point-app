@@ -48,18 +48,17 @@ export async function POST(request: Request) {
 
     const priceAsString = price.toString();
 
-    // 5. Execute Transaction
-    await prisma.$transaction(async (tx) => {
+    // 5. Execute Transaction & Capture Result
+    // --- THE FIX IS HERE: We capture the result of the transaction ---
+    const newDelinkRequest = await prisma.$transaction(async (tx) => {
       // a) Charge User
       await tx.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: priceAsString } },
       });
 
-      // NOTE: Commission is NOT paid here. It is paid by Admin on Completion.
-
-      // b) Create Request
-      await tx.delinkRequest.create({
+      // b) Create Request (Capture this variable)
+      const createdRequest = await tx.delinkRequest.create({
         data: {
           userId: user.id,
           nin: nin,
@@ -80,10 +79,18 @@ export async function POST(request: Request) {
           status: 'COMPLETED',
         },
       });
+
+      // Return the created request from the transaction
+      return createdRequest;
     });
 
+    // 6. Return response WITH the newRequest data
     return NextResponse.json(
-      { message: 'Request submitted! Please go to the NIN Delink History page to monitor your status.' },
+      { 
+        success: true,
+        message: 'Request submitted! Please go to the NIN Delink History page to monitor your status.',
+        newRequest: newDelinkRequest // <--- The client needs this to prevent the crash
+      },
       { status: 200 }
     );
 
