@@ -21,10 +21,11 @@ const services = [
   { id: 'NIN_MOD_ADDRESS', name: 'NIN Modification (Address)', category: 'NIN', platformPrice: new Decimal(1450.00), defaultAgentPrice: new Decimal(1500.00), productCode: null },
   { id: 'NIN_MOD_DOB', name: 'NIN Modification (Date of Birth)', category: 'NIN', platformPrice: new Decimal(14500.00), defaultAgentPrice: new Decimal(15000.00), productCode: null },
   { id: 'NIN_DELINK', name: 'NIN Delink / Retrieve Email', category: 'NIN', platformPrice: new Decimal(2450.00), defaultAgentPrice: new Decimal(2500.00), productCode: null },
-  
-  // --- NEW: VNIN Slip ---
   { id: 'VNIN_SLIP', name: 'VNIN Slip (Instant)', category: 'NIN', platformPrice: new Decimal(150.00), defaultAgentPrice: new Decimal(200.00), productCode: null }, 
-  // ---------------------
+
+  // --- NPC Attestation (NEW) ---
+  { id: 'NPC_ATTESTATION', name: 'NPC Attestation', category: 'NPC', platformPrice: new Decimal(15000.00), defaultAgentPrice: new Decimal(15500.00), productCode: null },
+  // -----------------------------
 
   // --- Newspaper Services ---
   { id: 'NEWSPAPER_NAME_CHANGE', name: 'Newspaper Change of Name', category: 'NEWSPAPER', platformPrice: new Decimal(4450.00), defaultAgentPrice: new Decimal(4500.00), productCode: null },
@@ -56,8 +57,6 @@ const services = [
   { id: 'JAMB_REG_SLIP', name: 'JAMB Registration Slip', category: 'JAMB', platformPrice: new Decimal(1400.00), defaultAgentPrice: new Decimal(1500.00), productCode: null },
   { id: 'JAMB_ADMISSION_LETTER', name: 'JAMB Admission Letter', category: 'JAMB', platformPrice: new Decimal(1400.00), defaultAgentPrice: new Decimal(1500.00), productCode: null },
   { id: 'JAMB_PROFILE_CODE', name: 'JAMB Profile Code Retrieval', category: 'JAMB', platformPrice: new Decimal(400.00), defaultAgentPrice: new Decimal(500.00), productCode: null },
-
-  // --- "World-Class" VTU ---
 
   // --- VTU Airtime ---
   { id: 'AIRTIME_MTN', name: 'MTN Airtime', category: 'VTU_AIRTIME', platformPrice: new Decimal(97.00), defaultAgentPrice: new Decimal(98.00), productCode: 'mtn_custom' },
