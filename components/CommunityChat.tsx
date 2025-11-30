@@ -9,8 +9,8 @@ import {
   NoSymbolIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
-import { User } from '@prisma/client';
 
+// --- Custom Type for Chat Message ---
 type ChatMessage = {
   id: string;
   message: string;
@@ -21,12 +21,21 @@ type ChatMessage = {
     lastName: string;
     businessName: string | null;
     role: string;
-    email: string; // Only visible to Admin
+    email: string;
   };
 };
 
+// --- UPDATED Props: Use a loose type or pick specific fields ---
 type Props = {
-  currentUser: User;
+  currentUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    isChatBlocked?: boolean; // Optional because session might not have it yet
+    businessName?: string | null;
+  };
 };
 
 export default function CommunityChat({ currentUser }: Props) {
@@ -80,8 +89,7 @@ export default function CommunityChat({ currentUser }: Props) {
       if (res.ok) {
         setNewMessage("");
         // Immediate fetch update
-        const data = await res.json();
-        // Ideally append locally, but polling catches it quickly
+        // const data = await res.json(); // We rely on polling for now
       } else {
         const err = await res.json();
         alert(err.error || "Failed to send");
@@ -145,8 +153,7 @@ export default function CommunityChat({ currentUser }: Props) {
           {/* Messages Area */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {messages.map((msg) => {
-              const isMe = msg.user.email === currentUser.email; // Simple check (using ID is safer)
-              // Note: In production, compare IDs passed from props, but this works if email is unique
+              const isMe = msg.user.email === currentUser.email; 
               
               return (
                 <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
@@ -161,7 +168,7 @@ export default function CommunityChat({ currentUser }: Props) {
                       isMe 
                         ? 'bg-blue-600 text-white rounded-br-none' 
                         : msg.isAdmin 
-                          ? 'bg-purple-600 text-white rounded-bl-none' // Admin msg style
+                          ? 'bg-purple-600 text-white rounded-bl-none' 
                           : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
                     }`}>
                       {/* Name Display */}
@@ -201,7 +208,8 @@ export default function CommunityChat({ currentUser }: Props) {
 
           {/* Input Area */}
           <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-gray-200">
-            {currentUser.isChatBlocked ? (
+            {/* Optional Chaining in case isChatBlocked is undefined */}
+            {currentUser?.isChatBlocked ? (
                <div className="text-center text-red-500 text-sm py-2 bg-red-50 rounded">
                  You have been blocked from chatting.
                </div>
@@ -238,8 +246,6 @@ export default function CommunityChat({ currentUser }: Props) {
         ) : (
           <ChatBubbleLeftRightIcon className="h-8 w-8" />
         )}
-        {/* Notification Dot (Optional logic can be added) */}
-        {!isOpen && <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>}
       </button>
     </div>
   );
