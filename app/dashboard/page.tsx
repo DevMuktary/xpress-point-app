@@ -9,8 +9,8 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import EmailVerifyAlert from "@/components/EmailVerifyAlert";
 import ServiceItemCard from "@/components/ServiceItemCard";
 import QuickActions from "@/components/QuickActions";
-import NotificationBanner from "@/components/NotificationBanner"; // <--- New
-import CommunityChat from "@/components/CommunityChat";         // <--- New
+import NotificationBanner from "@/components/NotificationBanner"; 
+import CommunityChat from "@/components/CommunityChat";         
 
 // --- Services List ---
 const allServices = [
@@ -61,6 +61,12 @@ const allServices = [
     description: "Publish change of name and other notices.", 
     logo: "/logos/news.png", 
     href: "/dashboard/services/newspaper" 
+  },
+  { 
+    title: "NPC Attestation", 
+    description: "Get your NPC Birth Attestation certificate.", 
+    logo: "/logos/npc.png", 
+    href: "/dashboard/services/npc" 
   },
 ];
 // -----------------------------------------
