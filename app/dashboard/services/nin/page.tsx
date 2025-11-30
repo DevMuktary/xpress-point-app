@@ -39,7 +39,7 @@ export default function NinServicesPage() {
     {
       title: 'Personalize NIN (Tracking ID)',
       description: 'Service for NIN personalization using a tracking ID.',
-      href: '/dashboard/services/nin/personalization', // Updated href to match folder structure
+      href: '/dashboard/services/nin/personalize', // Updated href to match folder structure
     },
     {
       title: 'Validation',
