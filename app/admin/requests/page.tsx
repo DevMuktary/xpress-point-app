@@ -25,7 +25,8 @@ export default async function AdminRequestsPage() {
     tinCount,
     jambCount,
     resultCount,
-    newspaperCount
+    newspaperCount,
+    npcCount // <--- New
   ] = await Promise.all([
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
@@ -41,7 +42,8 @@ export default async function AdminRequestsPage() {
     prisma.tinRequest.count({ where: { status: 'PENDING' } }),
     prisma.jambRequest.count({ where: { status: 'PENDING' } }),
     prisma.resultRequest.count({ where: { status: 'PENDING' } }),
-    prisma.newspaperRequest.count({ where: { status: 'PENDING' } })
+    prisma.newspaperRequest.count({ where: { status: 'PENDING' } }),
+    prisma.npcRequest.count({ where: { status: 'PENDING' } }) // <--- New
   ]);
 
   const stats = {
@@ -55,7 +57,8 @@ export default async function AdminRequestsPage() {
     tin: tinCount,
     jamb: jambCount,
     result: resultCount,
-    newspaper: newspaperCount
+    newspaper: newspaperCount,
+    npc: npcCount // <--- New
   };
 
   return (
