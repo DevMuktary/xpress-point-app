@@ -135,6 +135,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("VNIN Slip API Error:", error);
-    return NextResponse.json({ error: "System error occurred. Please try again." }, { status: 500 });
+    return NextResponse.json({ error: "No Record Found. Please check and try again." }, { status: 500 });
   }
 }
