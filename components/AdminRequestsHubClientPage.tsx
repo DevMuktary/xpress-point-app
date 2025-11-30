@@ -8,6 +8,7 @@ import {
   UserIcon, 
   DocumentTextIcon,
   BriefcaseIcon,
+  ArrowPathIcon,
   AcademicCapIcon,
   NewspaperIcon,
   ShieldCheckIcon // For NPC
