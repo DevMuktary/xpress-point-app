@@ -5,7 +5,7 @@ import {
   ClockIcon, 
   CreditCardIcon,
   IdentificationIcon,
-  ShieldCheckIcon,
+  ShieldCheckIcon, // Used for NPC
   DocumentTextIcon,
   BriefcaseIcon,
   NewspaperIcon,
@@ -75,6 +75,21 @@ export default function HistoryHubPage() {
           icon: LinkIcon,
           colorClass: "bg-indigo-100 text-indigo-600",
           description: "Email delinking status"
+        },
+        // Adding Personalization here as it fits NIN category often
+        {
+          title: "NIN Personalization",
+          href: "/dashboard/history/personalization",
+          icon: FingerPrintIcon,
+          colorClass: "bg-indigo-100 text-indigo-600",
+          description: "Tracking ID status"
+        },
+         {
+          title: "IPE Clearance",
+          href: "/dashboard/history/ipe",
+          icon: ShieldCheckIcon,
+          colorClass: "bg-indigo-100 text-indigo-600",
+          description: "Clearance status"
         }
       ]
     },
@@ -134,7 +149,16 @@ export default function HistoryHubPage() {
           icon: NewspaperIcon,
           colorClass: "bg-gray-100 text-gray-600",
           description: "Publication proofs"
+        },
+        // --- NEW NPC ATTESTATION CARD ---
+        {
+          title: "NPC Attestation",
+          href: "/dashboard/history/attestation",
+          icon: ShieldCheckIcon,
+          colorClass: "bg-emerald-100 text-emerald-600",
+          description: "Birth Attestation Status"
         }
+        // --------------------------------
       ]
     },
     {
