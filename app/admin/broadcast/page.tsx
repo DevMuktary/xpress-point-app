@@ -20,7 +20,7 @@ export default async function AdminBroadcastPage() {
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/admin" className="text-gray-500 hover:text-gray-900">
+        <Link href="/admin/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <MegaphoneIcon className="h-8 w-8 text-red-600" />
