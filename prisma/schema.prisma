@@ -25,8 +25,12 @@ model User {
   nin                          String?
   hasAgreedToModificationTerms Boolean  @default(false) @map("has_agreed_to_mod_terms")
   isBlocked                    Boolean  @default(false) @map("is_blocked")
+  
+  // --- NEW: Chat Blocking ---
+  isChatBlocked                Boolean  @default(false) @map("is_chat_blocked")
+  // --------------------------
+
   // --- NEW FIELD: AGENT CODE ---
-  // This is the 6-digit code used for checking results on the agency portal
   agentCode                    String?  @unique @map("agent_code") 
   // -----------------------------
 
@@ -63,18 +67,22 @@ model User {
   vtuRequests                  VtuRequest[]
   bvnRequests                  BvnRequest[]
   otps                         Otp[]
+  
+  // --- NEW: Chat Messages Relation ---
+  chatMessages                 ChatMessage[]
+  // -----------------------------------
 
   @@map("users")
 }
 
 model Wallet {
-  id                String   @id @default(uuid())
-  userId            String   @unique @map("user_id")
-  balance           Decimal  @default(0.00) @db.Decimal(12, 2)
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  user              User     @relation(fields: [userId], references: [id])
+  id                 String   @id @default(uuid())
+  userId             String   @unique @map("user_id")
+  balance            Decimal  @default(0.00) @db.Decimal(12, 2)
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  user               User     @relation(fields: [userId], references: [id])
   
-  commissionBalance Decimal  @default(0.00) @map("commission_balance") @db.Decimal(12, 2)
+  commissionBalance  Decimal  @default(0.00) @map("commission_balance") @db.Decimal(12, 2)
   
   @@map("wallets")
 }
@@ -130,16 +138,16 @@ model Otp {
 }
 
 model Service {
-  id                String   @id
-  name              String
-  category          String
+  id                  String                @id
+  name                String
+  category            String
   
-  platformPrice     Decimal  @default(0.00) @map("platform_price") @db.Decimal(10, 2)
-  defaultAgentPrice Decimal  @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
-  defaultCommission Decimal  @default(0.00) @map("default_commission") @db.Decimal(10, 2)
+  platformPrice       Decimal  @default(0.00) @map("platform_price") @db.Decimal(10, 2)
+  defaultAgentPrice   Decimal  @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
+  defaultCommission   Decimal  @default(0.00) @map("default_commission") @db.Decimal(10, 2)
 
-  isActive          Boolean  @default(true) @map("is_active")
-  productCode       String?  @map("product_code")
+  isActive            Boolean  @default(true) @map("is_active")
+  productCode         String?  @map("product_code")
   
   Transaction         Transaction[]
   ModificationRequest ModificationRequest[]
@@ -163,28 +171,24 @@ enum RequestStatus {
   FAILED
 }
 
-// --- NEW MODEL: BVN ENROLLMENT RESULTS (From Excel) ---
 model BvnEnrollmentResult {
   id               String   @id @default(uuid())
   
-  // Fields mapped from the CSV/Excel Header
-  ticketNumber     String   @unique @map("ticket_number") // TICKET_NUMBER (Unique identifier)
-  bvn              String?  @map("bvn")                   // BVN
-  institutionName  String?  @map("institution_name")      // AGT_MGT_INST_NAME
-  agentName        String?  @map("agent_name")            // AGENT_NAME
-  agentCode        String   @map("agent_code")            // AGENT_CODE (This links to User.agentCode)
-  bmsImportId      String?  @map("bms_import_id")         // BMS_IMPORT_ID
-  status           String   @map("status")                // VALIDATION_STATUS (e.g., PENDING, REJECTED)
-  message          String?  @map("message")               // VALIDATION_MESSAGE (e.g., ID NOT CLEAR)
+  ticketNumber     String   @unique @map("ticket_number") 
+  bvn              String?  @map("bvn")                   
+  institutionName  String?  @map("institution_name")      
+  agentName        String?  @map("agent_name")            
+  agentCode        String   @map("agent_code")            
+  bmsImportId      String?  @map("bms_import_id")         
+  status           String   @map("status")                
+  message          String?  @map("message")               
   
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  // We index agentCode for fast searching on the agency portal
   @@index([agentCode])
   @@map("bvn_enrollment_results")
 }
-// -------------------------------------------------------
 
 model PersonalizationRequest {
   id            String        @id @default(uuid())
@@ -389,7 +393,6 @@ model BvnRequest {
   retrievalResult     String?       @map("retrieval_result")
   newspaperUrl        String?       @map("newspaper_url")
   
-  // For Admin Uploads to BvnEnrollmentResult linkage if needed, but Agent Code is primary
   adminResultUrl      String?       @map("admin_result_url")
 
   createdAt           DateTime      @default(now()) @map("created_at")
@@ -439,6 +442,31 @@ model PendingAccountChange {
   
   @@map("pending_account_changes")
 }
+
+// --- NEW: Chat Message Model ---
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  message   String
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("chat_messages")
+}
+// -------------------------------
+
+// --- NEW: System Settings (for Banner) ---
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+// -----------------------------------------
 
 enum Role {
   AGENT
