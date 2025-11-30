@@ -2,49 +2,54 @@ import React from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
-import ServiceItemCard from '@/components/ServiceItemCard'; // We use our "world-class" card
+import ServiceItemCard from '@/components/ServiceItemCard';
 
 // This is a Server Component, so it's very fast.
 export default function NinServicesPage() {
   
-  // --- THIS IS THE FIX ---
-  // The list is "refurbished" to separate the verification types.
-  // All items are clickable and link to their own pages (which will 404 until we build them).
+  // --- Refurbished Service List ---
   const ninServices = [
     {
       title: 'NIN Verification (by NIN)',
       description: 'Verify and print slips using an 11-digit NIN.',
-      href: '/dashboard/services/nin/verify-by-nin', // We will build this
+      href: '/dashboard/services/nin/lookup', // Updated href to match folder structure
     },
     {
       title: 'NIN Verification (by Phone)',
       description: 'Verify and print slips using an 11-digit phone number.',
-      href: '/dashboard/services/nin/verify-by-phone', // We will build this
+      href: '/dashboard/services/nin/lookup-phone', // Updated href to match folder structure
     },
+    // --- NEW SERVICE ADDED HERE ---
+    {
+      title: 'VNIN Slip (Instant)',
+      description: 'Generate and download your Virtual NIN Slip instantly.',
+      href: '/dashboard/services/nin/vnin-slip',
+    },
+    // ------------------------------
     {
       title: 'IPE Clearance',
       description: 'Service for IPE clearance processes.',
-      href: '/dashboard/services/nin/ipe-clearance', // Will 404
+      href: '/dashboard/services/nin/ipe-clearance',
     },
     {
       title: 'Self Service Delink',
       description: 'Service for unlinking processes.',
-      href: '/dashboard/services/nin/delink', // Will 404
+      href: '/dashboard/services/nin/delink',
     },
     {
       title: 'Personalize NIN (Tracking ID)',
       description: 'Service for NIN personalization using a tracking ID.',
-      href: '/dashboard/services/nin/personalize', // Will 404
+      href: '/dashboard/services/nin/personalization', // Updated href to match folder structure
     },
     {
       title: 'Validation',
       description: 'Includes "No Record Found" & "Update Record" (Mod-Validation).',
-      href: '/dashboard/services/nin/validation', // Will 404
+      href: '/dashboard/services/nin/validation',
     },
     {
       title: 'NIN Modification',
       description: 'Request changes to your NIN data (Name, DOB, etc.).',
-      href: '/dashboard/services/nin/modification', // Will 404
+      href: '/dashboard/services/nin/modification',
     },
   ];
 
@@ -67,7 +72,6 @@ export default function NinServicesPage() {
       </div>
 
       {/* --- "Refurbished" Service Grid --- */}
-      {/* This will stack to 1-column on mobile, just as you requested */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {ninServices.map((service) => (
           <ServiceItemCard
