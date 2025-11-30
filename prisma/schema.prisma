@@ -60,12 +60,26 @@ model User {
   vtuRequests                  VtuRequest[]
   bvnRequests                  BvnRequest[]
   vninRequests                 VninRequest[]
-  npcRequests                  NpcRequest[] // <--- ADDED THIS
+  npcRequests                  NpcRequest[]
   otps                         Otp[]
+  passwordResetTokens          PasswordResetToken[] // <--- ADDED THIS
   chatMessages                 ChatMessage[]
 
   @@map("users")
 }
+
+// --- NEW MODEL: PASSWORD RESET TOKEN ---
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique // The OTP or Hash
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+// ---------------------------------------
 
 model Wallet {
   id                 String   @id @default(uuid())
@@ -149,7 +163,7 @@ model Service {
   VtuRequest          VtuRequest[]
   BvnRequest          BvnRequest[]
   VninRequest         VninRequest[]
-  NpcRequest          NpcRequest[] // <--- ADDED THIS
+  NpcRequest          NpcRequest[]
   AggregatorPrice     AggregatorPrice[]
   
   @@map("services")
@@ -206,20 +220,32 @@ model IpeRequest {
   @@map("ipe_requests")
 }
 
+// --- UPDATED VALIDATION REQUEST (Removed unique constraint for flexibility) ---
 model ValidationRequest {
   id            String        @id @default(uuid())
   userId        String        @map("user_id")
   nin           String        @map("nin")
-  scode         String
-  newTrackingId String?       @map("new_tracking_id")
-  status        RequestStatus @default(PROCESSING)
+  
+  // We removed 'scode' and replaced it with a simpler 'type' field for the manual process
+  // But for backward compatibility, we can keep 'scode' or map 'type' to it.
+  // Let's use 'type' to distinguish "No Record" vs "Record Update"
+  type          String        @default("NO_RECORD") 
+
+  status        RequestStatus @default(PENDING) // Default is PENDING for manual
   statusMessage String?       @map("status_message")
+  
+  // Admin response fields
+  adminNote     String?       @map("admin_note")
+  adminFileUrl  String?       @map("admin_file_url")
+
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
   user          User          @relation(fields: [userId], references: [id])
-  @@unique([userId, nin, scode])
+  
+  // Removed @@unique to allow multiple requests if needed (e.g. one fails, try again)
   @@map("validation_requests")
 }
+// ---------------------------------------------------------------------------
 
 model ModificationRequest {
   id              String        @id @default(uuid())
@@ -401,32 +427,21 @@ model VninRequest {
   @@map("vnin_requests")
 }
 
-// --- NEW MODEL: NPC ATTESTATION REQUEST ---
 model NpcRequest {
   id              String        @id @default(uuid())
   userId          String        @map("user_id")
   serviceId       String        @map("service_id")
   status          RequestStatus @default(PENDING)
   statusMessage   String?       @map("status_message")
-  
-  // Stores all personal, registration, father, mother details
   formData        Json
-  
-  // File uploads
   affidavitUrl    String?       @map("affidavit_url")
-  
-  // Admin upload
   certificateUrl  String?       @map("certificate_url")
-  
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
-
   user            User          @relation(fields: [userId], references: [id])
   service         Service       @relation(fields: [serviceId], references: [id])
-  
   @@map("npc_requests")
 }
-// ------------------------------------------
 
 model AggregatorPrice {
   id           String   @id @default(uuid())
