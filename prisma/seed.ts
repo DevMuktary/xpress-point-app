@@ -12,10 +12,12 @@ const services = [
   { id: 'NIN_SLIP_PREMIUM', name: 'NIN Premium Slip', category: 'NIN', platformPrice: new Decimal(180.00), defaultAgentPrice: new Decimal(200.00), productCode: null },
   { id: 'NIN_PERSONALIZATION', name: 'NIN Personalization', category: 'NIN', platformPrice: new Decimal(950.00), defaultAgentPrice: new Decimal(1000.00), productCode: null },
   { id: 'NIN_IPE_CLEARANCE', name: 'NIN IPE Clearance', category: 'NIN', platformPrice: new Decimal(2450.00), defaultAgentPrice: new Decimal(2500.00), productCode: null },
-  { id: 'NIN_VALIDATION_47', name: 'NIN Validation (No Record)', category: 'NIN', platformPrice: new Decimal(480.00), defaultAgentPrice: new Decimal(500.00), productCode: null },
-  { id: 'NIN_VALIDATION_48', name: 'NIN Validation (Sim Card Issues)', category: 'NIN', platformPrice: new Decimal(530.00), defaultAgentPrice: new Decimal(550.00), productCode: null },
-  { id: 'NIN_VALIDATION_49', name: 'NIN Validation (Bank Validation)', category: 'NIN', platformPrice: new Decimal(480.00), defaultAgentPrice: new Decimal(500.00), productCode: null },
-  { id: 'NIN_VALIDATION_50', name: 'NIN Validation (Photographer error)', category: 'NIN', platformPrice: new Decimal(580.00), defaultAgentPrice: new Decimal(600.00), productCode: null },
+  
+  // --- NEW: Manual Validation Services ---
+  { id: 'NIN_VAL_NO_RECORD', name: 'NIN Validation (No Record Found)', category: 'NIN', platformPrice: new Decimal(450.00), defaultAgentPrice: new Decimal(500.00), productCode: null },
+  { id: 'NIN_VAL_UPDATE_RECORD', name: 'NIN Validation (Record Update)', category: 'NIN', platformPrice: new Decimal(950.00), defaultAgentPrice: new Decimal(1000.00), productCode: null },
+  // --------------------------------------
+
   { id: 'NIN_MOD_NAME', name: 'NIN Modification (Name)', category: 'NIN', platformPrice: new Decimal(1950.00), defaultAgentPrice: new Decimal(2000.00), productCode: null },
   { id: 'NIN_MOD_PHONE', name: 'NIN Modification (Phone)', category: 'NIN', platformPrice: new Decimal(950.00), defaultAgentPrice: new Decimal(1000.00), productCode: null },
   { id: 'NIN_MOD_ADDRESS', name: 'NIN Modification (Address)', category: 'NIN', platformPrice: new Decimal(1450.00), defaultAgentPrice: new Decimal(1500.00), productCode: null },
@@ -23,9 +25,8 @@ const services = [
   { id: 'NIN_DELINK', name: 'NIN Delink / Retrieve Email', category: 'NIN', platformPrice: new Decimal(2450.00), defaultAgentPrice: new Decimal(2500.00), productCode: null },
   { id: 'VNIN_SLIP', name: 'VNIN Slip (Instant)', category: 'NIN', platformPrice: new Decimal(150.00), defaultAgentPrice: new Decimal(200.00), productCode: null }, 
 
-  // --- NPC Attestation (NEW) ---
+  // --- NPC Attestation ---
   { id: 'NPC_ATTESTATION', name: 'NPC Attestation', category: 'NPC', platformPrice: new Decimal(15000.00), defaultAgentPrice: new Decimal(15500.00), productCode: null },
-  // -----------------------------
 
   // --- Newspaper Services ---
   { id: 'NEWSPAPER_NAME_CHANGE', name: 'Newspaper Change of Name', category: 'NEWSPAPER', platformPrice: new Decimal(4450.00), defaultAgentPrice: new Decimal(4500.00), productCode: null },
