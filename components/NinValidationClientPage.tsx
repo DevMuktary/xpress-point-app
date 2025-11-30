@@ -8,7 +8,8 @@ import {
   IdentificationIcon,
   ArrowPathIcon,
   ExclamationTriangleIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  DocumentMagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import { ValidationRequest } from '@prisma/client';
@@ -16,26 +17,22 @@ import { ValidationRequest } from '@prisma/client';
 // --- Types ---
 type Props = {
   prices: { [key: string]: number };
-  availability: { [key: string]: boolean }; // <--- ADDED THIS
+  availability: { [key: string]: boolean };
   initialRequests: ValidationRequest[];
 };
-type ServiceID = 'NIN_VALIDATION_47' | 'NIN_VALIDATION_48' | 'NIN_VALIDATION_49' | 'NIN_VALIDATION_50';
 
-// --- UPDATED "Modern Button" Component ---
-const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
-  title: string,
-  description: string,
-  selected: boolean,
-  onClick: () => void,
-  disabled?: boolean // <--- Added disabled support
-}) => (
+// We only have 2 types now
+type ValidationType = 'NO_RECORD' | 'UPDATE_RECORD';
+
+// --- Modern Button ---
+const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: any) => (
   <button
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`rounded-lg p-4 text-left transition-all border-2
+    className={`rounded-lg p-4 text-left transition-all border-2 w-full
       ${disabled
-        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
         : selected
           ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
           : 'border-gray-300 bg-white hover:border-gray-400'
@@ -48,10 +45,8 @@ const ModTypeButton = ({ title, description, selected, onClick, disabled = false
   </button>
 );
 
-// --- Reusable Input Component ---
-const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true }: {
-  label: string, id: string, value: string, onChange: (value: string) => void, Icon: React.ElementType, type?: string, isRequired?: boolean
-}) => (
+// --- Input Component ---
+const DataInput = ({ label, id, value, onChange, Icon, type = "text" }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
     <div className="relative mt-1">
@@ -62,56 +57,45 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         id={id} type={type} value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        required={isRequired}
+        required
       />
     </div>
   </div>
 );
 
-// --- Notification Component ---
-const NoticeBox = () => (
-  <div className="space-y-3 rounded-xl bg-yellow-50 p-4 border border-yellow-100">
-    <div className="flex items-start gap-3">
-      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-      <div className="text-sm text-yellow-800">
-        <span className="font-bold block mb-1">Non-Refundable Service</span>
-        This service cannot be cancelled or refunded once submitted. Please ensure the NIN is correct.
-      </div>
-    </div>
-    <div className="flex items-start gap-3 pt-2 border-t border-yellow-200/60">
-      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-      <div className="text-sm text-blue-800">
-        <span className="font-bold block mb-1">Processing Time</span>
-        Validation may complete within 48 hours, but the status update on the portal might take up to 72 hours or more.
-      </div>
-    </div>
-  </div>
-);
-
-// --- Main Component ---
 export default function NinValidationClientPage({ prices, initialRequests, availability }: Props) {
-  const [serviceId, setServiceId] = useState<ServiceID | null>(null);
+  const [validationType, setValidationType] = useState<ValidationType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-   
-  // Form Data State
   const [nin, setNin] = useState('');
-   
-  // History State
   const [requests, setRequests] = useState(initialRequests);
 
-  // Dynamic fee calculation
+  // Map local type to DB Service ID for price lookup
+  const getServiceId = (type: ValidationType) => {
+    if (type === 'NO_RECORD') return 'NIN_VAL_NO_RECORD';
+    if (type === 'UPDATE_RECORD') return 'NIN_VAL_UPDATE_RECORD';
+    return '';
+  };
+
   const fee = useMemo(() => {
-    if (!serviceId) return 0;
-    return prices[serviceId] || 0;
-  }, [serviceId, prices]);
+    if (!validationType) return 0;
+    return prices[getServiceId(validationType)] || 0;
+  }, [validationType, prices]);
 
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    if (!validationType) {
+        setError("Please select a validation type.");
+        return;
+    }
+    if (nin.length < 11) {
+        setError("Enter a valid NIN.");
+        return;
+    }
     setIsConfirmModalOpen(true);
   };
 
@@ -125,7 +109,7 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           nin,
-          scode: serviceId!.split('_')[2] // Extract "47", "48", etc.
+          validationType 
         }),
       });
       
@@ -133,9 +117,8 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
       if (!response.ok) throw new Error(data.error || 'Submission failed.');
       
       setSuccess(data.message);
-      setRequests([data.newRequest, ...requests]); // Add new request to history
-      setServiceId(null);
-      setNin('');
+      // Refresh history manually or via router.refresh()
+      window.location.reload(); 
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -143,81 +126,78 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
     }
   };
    
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'COMPLETED': return { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Completed' };
+      case 'PROCESSING': return { color: 'bg-blue-100 text-blue-800', icon: ArrowPathIcon, text: 'Processing' };
+      case 'PENDING': return { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon, text: 'Pending' };
+      case 'FAILED': return { color: 'bg-red-100 text-red-800', icon: XCircleIcon, text: 'Failed' };
+      default: return { color: 'bg-gray-100 text-gray-800', icon: ClockIcon, text: 'Unknown' };
+    }
+  };
+
   return (
     <div className="space-y-6">
       {isLoading && <Loading />}
       
+      {/* Success Banner */}
       {success && (
-        <div className="rounded-lg bg-green-50 p-4 border border-green-200 animate-in fade-in slide-in-from-top-2">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-bold text-green-800">Request Submitted!</h3>
-              <p className="mt-2 text-sm text-green-700">{success}</p>
-            </div>
+        <div className="rounded-lg bg-green-50 p-4 border border-green-200 flex gap-3">
+          <CheckCircleIcon className="h-5 w-5 text-green-600" />
+          <div>
+            <h3 className="text-sm font-bold text-green-800">Request Submitted!</h3>
+            <p className="mt-1 text-sm text-green-700">{success}</p>
           </div>
         </div>
       )}
 
+      {/* Form */}
       <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
           
-          {/* 1. Select Service Type */}
+          {/* 1. Select Type */}
           <div>
             <label className="text-lg font-bold text-gray-900">1. Select Validation Reason</label>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
               <ModTypeButton 
-                title="No Record" 
-                description={`Fee: ₦${prices.NIN_VALIDATION_47 || 0}`} 
-                selected={serviceId === 'NIN_VALIDATION_47'} 
-                disabled={!availability['NIN_VALIDATION_47']} // <--- Apply Availability
-                onClick={() => setServiceId('NIN_VALIDATION_47')} 
+                title="No Record Found" 
+                description={`Fee: ₦${prices['NIN_VAL_NO_RECORD'] || 0}`} 
+                selected={validationType === 'NO_RECORD'} 
+                // Fallback to true if availability is undefined (during transition)
+                disabled={availability['NIN_VAL_NO_RECORD'] === false} 
+                onClick={() => setValidationType('NO_RECORD')} 
               />
               <ModTypeButton 
-                title="Sim Card Issues" 
-                description={`Fee: ₦${prices.NIN_VALIDATION_48 || 0}`} 
-                selected={serviceId === 'NIN_VALIDATION_48'} 
-                disabled={!availability['NIN_VALIDATION_48']} // <--- Apply Availability
-                onClick={() => setServiceId('NIN_VALIDATION_48')} 
-              />
-              <ModTypeButton 
-                title="Bank Validation" 
-                description={`Fee: ₦${prices.NIN_VALIDATION_49 || 0}`} 
-                selected={serviceId === 'NIN_VALIDATION_49'} 
-                disabled={!availability['NIN_VALIDATION_49']} // <--- Apply Availability
-                onClick={() => setServiceId('NIN_VALIDATION_49')} 
-              />
-              <ModTypeButton 
-                title="Photographer Error" 
-                description={`Fee: ₦${prices.NIN_VALIDATION_50 || 0}`} 
-                selected={serviceId === 'NIN_VALIDATION_50'} 
-                disabled={!availability['NIN_VALIDATION_50']} // <--- Apply Availability
-                onClick={() => setServiceId('NIN_VALIDATION_50')} 
+                title="Record Update (Modification)" 
+                description={`Fee: ₦${prices['NIN_VAL_UPDATE_RECORD'] || 0}`} 
+                selected={validationType === 'UPDATE_RECORD'} 
+                disabled={availability['NIN_VAL_UPDATE_RECORD'] === false} 
+                onClick={() => setValidationType('UPDATE_RECORD')} 
               />
             </div>
           </div>
 
-          {/* 2. Show Form based on selection */}
-          {serviceId && (
+          {/* 2. Enter Details */}
+          {validationType && (
             <div className="border-t border-gray-200 pt-6 space-y-6 animate-in fade-in slide-in-from-top-4">
               
-              {/* --- NOTIFICATION BLOCK --- */}
-              <NoticeBox />
-              {/* -------------------------- */}
+              <div className="bg-yellow-50 border border-yellow-100 p-4 rounded-lg flex gap-3">
+                 <InformationCircleIcon className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+                 <p className="text-sm text-yellow-800">
+                   <strong>Manual Process:</strong> This request will be sent to the admin for processing. 
+                   You will be notified once the validation is completed on the portal.
+                 </p>
+              </div>
 
               <h3 className="text-lg font-bold text-gray-900">2. Enter Details</h3>
               <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
               
               <div className="pt-4">
-                {error && (
-                  <p className="mb-4 text-sm font-medium text-red-600 text-center bg-red-50 p-2 rounded-lg">{error}</p>
-                )}
+                {error && <p className="mb-4 text-sm font-medium text-red-600 text-center">{error}</p>}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
+                  className="w-full flex justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50 transition-all"
                 >
                   {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
                 </button>
@@ -226,45 +206,45 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
           )}
         </form>
       </div>
+      
+      {/* History */}
+      <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100 mt-8">
+         <h3 className="text-lg font-bold text-gray-900 mb-4">Validation History</h3>
+         <div className="space-y-4">
+            {requests.map((req) => {
+               const statusInfo = getStatusInfo(req.status);
+               return (
+                 <div key={req.id} className="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
+                    <div>
+                       <p className="font-bold text-gray-800">{req.scode.replace('_', ' ')}</p>
+                       <p className="text-xs text-gray-500">{req.nin} • {new Date(req.createdAt).toLocaleDateString()}</p>
+                       <p className="text-xs text-gray-600 mt-1 italic">{req.statusMessage}</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusInfo.color}`}>
+                       {statusInfo.text}
+                    </span>
+                 </div>
+               );
+            })}
+            {requests.length === 0 && <p className="text-center text-gray-500 py-4">No history found.</p>}
+         </div>
+      </div>
 
       {/* Confirmation Modal */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4 bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-900">Please Confirm</h2>
-              <button onClick={() => setIsConfirmModalOpen(false)} className="text-gray-500 hover:text-gray-700">
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="mb-4 flex justify-center">
-                <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
-                </div>
-              </div>
-              <p className="text-center text-gray-600 text-sm leading-relaxed">
-                You are about to submit this validation request. <br/>
-                <strong>This action is irreversible and non-refundable.</strong>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+            <div className="p-6 text-center">
+              <ExclamationTriangleIcon className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-gray-900">Confirm Validation</h3>
+              <p className="text-gray-600 text-sm mt-2">
+                You are submitting a <strong>{validationType?.replace('_', ' ')}</strong> request for NIN <strong>{nin}</strong>.
               </p>
-              <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
-                <p className="text-center text-2xl font-bold text-blue-700">₦{fee}</p>
-              </div>
+              <p className="mt-4 text-2xl font-bold text-blue-600">₦{fee}</p>
             </div>
-            <div className="grid grid-cols-2 gap-0 border-t border-gray-200">
-              <button
-                onClick={() => setIsConfirmModalOpen(false)}
-                className="py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors border-r border-gray-200"
-              >
-                CANCEL
-              </button>
-              <button
-                onClick={handleFinalSubmit}
-                className="py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-              >
-                YES, SUBMIT
-              </button>
+            <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
+              <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 py-2.5 bg-white border border-gray-300 rounded-lg font-bold text-gray-700">Cancel</button>
+              <button onClick={handleFinalSubmit} className="flex-1 py-2.5 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-700">Yes, Submit</button>
             </div>
           </div>
         </div>
