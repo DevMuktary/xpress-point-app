@@ -15,7 +15,8 @@ import {
   ChartBarIcon,
   CheckCircleIcon,
   WalletIcon,
-  WrenchScrewdriverIcon
+  WrenchScrewdriverIcon,
+  MegaphoneIcon // <--- Added for Broadcast
 } from '@heroicons/react/24/outline';
 
 // --- Stat Card Component ---
@@ -128,6 +129,13 @@ export default async function AdminDashboardPage() {
   // --- 3. Admin Tools Configuration ---
   const adminTools = [
     {
+      title: "Broadcast Message", // <--- NEW
+      description: "Send email notifications to all users.",
+      href: "/admin/broadcast",
+      logo: MegaphoneIcon,
+      color: "text-red-600"
+    },
+    {
       title: "Manage Requests",
       description: "Approve or reject NIN, BVN, CAC, and other pending requests.",
       href: "/admin/requests",
@@ -142,7 +150,7 @@ export default async function AdminDashboardPage() {
       color: "text-green-600"
     },
     {
-      title: "User Operations", // <--- Funding & Blocking
+      title: "User Operations", 
       description: "Search specific users to Fund Wallet or Block Account.",
       href: "/admin/users/manage",
       logo: WrenchScrewdriverIcon,
@@ -170,7 +178,7 @@ export default async function AdminDashboardPage() {
       color: "text-purple-600"
     },
     {
-      title: "Transaction Log", // <--- This is back
+      title: "Transaction Log",
       description: "View all financial activities across the platform.",
       href: "/admin/transactions",
       logo: DocumentTextIcon,
@@ -258,7 +266,7 @@ export default async function AdminDashboardPage() {
             <div className="mt-6">
               <span 
                 className={`inline-block rounded-lg ${tool.color.replace('text', 'bg').replace('600', '100')} px-4 py-2 text-sm font-medium ${tool.color}
-                           transition-all group-hover:bg-opacity-0 ${tool.color.replace('text', 'hover:bg')}`}
+                          transition-all group-hover:bg-opacity-0 ${tool.color.replace('text', 'hover:bg')}`}
               >
                 Open Tool →
               </span>
