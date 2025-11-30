@@ -25,19 +25,14 @@ model User {
   nin                          String?
   hasAgreedToModificationTerms Boolean  @default(false) @map("has_agreed_to_mod_terms")
   isBlocked                    Boolean  @default(false) @map("is_blocked")
-  
-  // --- Chat Blocking ---
   isChatBlocked                Boolean  @default(false) @map("is_chat_blocked")
-
-  // --- FIELD: AGENT CODE ---
-  agentCode                    String?  @unique @map("agent_code") 
+  agentCode                    String?  @unique @map("agent_code")
 
   // --- AGGREGATOR FIELDS ---
   subdomain                    String?  @unique
   accountName                  String?  @map("account_name")
   accountNumber                String?  @map("account_number")
   bankName                     String?  @map("bank_name")
-  
   aggregatorId                 String?  @map("aggregator_id")
   aggregator                   User?    @relation("AgentToAggregator", fields: [aggregatorId], references: [id])
   agents                       User[]   @relation("AgentToAggregator")
@@ -64,10 +59,9 @@ model User {
   resultRequests               ResultRequest[]
   vtuRequests                  VtuRequest[]
   bvnRequests                  BvnRequest[]
-  vninRequests                 VninRequest[] // <--- ADDED THIS
+  vninRequests                 VninRequest[]
+  npcRequests                  NpcRequest[] // <--- ADDED THIS
   otps                         Otp[]
-  
-  // --- Chat Messages ---
   chatMessages                 ChatMessage[]
 
   @@map("users")
@@ -79,7 +73,6 @@ model Wallet {
   balance            Decimal  @default(0.00) @db.Decimal(12, 2)
   updatedAt          DateTime @updatedAt @map("updated_at")
   user               User     @relation(fields: [userId], references: [id])
-  
   commissionBalance  Decimal  @default(0.00) @map("commission_balance") @db.Decimal(12, 2)
   
   @@map("wallets")
@@ -139,11 +132,9 @@ model Service {
   id                  String                @id
   name                String
   category            String
-  
   platformPrice       Decimal  @default(0.00) @map("platform_price") @db.Decimal(10, 2)
   defaultAgentPrice   Decimal  @default(0.00) @map("default_agent_price") @db.Decimal(10, 2)
   defaultCommission   Decimal  @default(0.00) @map("default_commission") @db.Decimal(10, 2)
-
   isActive            Boolean  @default(true) @map("is_active")
   productCode         String?  @map("product_code")
   
@@ -157,7 +148,8 @@ model Service {
   ResultRequest       ResultRequest[]
   VtuRequest          VtuRequest[]
   BvnRequest          BvnRequest[]
-  VninRequest         VninRequest[] // <--- ADDED THIS
+  VninRequest         VninRequest[]
+  NpcRequest          NpcRequest[] // <--- ADDED THIS
   AggregatorPrice     AggregatorPrice[]
   
   @@map("services")
@@ -382,25 +374,19 @@ model BvnRequest {
   status              RequestStatus @default(PENDING)
   statusMessage       String?       @map("status_message")
   formData            Json
-  
   failedEnrollmentUrl String?       @map("failed_enrollment_url")
   vninSlipUrl         String?       @map("vnin_slip_url")
   uploadedSlipUrl     String?       @map("uploaded_slip_url")
   retrievalResult     String?       @map("retrieval_result")
   newspaperUrl        String?       @map("newspaper_url")
-  
   adminResultUrl      String?       @map("admin_result_url")
-
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
-
   user                User          @relation(fields: [userId], references: [id])
   service             Service       @relation(fields: [serviceId], references: [id])
-  
   @@map("bvn_requests")
 }
 
-// --- NEW MODEL: VNIN SLIP REQUESTS ---
 model VninRequest {
   id            String        @id @default(uuid())
   userId        String        @map("user_id")
@@ -408,29 +394,47 @@ model VninRequest {
   nin           String        @map("nin")
   status        RequestStatus @default(PROCESSING)
   statusMessage String?       @map("status_message")
-  
-  // We do not store the full Base64 PDF in DB (too large), 
-  // but we can store a status or metadata if needed.
-  
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
-
   user          User          @relation(fields: [userId], references: [id])
   service       Service       @relation(fields: [serviceId], references: [id])
-
   @@map("vnin_requests")
 }
-// -------------------------------------
+
+// --- NEW MODEL: NPC ATTESTATION REQUEST ---
+model NpcRequest {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  serviceId       String        @map("service_id")
+  status          RequestStatus @default(PENDING)
+  statusMessage   String?       @map("status_message")
+  
+  // Stores all personal, registration, father, mother details
+  formData        Json
+  
+  // File uploads
+  affidavitUrl    String?       @map("affidavit_url")
+  
+  // Admin upload
+  certificateUrl  String?       @map("certificate_url")
+  
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user            User          @relation(fields: [userId], references: [id])
+  service         Service       @relation(fields: [serviceId], references: [id])
+  
+  @@map("npc_requests")
+}
+// ------------------------------------------
 
 model AggregatorPrice {
   id           String   @id @default(uuid())
   aggregatorId String   @map("aggregator_id")
   serviceId    String   @map("service_id")
   commission   Decimal  @db.Decimal(10, 2)
-  
   aggregator   User     @relation(fields: [aggregatorId], references: [id])
   service      Service  @relation(fields: [serviceId], references: [id])
-  
   @@unique([aggregatorId, serviceId])
   @@map("aggregator_prices")
 }
@@ -442,9 +446,7 @@ model WithdrawalRequest {
   status      RequestStatus @default(PENDING)
   createdAt   DateTime      @default(now()) @map("created_at")
   completedAt DateTime?     @map("completed_at")
-  
   user        User          @relation(fields: [userId], references: [id])
-  
   @@map("withdrawal_requests")
 }
 
@@ -455,9 +457,7 @@ model PendingAccountChange {
   newAccountNumber String   @map("new_account_number")
   newBankName      String   @map("new_bank_name")
   createdAt        DateTime @default(now()) @map("created_at")
-  
   user             User     @relation(fields: [userId], references: [id])
-  
   @@map("pending_account_changes")
 }
 
@@ -468,9 +468,7 @@ model ChatMessage {
   isAdmin   Boolean  @default(false) @map("is_admin")
   isDeleted Boolean  @default(false) @map("is_deleted")
   createdAt DateTime @default(now()) @map("created_at")
-  
   user      User     @relation(fields: [userId], references: [id])
-
   @@map("chat_messages")
 }
 
@@ -478,7 +476,6 @@ model SystemSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt @map("updated_at")
-
   @@map("system_settings")
 }
 
