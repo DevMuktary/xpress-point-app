@@ -26,13 +26,11 @@ model User {
   hasAgreedToModificationTerms Boolean  @default(false) @map("has_agreed_to_mod_terms")
   isBlocked                    Boolean  @default(false) @map("is_blocked")
   
-  // --- NEW: Chat Blocking ---
+  // --- Chat Blocking ---
   isChatBlocked                Boolean  @default(false) @map("is_chat_blocked")
-  // --------------------------
 
-  // --- NEW FIELD: AGENT CODE ---
+  // --- FIELD: AGENT CODE ---
   agentCode                    String?  @unique @map("agent_code") 
-  // -----------------------------
 
   // --- AGGREGATOR FIELDS ---
   subdomain                    String?  @unique
@@ -66,11 +64,11 @@ model User {
   resultRequests               ResultRequest[]
   vtuRequests                  VtuRequest[]
   bvnRequests                  BvnRequest[]
+  vninRequests                 VninRequest[] // <--- ADDED THIS
   otps                         Otp[]
   
-  // --- NEW: Chat Messages Relation ---
+  // --- Chat Messages ---
   chatMessages                 ChatMessage[]
-  // -----------------------------------
 
   @@map("users")
 }
@@ -159,6 +157,7 @@ model Service {
   ResultRequest       ResultRequest[]
   VtuRequest          VtuRequest[]
   BvnRequest          BvnRequest[]
+  VninRequest         VninRequest[] // <--- ADDED THIS
   AggregatorPrice     AggregatorPrice[]
   
   @@map("services")
@@ -173,7 +172,6 @@ enum RequestStatus {
 
 model BvnEnrollmentResult {
   id               String   @id @default(uuid())
-  
   ticketNumber     String   @unique @map("ticket_number") 
   bvn              String?  @map("bvn")                   
   institutionName  String?  @map("institution_name")      
@@ -182,10 +180,8 @@ model BvnEnrollmentResult {
   bmsImportId      String?  @map("bms_import_id")         
   status           String   @map("status")                
   message          String?  @map("message")               
-  
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
-
   @@index([agentCode])
   @@map("bvn_enrollment_results")
 }
@@ -404,6 +400,28 @@ model BvnRequest {
   @@map("bvn_requests")
 }
 
+// --- NEW MODEL: VNIN SLIP REQUESTS ---
+model VninRequest {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  serviceId     String        @map("service_id")
+  nin           String        @map("nin")
+  status        RequestStatus @default(PROCESSING)
+  statusMessage String?       @map("status_message")
+  
+  // We do not store the full Base64 PDF in DB (too large), 
+  // but we can store a status or metadata if needed.
+  
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  user          User          @relation(fields: [userId], references: [id])
+  service       Service       @relation(fields: [serviceId], references: [id])
+
+  @@map("vnin_requests")
+}
+// -------------------------------------
+
 model AggregatorPrice {
   id           String   @id @default(uuid())
   aggregatorId String   @map("aggregator_id")
@@ -443,7 +461,6 @@ model PendingAccountChange {
   @@map("pending_account_changes")
 }
 
-// --- NEW: Chat Message Model ---
 model ChatMessage {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
@@ -456,9 +473,7 @@ model ChatMessage {
 
   @@map("chat_messages")
 }
-// -------------------------------
 
-// --- NEW: System Settings (for Banner) ---
 model SystemSetting {
   key       String   @id
   value     String
@@ -466,7 +481,6 @@ model SystemSetting {
 
   @@map("system_settings")
 }
-// -----------------------------------------
 
 enum Role {
   AGENT
