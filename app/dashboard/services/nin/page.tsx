@@ -12,12 +12,12 @@ export default function NinServicesPage() {
     {
       title: 'NIN Verification (by NIN)',
       description: 'Verify and print slips using an 11-digit NIN.',
-      href: '/dashboard/services/nin/lookup', // Updated href to match folder structure
+      href: '/dashboard/services/nin/verify-by-nin', // Updated href to match folder structure
     },
     {
       title: 'NIN Verification (by Phone)',
       description: 'Verify and print slips using an 11-digit phone number.',
-      href: '/dashboard/services/nin/lookup-phone', // Updated href to match folder structure
+      href: '/dashboard/services/nin/verify-by-phone', // Updated href to match folder structure
     },
     // --- NEW SERVICE ADDED HERE ---
     {
