@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   XMarkIcon,
   IdentificationIcon,
+  ClockIcon,
   ArrowPathIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
