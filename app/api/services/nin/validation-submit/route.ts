@@ -10,47 +10,40 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const { nin, scode } = body; 
+    // We expect 'validationType' from the client ('NO_RECORD' or 'UPDATE_RECORD')
+    const { nin, validationType } = await request.json(); 
 
-    if (!nin || !scode) {
+    if (!nin || !validationType) {
       return NextResponse.json({ error: 'NIN and Validation Type are required.' }, { status: 400 });
     }
-    
-    // --- 1. Map 'scode' to Database 'type' ---
-    // 47 = No Record Found
-    // 48, 49, 50 = Record Update (Sim, Bank, Photo errors)
-    let validationType = 'NO_RECORD';
-    if (scode === '47') {
-      validationType = 'NO_RECORD';
-    } else {
-      validationType = 'RECORD_UPDATE';
-    }
 
-    // --- 2. Get Service & Price ---
-    const serviceId = `NIN_VALIDATION_${scode}`;
+    // Map frontend types to the Service IDs in your DB (from seed.ts)
+    let serviceId = '';
+    if (validationType === 'NO_RECORD') serviceId = 'NIN_VAL_NO_RECORD';
+    else if (validationType === 'UPDATE_RECORD') serviceId = 'NIN_VAL_UPDATE_RECORD';
+    else return NextResponse.json({ error: 'Invalid Validation Type' }, { status: 400 });
+
+    // 1. Get Service & Price
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
-    
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
     const price = new Decimal(service.defaultAgentPrice);
-    const priceAsString = price.toString();
 
-    // --- 3. Check Wallet ---
+    // 2. Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
     if (!wallet || wallet.balance.lessThan(price)) {
-      return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
+      return NextResponse.json({ error: `Insufficient funds. Cost: ₦${price}.` }, { status: 402 });
     }
 
-    // --- 4. Check Duplicates (Manual Check) ---
-    // We check if there is already a PENDING request for this NIN and Type
+    // 3. Check Duplicates
+    // FIX: Changed 'type' to 'scode' to match schema
     const existingRequest = await prisma.validationRequest.findFirst({
       where: { 
         userId: user.id, 
-        nin: nin, 
-        type: validationType,
+        nin: nin,
+        scode: validationType, 
         status: { in: ['PENDING', 'PROCESSING'] }
       }
     });
@@ -59,22 +52,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You already have a pending request for this NIN.' }, { status: 409 });
     }
 
-    // --- 5. Execute Transaction (Manual Submission) ---
-    const newRequest = await prisma.$transaction(async (tx) => {
-      // a) Charge User
+    // 4. Execute Transaction
+    await prisma.$transaction(async (tx) => {
+      // a) Charge Wallet
       await tx.wallet.update({
         where: { userId: user.id },
-        data: { balance: { decrement: priceAsString } },
+        data: { balance: { decrement: price } },
       });
 
-      // b) Create Request (For Admin Review)
-      const req = await tx.validationRequest.create({
+      // b) Create Request (Manual status: PENDING)
+      // FIX: Changed 'type' to 'scode' here as well
+      await tx.validationRequest.create({
         data: {
           userId: user.id,
           nin: nin,
-          type: validationType, // Storing as NO_RECORD or RECORD_UPDATE
+          scode: validationType, 
           status: 'PENDING',
-          statusMessage: 'Request submitted. Awaiting admin validation.',
+          statusMessage: 'Submitted. Awaiting Admin processing.'
         },
       });
 
@@ -86,26 +80,21 @@ export async function POST(request: Request) {
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
           description: `NIN Validation (${validationType}) - ${nin}`,
-          reference: `VAL-${Date.now()}`,
+          reference: `NIN-VAL-${Date.now()}`,
           status: 'COMPLETED',
         },
       });
-
-      return req;
     });
 
     return NextResponse.json(
-      { 
-        message: 'Request submitted successfully! Please check your history for updates.',
-        newRequest: newRequest 
-      },
+      { message: 'Request submitted successfully! Check history for updates.' },
       { status: 200 }
     );
 
   } catch (error: any) {
-    console.error(`NIN Validation (Submit) Error:`, error);
+    console.error(`NIN Validation Error:`, error);
     return NextResponse.json(
-      { error: "An internal server error occurred." },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }
