@@ -16,8 +16,11 @@ import {
   CheckCircleIcon,
   WalletIcon,
   WrenchScrewdriverIcon,
-  MegaphoneIcon // <--- Added for Broadcast
+  MegaphoneIcon
 } from '@heroicons/react/24/outline';
+
+// --- Import the Chat Widget ---
+import CommunityChat from '@/components/CommunityChat'; 
 
 // --- Stat Card Component ---
 const StatCard = ({ title, value, icon: Icon, color, href }: {
@@ -42,7 +45,7 @@ const StatCard = ({ title, value, icon: Icon, color, href }: {
 
 export default async function AdminDashboardPage() {
   const user = await getUserFromSession();
-  if (!user) {
+  if (!user || user.role !== 'ADMIN') {
     redirect('/login-admin');
   }
 
@@ -84,7 +87,7 @@ export default async function AdminDashboardPage() {
       }
     }),
 
-    // PENDING
+    // PENDING counts
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
     prisma.bvnRequest.count({ where: { status: 'PENDING' } }),
@@ -94,7 +97,7 @@ export default async function AdminDashboardPage() {
     prisma.resultRequest.count({ where: { status: 'PENDING' } }),
     prisma.newspaperRequest.count({ where: { status: 'PENDING' } }),
 
-    // COMPLETED
+    // COMPLETED counts (for calculating successful jobs)
     prisma.modificationRequest.count({ where: { status: 'COMPLETED' } }),
     prisma.delinkRequest.count({ where: { status: 'COMPLETED' } }),
     prisma.validationRequest.count({ where: { status: 'COMPLETED' } }),
@@ -129,7 +132,7 @@ export default async function AdminDashboardPage() {
   // --- 3. Admin Tools Configuration ---
   const adminTools = [
     {
-      title: "Broadcast Message", // <--- NEW
+      title: "Broadcast Message",
       description: "Send email notifications to all users.",
       href: "/admin/broadcast",
       logo: MegaphoneIcon,
@@ -187,7 +190,7 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto relative">
       <h1 className="text-3xl font-bold text-gray-900 mb-6">
         Admin Dashboard
       </h1>
@@ -274,6 +277,11 @@ export default async function AdminDashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* --- ADMIN COMMUNITY CHAT WIDGET --- */}
+      {/* Because user.role is ADMIN, this widget will automatically show Delete/Block controls */}
+      <CommunityChat currentUser={user} />
+      
     </div>
   );
 }
