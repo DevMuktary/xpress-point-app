@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email or Phone is required' }, { status: 400 });
     }
 
-    // Find user
+    // 1. Find user
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -21,48 +21,41 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      // For security, don't reveal if user exists or not
+      // Security: Don't reveal if user exists
       return NextResponse.json({ message: 'If an account exists, an OTP has been sent.' });
     }
 
-    // Generate 6-digit OTP
+    // 2. Generate OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins from now
 
-    // Save to DB
-    await prisma.passwordResetToken.upsert({
-      where: { userId: user.id }, // Since userId isn't unique in the schema, we rely on token uniqueness or cleanup.
-      // Wait, schema has token unique, userId not unique. We should probably delete old ones first.
-      create: {
+    // 3. Save to DB (Delete old tokens first to keep it clean)
+    await prisma.passwordResetToken.deleteMany({ 
+      where: { userId: user.id } 
+    });
+    
+    await prisma.passwordResetToken.create({
+      data: {
         userId: user.id,
         token: otpCode,
         expiresAt
-      },
-      update: {
-        token: otpCode,
-        expiresAt
       }
-    // Note: Upsert on non-unique field is tricky. Better approach: delete old, create new.
-    });
-    // Since schema: token is unique. Let's do deleteMany then create.
-    await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
-    await prisma.passwordResetToken.create({
-        data: { userId: user.id, token: otpCode, expiresAt }
     });
 
-    // Send via WhatsApp first
+    // 4. Send via WhatsApp first, fall back to Email
     try {
+      // Assuming user.phoneNumber is stored as '080...' or '+234...'
       await sendOtpMessage(user.phoneNumber, otpCode);
     } catch (waError) {
-      console.error("WhatsApp Failed, falling back to Email", waError);
-      // Fallback to Email
+      console.error("WhatsApp Failed, attempting Email...", waError);
+      // Fallback
       await sendVerificationEmail(user.email, user.firstName, otpCode);
     }
 
-    return NextResponse.json({ message: 'OTP sent successfully.', email: user.email, phone: user.phoneNumber });
+    return NextResponse.json({ message: 'OTP sent successfully.' });
 
   } catch (error) {
-    console.error(error);
+    console.error("Forgot Password Error:", error);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
