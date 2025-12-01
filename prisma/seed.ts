@@ -13,10 +13,10 @@ const services = [
   { id: 'NIN_PERSONALIZATION', name: 'NIN Personalization', category: 'NIN', platformPrice: new Decimal(950.00), defaultAgentPrice: new Decimal(1000.00), productCode: null },
   { id: 'NIN_IPE_CLEARANCE', name: 'NIN IPE Clearance', category: 'NIN', platformPrice: new Decimal(2450.00), defaultAgentPrice: new Decimal(2500.00), productCode: null },
   
-  // --- NEW: Manual Validation Services ---
+  // --- MANUAL VALIDATION ONLY ---
   { id: 'NIN_VAL_NO_RECORD', name: 'NIN Validation (No Record Found)', category: 'NIN', platformPrice: new Decimal(450.00), defaultAgentPrice: new Decimal(500.00), productCode: null },
   { id: 'NIN_VAL_UPDATE_RECORD', name: 'NIN Validation (Record Update)', category: 'NIN', platformPrice: new Decimal(950.00), defaultAgentPrice: new Decimal(1000.00), productCode: null },
-  // --------------------------------------
+  // -----------------------------
 
   { id: 'NIN_MOD_NAME', name: 'NIN Modification (Name)', category: 'NIN', platformPrice: new Decimal(1950.00), defaultAgentPrice: new Decimal(2000.00), productCode: null },
   { id: 'NIN_MOD_PHONE', name: 'NIN Modification (Phone)', category: 'NIN', platformPrice: new Decimal(950.00), defaultAgentPrice: new Decimal(1000.00), productCode: null },
