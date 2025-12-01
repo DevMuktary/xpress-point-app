@@ -149,7 +149,7 @@ export default function BvnVerificationClientPage({ prices, availability }: Prop
         />
         <TypeButton 
           title="Standard Slip" 
-          description="Basic verification slip." 
+          description="Basic verification slip, with full details." 
           price={prices['BVN_VERIFY_SLIP'] || 0}
           selected={serviceType === 'STANDARD'}
           disabled={!availability['BVN_VERIFY_SLIP']}
