@@ -11,10 +11,10 @@ import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // --- Helper Functions ---
 function displayField(value: any): string {
-  if (value === null || value === undefined || value === "" || value === "****") {
-    return ''; 
-  }
-  return decodeHtmlEntities(value.toString());
+  if (value === null || value === undefined) return '';
+  const strVal = String(value).trim();
+  if (strVal === "" || strVal === "****") return '';
+  return decodeHtmlEntities(strVal);
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -39,11 +39,14 @@ function formatGender(gender: string): string {
 const DataRow = ({ label, value }: { label: string; value: any }) => (
   <div className="py-2.5 grid grid-cols-3 gap-4 border-b border-gray-50 last:border-0">
     <p className="text-sm font-medium text-gray-500 col-span-1">{label}</p>
-    <p className="text-base font-semibold text-gray-900 col-span-2 break-words">{displayField(value)}</p>
+    <p className="text-base font-semibold text-gray-900 col-span-2 break-words">
+        {displayField(value) || '-'}
+    </p>
   </div>
 );
 
 // --- Types ---
+// Updated to match the exact JSON you shared
 type NinData = {
   photo: string;
   firstname: string;
@@ -60,6 +63,8 @@ type NinData = {
   telephoneno: string;
   birthstate?: string;
   maritalstatus?: string;
+  religion?: string;
+  profession?: string;
 };
 
 type VerificationResponse = {
@@ -132,6 +137,7 @@ export default function VerifyByNinClientPage({ serviceFee, isActive }: { servic
         throw new Error(data.error || 'Verification failed.');
       }
 
+      // console.log("DEBUG: Verification Data Received", data); // Helpful for debugging in browser console
       setVerificationData(data);
       setSuccess("Verification successful!");
     } catch (err: any) {
@@ -258,6 +264,7 @@ export default function VerifyByNinClientPage({ serviceFee, isActive }: { servic
           />
         </div>
         <div className="divide-y divide-gray-100">
+          {/* Explicitly Access Properties - Case Sensitive matches API */}
           <DataRow label="First Name" value={data.data.firstname} />
           <DataRow label="Middle Name" value={data.data.middlename} />
           <DataRow label="Last Name" value={data.data.surname} />
@@ -338,7 +345,6 @@ export default function VerifyByNinClientPage({ serviceFee, isActive }: { servic
     <div className="w-full max-w-3xl mx-auto">
       {isLoading && <Loading />}
       
-      {/* ... (Search Header, Error/Success Messages) ... */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
