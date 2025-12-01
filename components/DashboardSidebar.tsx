@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -28,8 +28,18 @@ type Props = {
 };
 
 export default function DashboardSidebar({ userRole }: Props) {
-  const [isServicesOpen, setIsServicesOpen] = useState(true); 
   const pathname = usePathname(); 
+  
+  // --- FIX: Set this to FALSE by default so it doesn't open automatically ---
+  // It will only start open if you are currently on a /services page
+  const [isServicesOpen, setIsServicesOpen] = useState(false);
+
+  // Optional: Auto-open if user visits a service page directly
+  useEffect(() => {
+    if (pathname?.includes('/services')) {
+      setIsServicesOpen(true);
+    }
+  }, [pathname]);
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
 
@@ -45,7 +55,7 @@ export default function DashboardSidebar({ userRole }: Props) {
     { name: 'BVN Services', href: '/dashboard/services/bvn', icon: ShieldCheckIcon },
     { name: 'JAMB Services', href: '/dashboard/services/jamb', icon: AcademicCapIcon },
     { name: 'JTB TIN Services', href: '/dashboard/services/tin', icon: DocumentTextIcon },
-    { name: 'Result Checker', href: '/dashboard/services/exam-pins', icon: RectangleStackIcon }, // WAEC/NECO/NABTEB
+    { name: 'Result Checker', href: '/dashboard/services/exam-pins', icon: RectangleStackIcon },
     { name: 'CAC Registration', href: '/dashboard/services/cac', icon: BriefcaseIcon },
     { name: 'Newspapers', href: '/dashboard/services/newspaper', icon: NewspaperIcon },
     { name: 'VTU & Bills', href: '/dashboard/services/vtu', icon: DevicePhoneMobileIcon },
@@ -130,7 +140,7 @@ export default function DashboardSidebar({ userRole }: Props) {
             </span>
           </button>
           
-          <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isServicesOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isServicesOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
             {serviceLinks.map((item) => (
               <NavLink key={item.name} item={item} />
             ))}
