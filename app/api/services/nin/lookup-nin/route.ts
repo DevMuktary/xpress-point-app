@@ -5,7 +5,8 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- CONFIGURATION ---
-const ZEPA_API_BASE_URL = process.env.ZEPA_API_BASE_URL; // e.g. https://api.zepa.africa
+// Ensure these are set in your Railway variables
+const ZEPA_API_BASE_URL = process.env.ZEPA_API_BASE_URL; 
 const ZEPA_API_TOKEN = process.env.ZEPA_API_TOKEN;
 
 if (!ZEPA_API_BASE_URL || !ZEPA_API_TOKEN) {
@@ -23,12 +24,12 @@ function parseApiError(error: any): string {
     console.error("Request Error:", error.message);
   }
 
-  // 2. Timeout
+  // 2. Timeout handling
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
 
-  // 3. Extract message
+  // 3. Extract message safely
   if (error.response && error.response.data) {
     const data = error.response.data;
     if (data.message) return typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
+    // Using defaultAgentPrice for everyone
     const price = new Decimal(service.defaultAgentPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
     // --- 2. Call ZEPA API ---
     console.log(`[ZEPA] Verifying NIN: ${nin} for user ${user.id}`);
     
-    // We construct the URL. Remove trailing slash from base if present to avoid double slashes.
+    // Clean URL construction
     const baseUrl = ZEPA_API_BASE_URL.replace(/\/$/, ""); 
     const endpoint = `${baseUrl}/api/v1/verify-nin`;
 
@@ -85,61 +87,67 @@ export async function POST(request: Request) {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        timeout: 30000, // 30 seconds
+        timeout: 45000, // Increased timeout to 45s for reliability
       }
     );
 
     const data = response.data;
 
-    // DEBUG: Log the success response so we can see the keys!
-    console.log("ZEPA RESPONSE:", JSON.stringify(data, null, 2));
+    // --- CRITICAL DEBUGGING LOG ---
+    // If fields are still missing, check this log in Railway!
+    console.log("ZEPA RAW RESPONSE:", JSON.stringify(data, null, 2));
 
     // --- 3. Validate Response ---
-    // Adjust this check based on how Zepa returns success. 
-    // Usually it's data.status === true or data.success === true or just data.data exists.
     const responseData = data.data || data; 
 
     if (!responseData) {
-      throw new Error("API returned success but no data found.");
+      throw new Error("API returned success but no data payload found.");
     }
 
-    // --- 4. Data Mapping (Universal Adapter) ---
-    // Since we don't know Zepa's exact keys, we check ALL common variations.
+    // --- 4. Data Mapping (Expanded Adapter) ---
+    // This looks for every common variation used by Nigerian identity providers
     const mappedData = {
-      // Photo: Usually base64 string
-      photo: responseData.photo || responseData.image || responseData.picture || "",
+      // Photo
+      photo: responseData.photo || responseData.image || responseData.picture || responseData.photo_base64 || "",
       
-      // Names: Check camelCase, snake_case, PascalCase
+      // Names
       firstname: responseData.firstname || responseData.firstName || responseData.first_name || responseData.FirstName,
       surname: responseData.surname || responseData.lastName || responseData.last_name || responseData.Surname,
-      middlename: responseData.middlename || responseData.middleName || responseData.middle_name || responseData.MiddleName || "",
+      middlename: responseData.middlename || responseData.middleName || responseData.middle_name || responseData.othername || responseData.otherName || "",
       
-      // Dates: Handle formats
+      // Dates
       birthdate: (responseData.birthdate || responseData.dateOfBirth || responseData.dob || responseData.birthDate || "").replace(/-/g, '-'),
       
       // NIN
-      nin: responseData.nin || responseData.NIN || nin, // Fallback to requested NIN if missing
+      nin: responseData.nin || responseData.NIN || nin,
       
       trackingId: responseData.trackingId || responseData.tracking_id || `TRK-${Date.now()}`,
       
-      // Address
-      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address || responseData.residenceAddress || responseData.residence_address,
-      residence_lga: responseData.residence_lga || responseData.lga || responseData.residenceLga,
-      residence_state: responseData.residence_state || responseData.state || responseData.residenceState,
+      // Address (Expanded checks)
+      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address || responseData.residenceAddress || responseData.residence_address || responseData.fullAddress || responseData.addressLine1 || responseData.residence_Town,
       
-      // Other
-      telephoneno: responseData.telephoneno || responseData.mobile || responseData.phoneNumber || responseData.phone_number || responseData.phone,
+      // LGA & State (Expanded checks)
+      residence_lga: responseData.residence_lga || responseData.lga || responseData.residenceLga || responseData.LGA,
+      residence_state: responseData.residence_state || responseData.state || responseData.residenceState || responseData.stateOfResidence,
+      
+      // Phone (Expanded checks)
+      telephoneno: responseData.telephoneno || responseData.phoneNumber || responseData.phone_number || responseData.phone || responseData.mobile || responseData.tel,
+      
+      // Gender
       gender: responseData.gender || responseData.sex,
       
+      // Birth Details
       birthlga: responseData.birthlga || responseData.birthLga,
       birthstate: responseData.birthstate || responseData.birthState,
+      
+      // Other
       maritalstatus: responseData.maritalstatus || responseData.maritalStatus,
       profession: responseData.profession || responseData.occupation,
       religion: responseData.religion,
       signature: responseData.signature,
     };
 
-    // --- 5. Charge User & Save ---
+    // --- 5. Charge User & Save Transaction ---
     const [_, verificationRecord] = await prisma.$transaction([
       prisma.wallet.update({
         where: { userId: user.id },
@@ -165,7 +173,7 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // --- 6. Return Data ---
+    // --- 6. Return Data to Frontend ---
     const slipPrices = await prisma.service.findMany({
       where: {
         id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
