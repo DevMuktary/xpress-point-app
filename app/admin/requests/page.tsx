@@ -12,29 +12,31 @@ export default async function AdminRequestsPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
+  // Fetch counts for ALL manual services
   const [
     ninModCount,
     ninDelinkCount,
-    // BVN
+    ninValidationCount, // <--- Added
     bvnRetrievalCount,
     bvnModCount,
-    bvnEnrollmentSetupCount, // Count of agents waiting for setup
+    bvnEnrollmentSetupCount,
     bvnNibssCount,
-    // Others
     cacCount,
     tinCount,
     jambCount,
     resultCount,
     newspaperCount,
-    npcCount // <--- New
+    npcCount
   ] = await Promise.all([
+    // NIN
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
+    prisma.validationRequest.count({ where: { status: 'PENDING' } }), // <--- Added
     
     // BVN
     prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: { in: ['BVN_RETRIEVAL_PHONE', 'BVN_RETRIEVAL_CRM'] } } }),
     prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: { startsWith: 'BVN_MOD' } } }),
-    prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: 'BVN_ENROLLMENT_ANDROID' } }), // Setup requests
+    prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: 'BVN_ENROLLMENT_ANDROID' } }), 
     prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: 'BVN_VNIN_TO_NIBSS' } }),
 
     // Others
@@ -43,12 +45,13 @@ export default async function AdminRequestsPage() {
     prisma.jambRequest.count({ where: { status: 'PENDING' } }),
     prisma.resultRequest.count({ where: { status: 'PENDING' } }),
     prisma.newspaperRequest.count({ where: { status: 'PENDING' } }),
-    prisma.npcRequest.count({ where: { status: 'PENDING' } }) // <--- New
+    prisma.npcRequest.count({ where: { status: 'PENDING' } })
   ]);
 
   const stats = {
     ninMod: ninModCount,
     ninDelink: ninDelinkCount,
+    ninValidation: ninValidationCount, // <--- Added
     bvnRetrieval: bvnRetrievalCount,
     bvnMod: bvnModCount,
     bvnEnrollmentSetup: bvnEnrollmentSetupCount,
@@ -58,7 +61,7 @@ export default async function AdminRequestsPage() {
     jamb: jambCount,
     result: resultCount,
     newspaper: newspaperCount,
-    npc: npcCount // <--- New
+    npc: npcCount
   };
 
   return (
