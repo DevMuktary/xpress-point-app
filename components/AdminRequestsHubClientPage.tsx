@@ -64,14 +64,14 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
       <RequestCard 
         title="NIN Modification" 
         count={stats.ninMod} 
-        href="/admin/requests/modification" 
+        href="/admin/requests/nin-modification" 
         icon={IdentificationIcon} 
         color="text-green-600" 
       />
       <RequestCard 
         title="NIN Delink" 
         count={stats.ninDelink} 
-        href="/admin/requests/delink" 
+        href="/admin/requests/nin-delink" 
         icon={IdentificationIcon} 
         color="text-red-600" 
       />
@@ -87,28 +87,28 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
       <RequestCard 
         title="BVN Retrieval" 
         count={stats.bvnRetrieval} 
-        href="/admin/requests/bvn-retrieval" 
+        href="/admin/requests/bvn/retrieval" 
         icon={UserIcon} 
         color="text-purple-600" 
       />
       <RequestCard 
         title="BVN Modification" 
         count={stats.bvnMod} 
-        href="/admin/requests/bvn-modification" 
+        href="/admin/requests/bvn/modification" 
         icon={UserIcon} 
         color="text-orange-600" 
       />
       <RequestCard 
         title="BVN Enrollment Setup" 
         count={stats.bvnEnrollmentSetup} 
-        href="/admin/requests/bvn-enrollment" 
+        href="/admin/requests/bvn/enrollment/manage" 
         icon={DevicePhoneMobileIcon} 
         color="text-cyan-600" 
       />
       <RequestCard 
         title="VNIN to NIBSS" 
         count={stats.bvnNibss} 
-        href="/admin/requests/vnin-nibss" 
+        href="/admin/requests/bvn/nibss" 
         icon={ArrowPathIcon} // Using ArrowPathIcon (imported above but not in JSX?) let's ensure import
         color="text-teal-600" 
       />
