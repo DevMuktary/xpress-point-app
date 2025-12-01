@@ -5,7 +5,6 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- CONFIGURATION ---
-// Ensure these are set in your Railway variables
 const ZEPA_API_BASE_URL = process.env.ZEPA_API_BASE_URL; 
 const ZEPA_API_TOKEN = process.env.ZEPA_API_TOKEN;
 
@@ -15,7 +14,6 @@ if (!ZEPA_API_BASE_URL || !ZEPA_API_TOKEN) {
 
 // --- HELPER: Error Parser ---
 function parseApiError(error: any): string {
-  // 1. Log detailed error for debugging
   if (error.response) {
     console.error("--- [ZEPA API ERROR] ---");
     console.error("Status:", error.response.status);
@@ -24,12 +22,10 @@ function parseApiError(error: any): string {
     console.error("Request Error:", error.message);
   }
 
-  // 2. Timeout handling
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
 
-  // 3. Extract message safely
   if (error.response && error.response.data) {
     const data = error.response.data;
     if (data.message) return typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
@@ -63,7 +59,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // Using defaultAgentPrice for everyone
     const price = new Decimal(service.defaultAgentPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -71,12 +66,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call ZEPA API ---
-    console.log(`[ZEPA] Verifying NIN: ${nin} for user ${user.id}`);
+    // --- 2. Call ZEPA API (SWITCHED TO V2) ---
+    console.log(`[ZEPA V2] Verifying NIN: ${nin} for user ${user.id}`);
     
     // Clean URL construction
     const baseUrl = ZEPA_API_BASE_URL.replace(/\/$/, ""); 
-    const endpoint = `${baseUrl}/api/v1/verify-nin`;
+    
+    // UPDATED: Now pointing to /v2
+    const endpoint = `${baseUrl}/api/v1/verify-nin/v2`;
 
     const response = await axios.post(
       endpoint,
@@ -87,15 +84,15 @@ export async function POST(request: Request) {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        timeout: 45000, // Increased timeout to 45s for reliability
+        timeout: 60000, // V2 might take longer, increased to 60s
       }
     );
 
     const data = response.data;
 
     // --- CRITICAL DEBUGGING LOG ---
-    // If fields are still missing, check this log in Railway!
-    console.log("ZEPA RAW RESPONSE:", JSON.stringify(data, null, 2));
+    // Watch this log to see if V2 returns the address!
+    console.log("ZEPA V2 RAW RESPONSE:", JSON.stringify(data, null, 2));
 
     // --- 3. Validate Response ---
     const responseData = data.data || data; 
@@ -104,8 +101,7 @@ export async function POST(request: Request) {
       throw new Error("API returned success but no data payload found.");
     }
 
-    // --- 4. Data Mapping (Expanded Adapter) ---
-    // This looks for every common variation used by Nigerian identity providers
+    // --- 4. Data Mapping (With Telephone Fix & Expanded Address Fields) ---
     const mappedData = {
       // Photo
       photo: responseData.photo || responseData.image || responseData.picture || responseData.photo_base64 || "",
@@ -123,15 +119,15 @@ export async function POST(request: Request) {
       
       trackingId: responseData.trackingId || responseData.tracking_id || `TRK-${Date.now()}`,
       
-      // Address (Expanded checks)
+      // Address (Expanded for V2)
       residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address || responseData.residenceAddress || responseData.residence_address || responseData.fullAddress || responseData.addressLine1 || responseData.residence_Town,
       
-      // LGA & State (Expanded checks)
+      // LGA & State
       residence_lga: responseData.residence_lga || responseData.lga || responseData.residenceLga || responseData.LGA,
       residence_state: responseData.residence_state || responseData.state || responseData.residenceState || responseData.stateOfResidence,
       
-      // Phone (Expanded checks)
-      telephoneno: responseData.telephoneno || responseData.phoneNumber || responseData.phone_number || responseData.phone || responseData.mobile || responseData.tel,
+      // Phone (With Capital N fix)
+      telephoneno: responseData.telephoneNo || responseData.telephoneno || responseData.phoneNumber || responseData.phone_number || responseData.phone || responseData.mobile || responseData.tel,
       
       // Gender
       gender: responseData.gender || responseData.sex,
@@ -166,14 +162,14 @@ export async function POST(request: Request) {
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
-          description: `NIN Verification Lookup (${nin})`,
+          description: `NIN Verification Lookup V2 (${nin})`,
           reference: `NIN-LOOKUP-${Date.now()}`,
           status: 'COMPLETED',
         },
       }),
     ]);
 
-    // --- 6. Return Data to Frontend ---
+    // --- 6. Return Data ---
     const slipPrices = await prisma.service.findMany({
       where: {
         id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
