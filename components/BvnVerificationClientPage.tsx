@@ -7,6 +7,7 @@ import {
   XMarkIcon,
   InformationCircleIcon,
   ShieldCheckIcon,
+  CheckCircleIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
