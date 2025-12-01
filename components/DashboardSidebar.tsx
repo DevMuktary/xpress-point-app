@@ -19,7 +19,8 @@ import {
   AcademicCapIcon,
   WrenchScrewdriverIcon,
   ArrowRightOnRectangleIcon,
-  RectangleStackIcon
+  RectangleStackIcon,
+  Squares2X2Icon
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
@@ -28,15 +29,14 @@ type Props = {
 };
 
 export default function DashboardSidebar({ userRole }: Props) {
-  const pathname = usePathname(); 
+  const pathname = usePathname();
   
-  // --- FIX: Set this to FALSE by default so it doesn't open automatically ---
-  // It will only start open if you are currently on a /services page
+  // --- FIX: Default to FALSE (Closed), but check URL on mount ---
   const [isServicesOpen, setIsServicesOpen] = useState(false);
 
-  // Optional: Auto-open if user visits a service page directly
+  // Automatically open the menu if the user is currently on a service page
   useEffect(() => {
-    if (pathname?.includes('/services')) {
+    if (pathname?.startsWith('/dashboard/services')) {
       setIsServicesOpen(true);
     }
   }, [pathname]);
@@ -49,7 +49,7 @@ export default function DashboardSidebar({ userRole }: Props) {
     { name: 'Fund Wallet', href: '/dashboard/fund-wallet', icon: CreditCardIcon },
   ];
 
-  // --- 2. Services Navigation (Expanded) ---
+  // --- 2. Services Navigation (All Links) ---
   const serviceLinks = [
     { name: 'NIN Services', href: '/dashboard/services/nin', icon: IdentificationIcon },
     { name: 'BVN Services', href: '/dashboard/services/bvn', icon: ShieldCheckIcon },
@@ -68,20 +68,19 @@ export default function DashboardSidebar({ userRole }: Props) {
   ];
 
   // --- Helper Component for Links ---
-  const NavLink = ({ item, onClick }: { item: any, onClick?: () => void }) => {
+  const NavLink = ({ item, isChild = false }: { item: any, isChild?: boolean }) => {
     const active = isActive(item.href);
     return (
       <Link
         href={item.href}
-        onClick={onClick}
-        className={`group flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300
+        className={`group flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200
           ${active 
-            ? 'bg-blue-600 text-white shadow-md shadow-blue-200 translate-x-1' 
-            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700 hover:translate-x-1'
-          }`}
+            ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
+            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+          } ${isChild ? 'ml-2' : ''}`}
       >
         <item.icon 
-          className={`h-5 w-5 flex-shrink-0 transition-colors duration-300
+          className={`h-5 w-5 flex-shrink-0 transition-colors duration-200
             ${active ? 'text-white' : 'text-gray-400 group-hover:text-blue-600'}`} 
         />
         {item.name}
@@ -93,7 +92,7 @@ export default function DashboardSidebar({ userRole }: Props) {
     <div className="flex flex-col h-full bg-white border-r border-gray-100 shadow-[2px_0_20px_rgba(0,0,0,0.02)]">
       
       {/* --- A. Header / Logo Area --- */}
-      <div className="flex items-center gap-3 px-6 h-24 flex-shrink-0">
+      <div className="flex items-center gap-3 px-6 h-24 flex-shrink-0 border-b border-gray-50">
         <div className="relative h-10 w-10 overflow-hidden rounded-xl shadow-sm border border-gray-100">
            <SafeImage 
             src="/logos/logo.png" 
@@ -114,12 +113,12 @@ export default function DashboardSidebar({ userRole }: Props) {
       </div>
 
       {/* --- B. Scrollable Navigation --- */}
-      <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-8 scrollbar-hide">
+      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-6 scrollbar-hide">
         
         {/* Section: Overview */}
         <div>
-          <p className="px-4 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3">
-            Overview
+          <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+            Main
           </p>
           <div className="space-y-1">
             {mainLinks.map((item) => (
@@ -132,25 +131,35 @@ export default function DashboardSidebar({ userRole }: Props) {
         <div>
           <button
             onClick={() => setIsServicesOpen(!isServicesOpen)}
-            className="w-full flex items-center justify-between px-4 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3 hover:text-blue-600 transition-colors"
+            className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 mb-1
+              ${isServicesOpen || pathname?.startsWith('/dashboard/services') 
+                ? 'bg-blue-50 text-blue-800' 
+                : 'text-gray-600 hover:bg-gray-50'
+              }`}
           >
-            <span>Services Hub</span>
-            <span className={`transition-transform duration-300 ${isServicesOpen ? 'rotate-180' : ''}`}>
-              <ChevronDownIcon className="h-3 w-3" />
-            </span>
+            <div className="flex items-center gap-3">
+              <Squares2X2Icon className={`h-5 w-5 ${isServicesOpen ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span>Services Hub</span>
+            </div>
+            <ChevronDownIcon 
+              className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isServicesOpen ? 'rotate-180' : ''}`} 
+            />
           </button>
           
-          <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isServicesOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div 
+            className={`overflow-hidden transition-all duration-300 ease-in-out space-y-1
+            ${isServicesOpen ? 'max-h-[800px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+          >
             {serviceLinks.map((item) => (
-              <NavLink key={item.name} item={item} />
+              <NavLink key={item.name} item={item} isChild={true} />
             ))}
           </div>
         </div>
 
         {/* Section: Management */}
         <div>
-          <p className="px-4 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3">
-            Account
+          <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+            Settings
           </p>
           <div className="space-y-1">
             {managementLinks.map((item) => (
@@ -161,13 +170,13 @@ export default function DashboardSidebar({ userRole }: Props) {
       </nav>
 
       {/* --- C. Footer / Action Area --- */}
-      <div className="p-5 border-t border-gray-100 bg-gray-50/30 space-y-3">
+      <div className="p-5 border-t border-gray-100 bg-gray-50/50 space-y-3">
         
         {/* Dynamic Role-Based Button */}
         {userRole === 'AGGREGATOR' ? (
           <Link 
             href="/dashboard/aggregator"
-            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-gray-200 hover:bg-black transition-all active:scale-[0.98]"
+            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-gray-200 hover:bg-black transition-all active:scale-[0.98]"
           >
             <WrenchScrewdriverIcon className="h-5 w-5 text-purple-400 group-hover:rotate-12 transition-transform" />
             <span>Aggregator Tools</span>
@@ -175,7 +184,7 @@ export default function DashboardSidebar({ userRole }: Props) {
         ) : (
           <Link 
             href="/dashboard/upgrade"
-            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:shadow-xl hover:from-blue-700 hover:to-blue-800 transition-all active:scale-[0.98]"
+            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:shadow-xl hover:from-blue-700 hover:to-blue-800 transition-all active:scale-[0.98]"
           >
             <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
             <ArrowUpCircleIcon className="h-5 w-5 animate-bounce-slow" />
