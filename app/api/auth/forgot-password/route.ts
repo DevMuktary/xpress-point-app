@@ -1,117 +1,89 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendOtpMessage } from '@/lib/whatsapp';
-import { sendVerificationEmail } from '@/lib/email';
+import { sendHtmlEmail } from '@/lib/email'; // Only importing the generic sender
 
 export async function POST(request: Request) {
   try {
-    const { identifier } = await request.json();
+    const { email } = await request.json();
     
-    console.log("1. Forgot Password Request for:", identifier); // <--- DEBUG LOG
+    console.log("1. Forgot Password Request for Email:", email);
 
-    if (!identifier) {
-      return NextResponse.json({ error: 'Email or Phone is required' }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // --- Normalize Phone for Lookup ---
-    // If identifier starts with '0', create a version with '+234'
-    // If it's email, this logic won't break anything
-    let phoneSearch = identifier;
-    if (/^0\d{10}$/.test(identifier)) {
-        phoneSearch = '+234' + identifier.substring(1);
-    }
-    // Also try adding + to 234 if user typed 234...
-    let phoneSearch2 = identifier;
-    if (identifier.startsWith('234')) {
-        phoneSearch2 = '+' + identifier;
-    }
-
-    console.log(`2. Searching DB for: ${identifier} OR ${phoneSearch} OR ${phoneSearch2}`);
-
-    // Find user
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: identifier.toLowerCase() },
-          { phoneNumber: identifier },
-          { phoneNumber: phoneSearch },
-          { phoneNumber: phoneSearch2 }
-        ]
-      }
+    // 1. Find user by Email only
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
     });
 
     if (!user) {
-      console.log("3. User NOT FOUND in database."); // <--- DEBUG LOG
-      // We return success to UI for security, but log failure here
+      console.log("2. User NOT FOUND.");
+      // Return success to prevent email enumeration attacks
       return NextResponse.json({ 
-        message: 'If an account exists, an OTP has been sent. (DEBUG: User not found)' 
+        message: 'If an account exists, an OTP has been sent.' 
       });
     }
 
-    console.log("3. User Found:", user.email); // <--- DEBUG LOG
+    console.log("2. User Found:", user.id);
 
-    // Generate 6-digit OTP
+    // 3. Generate OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
-    // Save to DB (Delete old tokens first)
+    // 4. Save to DB (Cleanup old tokens first)
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
     await prisma.passwordResetToken.create({
         data: { userId: user.id, token: otpCode, expiresAt }
     });
 
-    console.log("4. OTP Generated & Saved:", otpCode);
+    console.log("3. OTP Generated:", otpCode);
 
-    // --- Attempt WhatsApp ---
-    let sentVia = 'None';
-    try {
-      if (user.phoneNumber) {
-        console.log("5. Attempting WhatsApp to:", user.phoneNumber);
+    let sentVia = [];
+
+    // 5. Send via WhatsApp (if phone exists)
+    if (user.phoneNumber) {
+      try {
+        console.log("4a. Attempting WhatsApp to:", user.phoneNumber);
         await sendOtpMessage(user.phoneNumber, otpCode);
-        sentVia = 'WhatsApp';
+        sentVia.push('WhatsApp');
+      } catch (waError) {
+        console.error("WhatsApp Send Failed:", waError);
       }
-    } catch (waError) {
-      console.error("WhatsApp Send Failed:", waError);
     }
 
-    // --- Attempt Email (Always send email as backup or primary) ---
+    // 6. Send via Email (Always)
+    // We ONLY use sendHtmlEmail here to avoid triggering the Welcome/Verification email
     try {
-      console.log("6. Attempting Email to:", user.email);
+      console.log("4b. Attempting Email to:", user.email);
       
-      // Create a simple HTML message for the code
       const htmlContent = `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #2563EB;">Password Reset</h2>
-          <p>You requested a password reset. Use the code below:</p>
-          <h1 style="letter-spacing: 5px; color: #333; font-size: 32px;">${otpCode}</h1>
-          <p>This code expires in 10 minutes.</p>
-          <p style="color: #999; font-size: 12px;">If you did not request this, please ignore this email.</p>
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: 0 auto;">
+          <h2 style="color: #2563EB; text-align: center;">Password Reset Request</h2>
+          <p style="font-size: 16px; color: #333;">Hello ${user.firstName},</p>
+          <p style="font-size: 16px; color: #333;">Use the code below to reset your Xpress Point password:</p>
+          
+          <div style="background-color: #f0f9ff; padding: 15px; text-align: center; margin: 20px 0; border-radius: 8px;">
+             <h1 style="letter-spacing: 8px; color: #2563EB; font-size: 32px; margin: 0;">${otpCode}</h1>
+          </div>
+
+          <p style="color: #666; font-size: 14px;">This code expires in 10 minutes.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="color: #999; font-size: 12px; text-align: center;">If you did not request this, please ignore this email.</p>
         </div>
       `;
       
-      // Use your generic email sender
-      // We import sendHtmlEmail from '@/lib/email' at top
-      // Make sure to import { sendHtmlEmail } ...
-      
-      // (I am assuming you exported sendHtmlEmail in lib/email.ts as discussed previously)
-       // If you only have sendVerificationEmail, we can reuse the logic here manually:
-       // But based on previous turns, we have sendHtmlEmail.
-       await sendVerificationEmail(user.email, user.firstName, otpCode); // Reusing this function logic or better:
-       // Actually, sendVerificationEmail formats it as a link. 
-       // Let's use the sendHtmlEmail function I gave you earlier:
-       const { sendHtmlEmail } = require('@/lib/email'); // Dynamic import to ensure it exists
-       await sendHtmlEmail(user.email, user.firstName, "Reset Your Password", htmlContent);
-
-       if (sentVia === 'None') sentVia = 'Email';
-       else sentVia += ' & Email';
+      await sendHtmlEmail(user.email, user.firstName, "Reset Your Password", htmlContent);
+      sentVia.push('Email');
 
     } catch (emailError) {
        console.error("Email Send Failed:", emailError);
     }
 
-    console.log(`7. Process Complete. Sent via: ${sentVia}`);
+    console.log(`5. Process Complete. Sent via: ${sentVia.join(', ')}`);
 
-    return NextResponse.json({ message: `OTP sent successfully via ${sentVia}.` });
+    return NextResponse.json({ message: `OTP sent via ${sentVia.join(' & ')}.` });
 
   } catch (error: any) {
     console.error("Forgot Password API Error:", error);
