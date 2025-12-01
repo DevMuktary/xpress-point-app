@@ -12,9 +12,10 @@ export default async function AdminValidationPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // Fetch pending validation requests
+  // --- FIX: Fetch ALL requests, not just 'PENDING' ---
+  // This ensures they don't disappear when you change their status.
   const requests = await prisma.validationRequest.findMany({
-    where: { status: 'PENDING' }, // Only show pending by default
+    // where: { status: 'PENDING' }, <--- REMOVED THIS LINE
     orderBy: { createdAt: 'desc' },
     include: { user: true }
   });
