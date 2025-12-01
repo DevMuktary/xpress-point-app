@@ -8,16 +8,17 @@ import {
   UserIcon, 
   DocumentTextIcon,
   BriefcaseIcon,
-  ArrowPathIcon,
   AcademicCapIcon,
   NewspaperIcon,
-  ShieldCheckIcon // For NPC
+  ShieldCheckIcon,
+  CheckBadgeIcon // For Validation
 } from '@heroicons/react/24/outline';
 
 type Props = {
   stats: {
     ninMod: number;
     ninDelink: number;
+    ninValidation: number; // <--- Added
     bvnRetrieval: number;
     bvnMod: number;
     bvnEnrollmentSetup: number;
@@ -27,16 +28,19 @@ type Props = {
     jamb: number;
     result: number;
     newspaper: number;
-    npc: number; // <--- New
+    npc: number;
   };
 };
 
+// Reusable Card Component
 const RequestCard = ({ title, count, href, icon: Icon, color }: any) => (
   <Link href={href} className="block group">
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all h-full relative overflow-hidden">
+      {/* Background Icon Faded */}
       <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity ${color}`}>
         <Icon className="h-24 w-24" />
       </div>
+      
       <div className="relative z-10">
         <div className={`p-3 rounded-lg w-fit mb-4 ${color.replace('text-', 'bg-').replace('600', '100')} ${color}`}>
           <Icon className="h-6 w-6" />
@@ -56,7 +60,7 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       
-      {/* --- NIN --- */}
+      {/* --- NIN Services --- */}
       <RequestCard 
         title="NIN Modification" 
         count={stats.ninMod} 
@@ -71,8 +75,15 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
         icon={IdentificationIcon} 
         color="text-red-600" 
       />
+      <RequestCard 
+        title="NIN Validation" 
+        count={stats.ninValidation} 
+        href="/admin/requests/validation" 
+        icon={CheckBadgeIcon} 
+        color="text-blue-600" 
+      />
 
-      {/* --- BVN --- */}
+      {/* --- BVN Services --- */}
       <RequestCard 
         title="BVN Retrieval" 
         count={stats.bvnRetrieval} 
@@ -92,17 +103,17 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
         count={stats.bvnEnrollmentSetup} 
         href="/admin/requests/bvn-enrollment" 
         icon={DevicePhoneMobileIcon} 
-        color="text-blue-600" 
+        color="text-cyan-600" 
       />
       <RequestCard 
         title="VNIN to NIBSS" 
         count={stats.bvnNibss} 
         href="/admin/requests/vnin-nibss" 
-        icon={ArrowPathIcon} 
+        icon={ArrowPathIcon} // Using ArrowPathIcon (imported above but not in JSX?) let's ensure import
         color="text-teal-600" 
       />
 
-      {/* --- Corporate --- */}
+      {/* --- Corporate Services --- */}
       <RequestCard 
         title="CAC Registration" 
         count={stats.cac} 
@@ -115,7 +126,7 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
         count={stats.tin} 
         href="/admin/requests/tin" 
         icon={DocumentTextIcon} 
-        color="text-cyan-600" 
+        color="text-indigo-500" 
       />
       <RequestCard 
         title="Newspaper Pub." 
@@ -125,7 +136,7 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
         color="text-gray-600" 
       />
 
-      {/* --- Education --- */}
+      {/* --- Education & Other --- */}
       <RequestCard 
         title="JAMB Services" 
         count={stats.jamb} 
@@ -134,22 +145,23 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
         color="text-yellow-600" 
       />
       <RequestCard 
-        title="Result Checker (Manual)" 
+        title="Result Checker" 
         count={stats.result} 
         href="/admin/requests/result" 
         icon={AcademicCapIcon} 
         color="text-pink-600" 
       />
-
-      {/* --- NPC (NEW) --- */}
       <RequestCard 
         title="NPC Attestation" 
         count={stats.npc} 
         href="/admin/requests/npc" 
         icon={ShieldCheckIcon} 
-        color="text-indigo-600" 
+        color="text-violet-600" 
       />
 
     </div>
   );
 }
+
+// Small Icon import fix for ArrowPathIcon if needed locally
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
