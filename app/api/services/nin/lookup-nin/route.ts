@@ -12,19 +12,42 @@ if (!CONFIRMIDENT_API_KEY) {
   console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
 }
 
+// --- HELPER: Enhanced Error Logger ---
 function parseApiError(error: any): string {
+  // 1. Log the RAW response to your server console so you can see the real issue
+  if (error.response) {
+    console.error("--- [PROVIDER ERROR START] ---");
+    console.error("Status Code:", error.response.status);
+    console.error("Full Error Body:", JSON.stringify(error.response.data, null, 2));
+    console.error("--- [PROVIDER ERROR END] ---");
+  } else {
+    console.error("Request Error:", error.message);
+  }
+
+  // 2. Timeout handling
   if (error.code === 'ECONNABORTED') {
     return 'The verification service timed out. Please try again.';
   }
+
+  // 3. Extract message from response safely
   if (error.response && error.response.data) {
     const data = error.response.data;
+
+    // Check for "message" object (Laravel/PHP style)
     if (data.message && typeof data.message === 'object' && data.message['0']) {
       return data.message['0'];
     }
+    // Check for "message" string
     if (data.message && typeof data.message === 'string') {
       return data.message;
     }
+    // Check for "error" string
+    if (data.error && typeof data.error === 'string') {
+      return data.error;
+    }
   }
+
+  // 4. Fallback
   if (error.message) {
     return error.message;
   }
@@ -55,7 +78,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // --- PRICE CHANGE ONLY (No Commission) ---
+    // Using defaultAgentPrice for everyone
     const price = new Decimal(service.defaultAgentPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -64,17 +87,21 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
+    // Note: We intentionally call the API *before* charging to avoid refund logic on failure.
+    // This is safe for lookups, but not for vending products.
+    console.log(`Attempting NIN Lookup for user ${user.id}...`);
+
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
       { 
         nin: nin,
-        ref: `XPRESSPOINT_NIN_${user.id}_${Date.now()}`
+        ref: `XPRESSPOINT_NIN_${user.id}_${Date.now()}` // Unique Ref
       },
       {
         headers: { 
           'api-key': CONFIRMIDENT_API_KEY,
           'Content-Type': 'application/json' 
         },
-        timeout: 15000,
+        timeout: 25000, // Increased timeout to 25s
       }
     );
 
@@ -82,28 +109,24 @@ export async function POST(request: Request) {
     
     // --- 3. Handle ConfirmIdent Response ---
     if (data.success !== true || !data.data) {
+      // Force throw to go to catch block if success is false but status was 200
       const errorMessage = data.message || "NIN verification failed.";
-      return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
+      throw { response: { data: data, status: 200 } }; 
     }
     
     const responseData = data.data;
 
-    // --- 4. Data Mapping (FIXED) ---
-    // I added "||" operators to handle inconsistent naming from the provider
+    // --- 4. Data Mapping (Defensive Coding) ---
+    // Checks multiple casing variations (e.g. firstname, Firstname, firs_tname)
     const mappedData = {
       photo: responseData.photo,
       
-      // FIXED: Looks for firstname OR first_name OR firs_tname
       firstname: responseData.firstname || responseData.first_name || responseData.firs_tname || responseData.FirstName,
-      
-      // FIXED: Looks for surname OR last_name
       surname: responseData.surname || responseData.last_name || responseData.Surname,
-      
-      // FIXED: Looks for middlename OR middle_name
       middlename: responseData.middlename || responseData.middle_name || responseData.MiddleName || "",
       
       birthdate: responseData.birthdate ? responseData.birthdate.replace(/-/g, '-') : "",
-      nin: responseData.nin || responseData.NIN, // Handle lowercase or uppercase
+      nin: responseData.nin || responseData.NIN, 
       trackingId: responseData.trackingId || responseData.tracking_id,
       
       residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address,
@@ -112,7 +135,6 @@ export async function POST(request: Request) {
       residence_lga: responseData.residence_lga,
       residence_state: responseData.residence_state,
       
-      // FIXED: Looks for telephoneno OR phone_number
       telephoneno: responseData.telephoneno || responseData.phone_number || responseData.phone,
       
       birthstate: responseData.birthstate,
@@ -132,7 +154,7 @@ export async function POST(request: Request) {
         data: {
           userId: user.id,
           data: mappedData as any,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         },
       }),
       prisma.transaction.create({
@@ -176,8 +198,10 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
+    // This calls our new logger
     const errorMessage = parseApiError(error);
-    console.error(`NIN Lookup (NIN) Error:`, errorMessage);
+    
+    // Return the specific error message to the frontend
     return NextResponse.json(
       { error: errorMessage },
       { status: 400 }
