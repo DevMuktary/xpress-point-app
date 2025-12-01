@@ -141,7 +141,7 @@ export default function BvnVerificationClientPage({ prices, availability }: Prop
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <TypeButton 
           title="Premium Slip" 
-          description="Detailed verified information." 
+          description="Card-look verified information." 
           price={prices['BVN_VERIFY_PREMIUM'] || 0}
           selected={serviceType === 'PREMIUM'}
           disabled={!availability['BVN_VERIFY_PREMIUM']}
