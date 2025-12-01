@@ -9,7 +9,6 @@ import {
   ClockIcon, 
   UserCircleIcon, 
   ChevronDownIcon,
-  ChevronRightIcon,
   BriefcaseIcon,
   DocumentTextIcon,
   IdentificationIcon,
@@ -17,9 +16,10 @@ import {
   NewspaperIcon,
   ArrowUpCircleIcon,
   ShieldCheckIcon,
-  XMarkIcon,
+  AcademicCapIcon,
   WrenchScrewdriverIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  RectangleStackIcon
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
@@ -28,32 +28,36 @@ type Props = {
 };
 
 export default function DashboardSidebar({ userRole }: Props) {
-  const [isServicesOpen, setIsServicesOpen] = useState(true); // Keep services open by default for visibility
+  const [isServicesOpen, setIsServicesOpen] = useState(true); 
   const pathname = usePathname(); 
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
 
-  // --- 1. Define Menu Data ---
+  // --- 1. Main Navigation ---
   const mainLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Fund Wallet', href: '/dashboard/fund-wallet', icon: CreditCardIcon },
   ];
 
+  // --- 2. Services Navigation (Expanded) ---
   const serviceLinks = [
     { name: 'NIN Services', href: '/dashboard/services/nin', icon: IdentificationIcon },
-    { name: 'CAC Registration', href: '/dashboard/services/cac', icon: BriefcaseIcon },
-    { name: 'JTB TIN Services', href: '/dashboard/services/tin', icon: DocumentTextIcon },
-    { name: 'VTU & Bills', href: '/dashboard/services/vtu', icon: DevicePhoneMobileIcon },
-    { name: 'Newspapers', href: '/dashboard/services/newspaper', icon: NewspaperIcon },
     { name: 'BVN Services', href: '/dashboard/services/bvn', icon: ShieldCheckIcon },
+    { name: 'JAMB Services', href: '/dashboard/services/jamb', icon: AcademicCapIcon },
+    { name: 'JTB TIN Services', href: '/dashboard/services/tin', icon: DocumentTextIcon },
+    { name: 'Result Checker', href: '/dashboard/services/exam-pins', icon: RectangleStackIcon }, // WAEC/NECO/NABTEB
+    { name: 'CAC Registration', href: '/dashboard/services/cac', icon: BriefcaseIcon },
+    { name: 'Newspapers', href: '/dashboard/services/newspaper', icon: NewspaperIcon },
+    { name: 'VTU & Bills', href: '/dashboard/services/vtu', icon: DevicePhoneMobileIcon },
   ];
 
+  // --- 3. Management Navigation ---
   const managementLinks = [
     { name: 'Transactions', href: '/dashboard/history', icon: ClockIcon },
     { name: 'Profile Settings', href: '/dashboard/profile', icon: UserCircleIcon },
   ];
 
-  // --- 2. Helper Component for Links ---
+  // --- Helper Component for Links ---
   const NavLink = ({ item, onClick }: { item: any, onClick?: () => void }) => {
     const active = isActive(item.href);
     return (
@@ -82,7 +86,7 @@ export default function DashboardSidebar({ userRole }: Props) {
       <div className="flex items-center gap-3 px-6 h-24 flex-shrink-0">
         <div className="relative h-10 w-10 overflow-hidden rounded-xl shadow-sm border border-gray-100">
            <SafeImage 
-            src="/public/logos/logo.png" 
+            src="/logos/logo.png" 
             alt="XP" 
             fill
             className="object-cover"
@@ -126,7 +130,7 @@ export default function DashboardSidebar({ userRole }: Props) {
             </span>
           </button>
           
-          <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isServicesOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isServicesOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
             {serviceLinks.map((item) => (
               <NavLink key={item.name} item={item} />
             ))}
