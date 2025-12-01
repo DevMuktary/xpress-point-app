@@ -56,7 +56,6 @@ export async function POST(request: Request) {
     }
     
     // --- PRICE CHANGE ONLY (No Commission) ---
-    // Using defaultAgentPrice for everyone
     const price = new Decimal(service.defaultAgentPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -65,7 +64,6 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Call External API (ConfirmIdent) ---
-    // We call API *before* charging to prevent charging for failed lookups (safe for lookups)
     const response = await axios.post(NIN_VERIFY_ENDPOINT, 
       { 
         nin: nin,
@@ -90,21 +88,33 @@ export async function POST(request: Request) {
     
     const responseData = data.data;
 
-    // --- 4. Data Mapping ---
+    // --- 4. Data Mapping (FIXED) ---
+    // I added "||" operators to handle inconsistent naming from the provider
     const mappedData = {
       photo: responseData.photo,
-      firstname: responseData.firs_tname, 
-      surname: responseData.last_name,
-      middlename: responseData.middlename,
-      birthdate: responseData.birthdate.replace(/-/g, '-'),
-      nin: responseData.NIN,
-      trackingId: responseData.trackingId,
-      residence_AdressLine1: responseData.residence_AdressLine1,
+      
+      // FIXED: Looks for firstname OR first_name OR firs_tname
+      firstname: responseData.firstname || responseData.first_name || responseData.firs_tname || responseData.FirstName,
+      
+      // FIXED: Looks for surname OR last_name
+      surname: responseData.surname || responseData.last_name || responseData.Surname,
+      
+      // FIXED: Looks for middlename OR middle_name
+      middlename: responseData.middlename || responseData.middle_name || responseData.MiddleName || "",
+      
+      birthdate: responseData.birthdate ? responseData.birthdate.replace(/-/g, '-') : "",
+      nin: responseData.nin || responseData.NIN, // Handle lowercase or uppercase
+      trackingId: responseData.trackingId || responseData.tracking_id,
+      
+      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address,
       birthlga: responseData.birthlga,
       gender: responseData.gender,
       residence_lga: responseData.residence_lga,
       residence_state: responseData.residence_state,
-      telephoneno: responseData.phone_number,
+      
+      // FIXED: Looks for telephoneno OR phone_number
+      telephoneno: responseData.telephoneno || responseData.phone_number || responseData.phone,
+      
       birthstate: responseData.birthstate,
       maritalstatus: responseData.maritalstatus,
       profession: responseData.profession,
@@ -151,8 +161,6 @@ export async function POST(request: Request) {
     
     const getPrice = (id: string) => {
       const s = slipPrices.find(sp => sp.id === id);
-      // We now display defaultAgentPrice to everyone because that is what they will be charged
-      // when they try to print the slip (based on the previous file we updated).
       return s ? s.defaultAgentPrice : 0;
     };
 
