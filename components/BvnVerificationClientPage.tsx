@@ -7,8 +7,8 @@ import {
   XMarkIcon,
   InformationCircleIcon,
   ShieldCheckIcon,
-  CheckCircleIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  CheckCircleIcon // Added for success message
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import SafeImage from '@/components/SafeImage';
@@ -20,7 +20,7 @@ type Props = {
 
 type ServiceType = 'PREMIUM' | 'STANDARD';
 
-// --- Modern Selection Button ---
+// --- Modern Selection Button (Updated to Blue) ---
 const TypeButton = ({ title, description, price, selected, disabled, onClick }: any) => (
   <button
     type="button"
@@ -30,22 +30,22 @@ const TypeButton = ({ title, description, price, selected, disabled, onClick }: 
       ${disabled 
         ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed' 
         : selected 
-          ? 'bg-purple-50 border-purple-600 ring-1 ring-purple-600' 
-          : 'bg-white border-gray-200 hover:border-purple-300'
+          ? 'bg-blue-50 border-blue-600 ring-1 ring-blue-600' 
+          : 'bg-white border-gray-200 hover:border-blue-300'
       }`}
   >
     <div className="flex justify-between items-center w-full">
-      <h3 className={`font-bold ${selected ? 'text-purple-900' : 'text-gray-900'}`}>{title}</h3>
+      <h3 className={`font-bold ${selected ? 'text-blue-900' : 'text-gray-900'}`}>{title}</h3>
       {disabled && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Offline</span>}
     </div>
     <p className="text-xs text-gray-500">{description}</p>
-    <p className={`text-lg font-bold mt-2 ${selected ? 'text-purple-700' : 'text-gray-700'}`}>
+    <p className={`text-lg font-bold mt-2 ${selected ? 'text-blue-700' : 'text-gray-700'}`}>
        ₦{price.toLocaleString()}
     </p>
   </button>
 );
 
-// --- Reusable Input ---
+// --- Reusable Input (Updated Focus to Blue) ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", maxLength = 11 }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -55,7 +55,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", maxLength 
       </div>
       <input
         id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         placeholder="Enter 11-digit BVN"
         maxLength={maxLength}
       />
@@ -66,7 +66,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", maxLength 
 export default function BvnVerificationClientPage({ prices, availability }: Props) {
   
   const [bvn, setBvn] = useState('');
-  const [serviceType, setServiceType] = useState<ServiceType>('PREMIUM'); // Default to Premium
+  const [serviceType, setServiceType] = useState<ServiceType>('PREMIUM'); 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -193,7 +193,7 @@ export default function BvnVerificationClientPage({ prices, availability }: Prop
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all hover:bg-purple-700 disabled:opacity-50 hover:-translate-y-0.5"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
             >
               <DocumentArrowDownIcon className="h-5 w-5" />
               {isLoading ? 'Generating...' : `Generate ${serviceType === 'PREMIUM' ? 'Premium' : 'Standard'} Slip`}
@@ -217,7 +217,7 @@ export default function BvnVerificationClientPage({ prices, availability }: Prop
                 You are about to generate a <strong>{serviceType}</strong> Slip for BVN: <br/>
                 <strong className="text-gray-900 text-lg font-mono">{bvn}</strong>
               </p>
-              <p className="mt-4 text-2xl font-bold text-purple-600">
+              <p className="mt-4 text-2xl font-bold text-blue-600">
                 Fee: ₦{currentFee.toLocaleString()}
               </p>
             </div>
@@ -230,7 +230,7 @@ export default function BvnVerificationClientPage({ prices, availability }: Prop
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="flex-1 rounded-lg bg-purple-600 py-2.5 px-4 text-sm font-bold text-white transition-colors hover:bg-purple-700"
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-bold text-white transition-colors hover:bg-blue-700"
               >
                 YES, GENERATE
               </button>
