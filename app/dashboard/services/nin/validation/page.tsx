@@ -1,12 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronLeftIcon, CheckBadgeIcon } from '@heroicons/react/24/outline'; 
+import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import NinValidationClientPage from '@/components/NinValidationClientPage';
 import SafeImage from '@/components/SafeImage';
-// 1. Import the Unavailable Component
 import ServiceUnavailable from '@/components/ServiceUnavailable';
 
 // This is a Server Component. It fetches data on the server.
@@ -17,13 +16,15 @@ export default async function NinValidationPage() {
   }
 
   // --- 1. Get the prices and status for these services ---
-  const serviceIds = ['NIN_VALIDATION_47', 'NIN_VALIDATION_48', 'NIN_VALIDATION_49', 'NIN_VALIDATION_50'];
+  // UPDATED: We now fetch only the 2 manual service IDs
+  const serviceIds = ['NIN_VAL_NO_RECORD', 'NIN_VAL_UPDATE_RECORD'];
+  
   const services = await prisma.service.findMany({
     where: { id: { in: serviceIds } },
     select: { id: true, defaultAgentPrice: true, isActive: true }
   });
 
-  // --- 2. Check Global Availability ---
+  // --- 2. Global Unavailability Check ---
   // If we found no services, or ALL found services are inactive
   const allServicesDown = services.length > 0 && services.every(s => !s.isActive);
 
