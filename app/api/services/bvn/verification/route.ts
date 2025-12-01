@@ -9,7 +9,7 @@ const DATAVERIFY_API_KEY = process.env.DATAVERIFY_API_KEY;
 
 // Endpoints
 const URL_PREMIUM = 'https://dataverify.com.ng/developers/bvn_slip/bvn_premium.php';
-const URL_STANDARD = 'https://dataverify.com.ng/developers/bvn_slip/bvn_slip.php'; // Standard endpoint pattern
+const URL_STANDARD = 'https://dataverify.com.ng/developers/bvn_slip/bvn_premium.php'; // Standard endpoint pattern
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
