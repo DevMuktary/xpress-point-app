@@ -493,7 +493,7 @@ export default function NinModificationClientPage({ hasAlreadyAgreed, prices, av
                     }}
                   />
                   <p className="text-xs text-blue-600 font-medium -mt-2">
-                    Don't have an attestation letter? <Link href="/dashboard/services/nin/attestation" className="underline hover:text-blue-800">Get one from us</Link>
+                    Don't have an attestation letter? <Link href="/dashboard/services/npc" className="underline hover:text-blue-800">Get one from us</Link>
                   </p>
                 </div>
               )}
