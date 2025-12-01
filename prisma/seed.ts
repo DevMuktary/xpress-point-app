@@ -397,6 +397,8 @@ const services = [
   { id: 'BVN_MOD_DOB_PHONE', name: 'BVN Modification (DOB & Phone)', category: 'BVN', platformPrice: new Decimal(5000.00), defaultAgentPrice: new Decimal(5500.00), productCode: null },
   { id: 'BVN_ENROLLMENT_ANDROID', name: 'BVN Android Enrollment', category: 'BVN', platformPrice: new Decimal(1000.00), defaultAgentPrice: new Decimal(1200.00), productCode: null },
   { id: 'BVN_VNIN_TO_NIBSS', name: 'VNIN to NIBSS', category: 'BVN', platformPrice: new Decimal(1500.00), defaultAgentPrice: new Decimal(1600.00), productCode: null },
+  { id: 'BVN_VERIFY_SLIP', name: 'BVN STANDARD SLIP', category: 'BVN', platformPrice: new Decimal(500.00), defaultAgentPrice: new Decimal(450.00), productCode: null },
+  { id: 'BVN_VERIFY_PREMIUM', name: 'BVN PREMIUM SLIP', category: 'BVN', platformPrice: new Decimal(550.00), defaultAgentPrice: new Decimal(480.00), productCode: null },
 ];
 
 async function main() {
