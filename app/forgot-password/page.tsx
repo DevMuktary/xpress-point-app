@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LockClosedIcon, ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, ArrowLeftIcon, CheckCircleIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1); // 1: Request, 2: Verify & Reset
   const [otp, setOtp] = useState('');
@@ -24,14 +24,14 @@ export default function ForgotPasswordPage() {
       const res = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier }),
+        body: JSON.stringify({ email }), // Sending email only
       });
       
       const data = await res.json();
 
       if (res.ok) {
         setStep(2);
-        setMsg({ type: 'success', text: data.message || "OTP sent successfully." });
+        setMsg({ type: 'success', text: data.message || "OTP sent to your Email & WhatsApp." });
       } else {
         setMsg({ type: 'error', text: data.error || "Failed to send OTP." });
       }
@@ -84,8 +84,8 @@ export default function ForgotPasswordPage() {
           </h1>
           <p className="text-gray-500 mt-2 text-sm">
             {step === 1 
-              ? "Enter your registered email or phone number to receive a code." 
-              : "Enter the 6-digit code sent to you and your new password."}
+              ? "Enter your registered email address." 
+              : "Enter the 6-digit code sent to your Email/WhatsApp."}
           </p>
         </div>
 
@@ -100,15 +100,20 @@ export default function ForgotPasswordPage() {
         {step === 1 ? (
           <form onSubmit={handleRequestOtp} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email or Phone</label>
-              <input
-                type="text"
-                required
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 p-3 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                placeholder="e.g. 08012345678"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="name@example.com"
+                />
+              </div>
             </div>
             <button 
               type="submit" 
