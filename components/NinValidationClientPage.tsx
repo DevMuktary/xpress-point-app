@@ -141,15 +141,15 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
   return (
     <div className="space-y-6">
       
-      {/* Important Instructions (Added as requested) */}
+      {/* Important Instructions */}
       <div className="bg-red-50 border border-red-200 p-4 rounded-lg flex gap-3">
          <ExclamationTriangleIcon className="h-6 w-6 text-red-600 flex-shrink-0" />
          <div className="text-sm text-red-900">
             <h4 className="font-bold mb-1">Important Instructions</h4>
             <ul className="list-disc list-inside space-y-1">
                 <li>Please ensure the NIN you submit has an issue that requires validation.</li>
-                <li>There is <strong>NO REFUND</strong> for this service.</li>
-                <li>The completion period will be between <strong>48-72 hours</strong>.</li>
+                <li>This service is not Refundable and Cannot be cancelled once submitted.</li>
+                <li>The NIN May be validated within before or within 48hrs sometime. But the Status will change within 72hrs or more.</li>
             </ul>
          </div>
       </div>
@@ -184,7 +184,7 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
                 onClick={() => setValidationType('NO_RECORD')} 
               />
               <ModTypeButton 
-                title="Record Update (Modification)" 
+                title="Update Record (Modification Validation Name/Phone number/address/ Except DOB"
                 description={`Fee: ₦${prices['NIN_VAL_UPDATE_RECORD'] || 0}`} 
                 selected={validationType === 'UPDATE_RECORD'} 
                 disabled={availability['NIN_VAL_UPDATE_RECORD'] === false} 
@@ -197,8 +197,6 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
           {validationType && (
             <div className="border-t border-gray-200 pt-6 space-y-6 animate-in fade-in slide-in-from-top-4">
               
-              {/* Removed Manual Process notification block here */}
-
               <h3 className="text-lg font-bold text-gray-900">2. Enter Details</h3>
               <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
               
