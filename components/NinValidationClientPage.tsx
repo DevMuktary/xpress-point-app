@@ -140,6 +140,20 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
 
   return (
     <div className="space-y-6">
+      
+      {/* Important Instructions (Added as requested) */}
+      <div className="bg-red-50 border border-red-200 p-4 rounded-lg flex gap-3">
+         <ExclamationTriangleIcon className="h-6 w-6 text-red-600 flex-shrink-0" />
+         <div className="text-sm text-red-900">
+            <h4 className="font-bold mb-1">Important Instructions</h4>
+            <ul className="list-disc list-inside space-y-1">
+                <li>Please ensure the NIN you submit has an issue that requires validation.</li>
+                <li>There is <strong>NO REFUND</strong> for this service.</li>
+                <li>The completion period will be between <strong>48-72 hours</strong>.</li>
+            </ul>
+         </div>
+      </div>
+
       {isLoading && <Loading />}
       
       {/* Success Banner */}
@@ -183,13 +197,7 @@ export default function NinValidationClientPage({ prices, initialRequests, avail
           {validationType && (
             <div className="border-t border-gray-200 pt-6 space-y-6 animate-in fade-in slide-in-from-top-4">
               
-              <div className="bg-yellow-50 border border-yellow-100 p-4 rounded-lg flex gap-3">
-                 <InformationCircleIcon className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-                 <p className="text-sm text-yellow-800">
-                   <strong>Manual Process:</strong> This request will be sent to the admin for processing. 
-                   You will be notified once the validation is completed on the portal.
-                 </p>
-              </div>
+              {/* Removed Manual Process notification block here */}
 
               <h3 className="text-lg font-bold text-gray-900">2. Enter Details</h3>
               <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
