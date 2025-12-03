@@ -9,7 +9,8 @@ import {
   UserIcon, 
   PaperClipIcon,
   EyeIcon,
-  XMarkIcon
+  XMarkIcon,
+  BuildingLibraryIcon // Added icon for Institution
 } from '@heroicons/react/24/outline';
 
 type AdminRequest = {
@@ -37,8 +38,8 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
   const [filterStatus, setFilterStatus] = useState('ALL');
 
   // Modal States
-  const [selectedReq, setSelectedReq] = useState<AdminRequest | null>(null); // For Action
-  const [viewReq, setViewReq] = useState<AdminRequest | null>(null); // For Viewing Details
+  const [selectedReq, setSelectedReq] = useState<AdminRequest | null>(null); 
+  const [viewReq, setViewReq] = useState<AdminRequest | null>(null); 
   const [actionType, setActionType] = useState<'PROCESSING' | 'COMPLETED' | 'FAILED' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -129,17 +130,31 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
   // --- Helper to render specific details ---
   const renderDetails = (req: AdminRequest) => {
     const d = req.formData;
-    const type = req.service.id; // e.g., BVN_MOD_NAME
+    const type = req.service.id; 
 
     return (
       <div className="space-y-4 text-sm text-gray-700">
         
-        {/* Basic Info */}
-        <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-1">
-          <p><strong>BVN:</strong> {d.bvn}</p>
-          <p><strong>NIN:</strong> {d.nin}</p>
-          <p><strong>Email:</strong> {d.email}</p>
-          <p><strong>Password:</strong> <span className="font-mono bg-white px-1 rounded">{d.password}</span></p>
+        {/* Basic Info - NOW INCLUDES INSTITUTION */}
+        <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-2">
+          {d.bankType && (
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-2 mb-2">
+              <BuildingLibraryIcon className="h-4 w-4 text-purple-600" />
+              <span className="font-bold text-purple-900 uppercase tracking-wide text-xs">Enrollment Institution:</span>
+              <span className="font-bold text-gray-900">{d.bankType}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
+            <p><strong>BVN:</strong> <span className="font-mono">{d.bvn}</span></p>
+            <p><strong>NIN:</strong> <span className="font-mono">{d.nin}</span></p>
+            <div className="col-span-2">
+              <p><strong>Email:</strong> {d.email}</p>
+            </div>
+            <div className="col-span-2">
+               <p><strong>Password:</strong> <span className="font-mono bg-white px-1 rounded border border-gray-300">{d.password}</span></p>
+            </div>
+          </div>
         </div>
 
         {/* Changes */}
@@ -148,7 +163,7 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
           
           {type.includes('NAME') && (
             <div className="mb-2">
-              <p className="text-xs text-gray-500">Name Change</p>
+              <p className="text-xs text-gray-500 font-bold uppercase mb-1">Name Change</p>
               <div className="grid grid-cols-2 gap-2">
                  <div>New First: <strong>{d.newFirstName}</strong></div>
                  <div>New Last: <strong>{d.newLastName}</strong></div>
@@ -226,7 +241,6 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
             <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 text-xs font-bold rounded-md ${filterStatus === s ? 'bg-white shadow text-purple-600' : 'text-gray-500'}`}>{s}</button>
           ))}
         </div>
-        <button onClick={() => alert("Export logic here")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50">Export CSV</button>
       </div>
 
       {/* Table */}
@@ -238,6 +252,7 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Agent</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Institution</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
               </tr>
@@ -251,6 +266,9 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
                     <div className="text-xs text-gray-500">{req.user.email}</div>
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-600">{req.service.name}</td>
+                  <td className="px-6 py-4 text-xs font-bold text-purple-700">
+                    {req.formData.bankType || 'N/A'}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(req.status)}`}>{req.status}</span>
                   </td>
@@ -276,7 +294,7 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
       {/* --- VIEW DETAILS MODAL --- */}
       {viewReq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative my-8 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center border-b border-gray-200 p-6">
               <div><h3 className="text-xl font-bold text-gray-900">Request Details</h3><p className="text-sm text-gray-500">{viewReq.service.name}</p></div>
               <button onClick={() => setViewReq(null)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full"><XMarkIcon className="h-6 w-6 text-gray-600"/></button>
@@ -298,7 +316,7 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-bold text-gray-900">Mark as {actionType}</h3>
-              <button onClick={closeActionModal} className="p-1 hover:bg-gray-100 rounded-full"><XCircleIcon className="h-6 w-6 text-gray-500"/></button>
+              <button onClick={closeActionModal} className="p-1 hover:bg-gray-100 rounded-full"><XMarkIcon className="h-6 w-6 text-gray-500"/></button>
             </div>
             <div className="space-y-4">
               {actionType === 'COMPLETED' && (
@@ -313,7 +331,7 @@ export default function AdminBvnModClientPage({ initialRequests }: { initialRequ
                     <input type="checkbox" checked={shouldRefund} onChange={e => setShouldRefund(e.target.checked)} className="h-5 w-5 text-red-600"/>
                  </div>
               )}
-              <textarea placeholder="Admin Note..." className="w-full border rounded-lg p-2 text-sm" value={adminNote} onChange={e => setAdminNote(e.target.value)} />
+              <textarea placeholder="Admin Note..." className="w-full border rounded-lg p-2 text-sm min-h-[80px]" value={adminNote} onChange={e => setAdminNote(e.target.value)} />
               <div className="flex gap-3 pt-2">
                 <button onClick={closeActionModal} className="flex-1 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg">Cancel</button>
                 <button onClick={handleSubmit} disabled={isProcessing || isUploading} className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50">{isProcessing || isUploading ? 'Saving...' : 'Confirm'}</button>
