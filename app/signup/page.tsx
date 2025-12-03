@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import styles from './page.module.css';
 import { useRouter } from 'next/navigation';
 import Loading from '@/app/loading';
 import Link from 'next/link';
 
 // --- NEW IMPORTS for Phone Input ---
-import 'react-phone-number-input/style.css'; // Import the default styles
+import 'react-phone-number-input/style.css'; 
 import PhoneInput from 'react-phone-number-input';
 import { E164Number } from 'libphonenumber-js/core';
 
-// --- NEW SVG ICONS ---
-// "Eye" icon
+// --- ICONS ---
 const EyeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
@@ -20,7 +19,6 @@ const EyeIcon = () => (
   </svg>
 );
 
-// "Eye-Off" (slashed) icon
 const EyeOffIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
@@ -30,7 +28,6 @@ const EyeOffIcon = () => (
   </svg>
 );
 
-// Helper type for our strength checks
 type StrengthChecks = {
   hasLower: boolean;
   hasUpper: boolean;
@@ -42,13 +39,16 @@ type StrengthChecks = {
 export default function SignUpPage() {
   const router = useRouter(); 
   
+  // --- CSS Flash Fix ---
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   // --- Form States ---
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
-  // --- UPDATED Phone Number State ---
   const [phoneNumber, setPhoneNumber] = useState<E164Number | undefined>();
   
   const [password, setPassword] = useState('');
@@ -61,7 +61,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // --- Real-time Password Strength Validation ---
+  // --- Password Validation ---
   const strengthChecks: StrengthChecks = useMemo(() => {
     return {
       hasLower: /[a-z]/.test(password),
@@ -74,18 +74,16 @@ export default function SignUpPage() {
 
   const isPasswordStrong = Object.values(strengthChecks).every(Boolean);
 
-  // --- Real-time Password Match Validation ---
   const passwordsMatch = useMemo(() => {
     if (confirmPassword.length === 0) return null;
     return password === confirmPassword;
   }, [password, confirmPassword]);
 
-  // --- Form Submission Handler ---
+  // --- Submit Handler ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // --- Final Validation on Submit ---
     if (!agreed) {
       setError("Please agree to the Terms of Service.");
       return;
@@ -115,7 +113,7 @@ export default function SignUpPage() {
           businessName,
           address,
           email,
-          phoneNumber: phoneNumber, // Send the full international number
+          phone: phoneNumber, // <--- FIXED: Changed from 'phoneNumber' to 'phone' to match backend
           password,
         }),
       });
@@ -123,7 +121,6 @@ export default function SignUpPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Something went wrong');
 
-      // Success! Redirect to the OTP page.
       router.push(`/verify-otp?phone=${encodeURIComponent(phoneNumber)}`);
 
     } catch (err: any) {
@@ -137,6 +134,9 @@ export default function SignUpPage() {
       {text}
     </li>
   );
+
+  // Prevent FOUC (Flash of Unstyled Content)
+  if (!mounted) return null;
 
   return (
     <>
@@ -172,22 +172,20 @@ export default function SignUpPage() {
             <input id="email" type="email" className={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
 
-          {/* --- UPDATED PHONE INPUT --- */}
           <div className={styles.formGroup}>
             <label htmlFor="phone" className={styles.label}>WhatsApp Phone Number</label>
             <PhoneInput
               id="phone"
               international
-              defaultCountry="NG" /* Defaults to Nigeria 🇳🇬 */
+              defaultCountry="NG" 
               value={phoneNumber}
               onChange={setPhoneNumber}
-              className={styles.phoneInput} /* Apply wrapper style */
-              inputClassName={styles.PhoneInputInput} /* Apply internal input style */
+              className={styles.phoneInput}
+              inputClassName={styles.PhoneInputInput}
               countrySelectProps={{ className: styles.PhoneInputCountry }}
             />
           </div>
 
-          {/* --- UPDATED Password with SVG Icon --- */}
           <div className={styles.formGroup}>
             <label htmlFor="password" className={styles.label}>Create Password</label>
             <div className={styles.passwordWrapper}>
@@ -199,7 +197,6 @@ export default function SignUpPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              {/* --- THIS IS THE CORRECTED LINE --- */}
               <button type="button" className={styles.eyeIcon} onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
@@ -215,7 +212,6 @@ export default function SignUpPage() {
             )}
           </div>
           
-          {/* --- UPDATED Confirm Password with SVG Icon --- */}
           <div className={styles.formGroup}>
             <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
             <div className={styles.passwordWrapper}>
@@ -252,7 +248,7 @@ export default function SignUpPage() {
           </div>
           
           {error && (
-            <p style={{ color: '#e74c3c', textAlign: 'center' }}>{error}</p>
+            <p style={{ color: '#e74c3c', textAlign: 'center', fontSize: '0.9rem', fontWeight: '600' }}>{error}</p>
           )}
           
           <button type="submit" className={styles.button} disabled={isLoading || !agreed || !isPasswordStrong || !passwordsMatch}>
