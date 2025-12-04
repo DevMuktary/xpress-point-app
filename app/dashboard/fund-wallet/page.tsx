@@ -2,11 +2,10 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import NinVerifyModal from './NinVerifyModal';
 import { BanknotesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { VirtualAccount } from '@prisma/client';
 import AccountCard from '@/components/AccountCard';
-import GenerateAccountControls from '@/components/GenerateAccountControls'; // <-- FIX: Import new component
+import GenerateAccountControls from '@/components/GenerateAccountControls';
 
 // Helper function to get user's virtual accounts
 async function getVirtualAccounts(userId: string) {
@@ -23,84 +22,62 @@ export default async function FundWalletPage() {
     redirect('/login');
   }
 
-  let virtualAccounts: VirtualAccount[] = [];
-  if (user.isIdentityVerified) {
-    virtualAccounts = await getVirtualAccounts(user.id);
-  }
+  // Always fetch accounts, regardless of verification status
+  const virtualAccounts: VirtualAccount[] = await getVirtualAccounts(user.id);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Fund Wallet</h1>
 
-      {/* --- 1. If user is NOT verified, show the NIN Modal --- */}
-      {!user.isIdentityVerified && (
-        <div className="rounded-2xl bg-white p-6 text-center shadow-lg">
-          <BanknotesIcon className="mx-auto h-12 w-12 text-blue-500" />
-          <h2 className="mt-4 text-lg font-semibold text-gray-900">
-            Verify Your Identity to Fund Wallet
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            To generate your personal bank account numbers, we need to
-            verify your identity once. This is a free, one-time check.
-          </p>
-          <NinVerifyModal />
-        </div>
-      )}
-
-      {/* --- 2. If user IS verified, show controls and accounts --- */}
-      {user.isIdentityVerified && (
-        <div className="space-y-6">
-          <div className="rounded-lg bg-red-50 p-4 border border-red-200">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-bold text-red-800">
-                  Important Notice
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>
-                    A <span className="font-bold">₦30 fee</span> will be deducted from each deposit.
-                    Money deposited into your wallet cannot be withdrawn to your bank account.
-                  </p>
-                </div>
+      <div className="space-y-6">
+        <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-bold text-red-800">
+                Important Notice
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>
+                  A <span className="font-bold">₦30 fee</span> will be deducted from each deposit.
+                  Money deposited into your wallet cannot be withdrawn to your bank account.
+                </p>
               </div>
             </div>
           </div>
-          
-          {/* --- THIS IS THE FIX --- */}
-          {/* This component will show the "Generate" buttons IF accounts are missing */}
-          <GenerateAccountControls 
-            existingAccounts={virtualAccounts} 
-          />
-          {/* ----------------------- */}
-
-          {/* This section will *only* show accounts that exist */}
-          {virtualAccounts.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Your Personal Account Numbers
-              </h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Transfer to any of these accounts. Your wallet will be credited
-                automatically.
-              </p>
-              
-              <div className="space-y-4 mt-4">
-                {virtualAccounts.map((account) => (
-                  <AccountCard
-                    key={account.id}
-                    bankName={account.bankName}
-                    accountNumber={account.accountNumber}
-                    accountName={account.accountName}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-      )}
+        
+        {/* Component to Generate New Accounts */}
+        <GenerateAccountControls 
+          existingAccounts={virtualAccounts} 
+        />
+
+        {/* List Existing Accounts */}
+        {virtualAccounts.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Your Personal Account Numbers
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Transfer to any of these accounts. Your wallet will be credited
+              automatically.
+            </p>
+            
+            <div className="space-y-4 mt-4">
+              {virtualAccounts.map((account) => (
+                <AccountCard
+                  key={account.id}
+                  bankName={account.bankName}
+                  accountNumber={account.accountNumber}
+                  accountName={account.accountName}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
