@@ -24,7 +24,6 @@ type Props = {
   availability: { [key: string]: boolean };
 };
 type BankType = 'Agency BVN' | 'B.O.A' | 'NIBSS Microfinance' | 'Enterprise Bank' | 'Heritage Bank' | 'FCMB' | 'First Bank' | 'Keystone Bank';
-// Added 'BVN_MOD_NAME_DOB_PHONE' to the type definition
 type ModType = 'BVN_MOD_NAME' | 'BVN_MOD_DOB' | 'BVN_MOD_PHONE' | 'BVN_MOD_NAME_DOB' | 'BVN_MOD_NAME_PHONE' | 'BVN_MOD_DOB_PHONE' | 'BVN_MOD_NAME_DOB_PHONE';
 
 const banksList: BankType[] = [
@@ -32,7 +31,6 @@ const banksList: BankType[] = [
   'Heritage Bank', 'FCMB', 'First Bank', 'Keystone Bank'
 ];
 
-// Added the new service option here
 const modTypes: { id: ModType, name: string }[] = [
   { id: 'BVN_MOD_NAME', name: 'Change of Name' },
   { id: 'BVN_MOD_DOB', name: 'Change of DOB' },
@@ -42,6 +40,9 @@ const modTypes: { id: ModType, name: string }[] = [
   { id: 'BVN_MOD_DOB_PHONE', name: 'DOB & Phone' },
   { id: 'BVN_MOD_NAME_DOB_PHONE', name: 'Name, DOB & Phone' },
 ];
+
+const SPECIAL_BANKS = ['FCMB', 'Keystone Bank'];
+const SPECIAL_BANK_FEE = 1000;
 
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
@@ -57,7 +58,7 @@ const ModTypeButton = ({ title, description, selected, onClick, disabled = false
     disabled={disabled}
     className={`rounded-lg p-4 text-left transition-all border-2
       ${disabled 
-        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' // Disabled styles
+        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
         : selected 
           ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500' 
           : 'border-gray-300 bg-white hover:border-gray-400'
@@ -122,7 +123,7 @@ const NoticeBox = () => (
   </div>
 );
 
-// --- Terms Modal (UPDATED CONTENT) ---
+// --- Terms Modal ---
 const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -215,14 +216,20 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // --- Dynamic Fee Calculation ---
-  const { totalFee, dobFee, dobError } = useMemo(() => {
-    if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null };
+  const { totalFee, dobFee, dobError, bankFee } = useMemo(() => {
+    if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null, bankFee: 0 };
 
     const baseFee = prices[serviceId] || 0;
     let dobFee = 0;
+    let bankFee = 0;
     let dobError: string | null = null;
     
-    // Check for DOB fee logic
+    // --- 1. Special Bank Fee ---
+    if (SPECIAL_BANKS.includes(bankType)) {
+        bankFee = SPECIAL_BANK_FEE;
+    }
+
+    // --- 2. DOB Fee Logic ---
     if ((serviceId.includes('DOB')) && oldDob && newDob) {
       try {
         const oldDate = new Date(oldDob);
@@ -243,7 +250,7 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
       } catch { }
     }
     
-    return { totalFee: baseFee + dobFee, dobFee, dobError };
+    return { totalFee: baseFee + dobFee + bankFee, dobFee, dobError, bankFee };
   }, [serviceId, bankType, oldDob, newDob, prices]);
 
   // --- File Upload Handler ---
@@ -315,7 +322,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
     } else if (serviceId === 'BVN_MOD_DOB_PHONE') {
       formData = { ...formData, newPhone, oldDob, newDob };
     } else if (serviceId === 'BVN_MOD_NAME_DOB_PHONE') {
-      // Added handler for the new service type
       formData = { ...formData, newFirstName, newMiddleName, newLastName, oldDob, newDob, newPhone };
     }
 
@@ -409,7 +415,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
               <label className="text-lg font-semibold text-gray-900">2. Select Modification Type</label>
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                 {modTypes.map(mod => {
-                    // Check availability for this specific mod
                     const isAvailable = availability[mod.id] ?? false; 
                     return (
                       <ModTypeButton
@@ -430,9 +435,7 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
           {bankType && serviceId && (
             <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
                
-              {/* --- NOTIFICATION BLOCK --- */}
               <NoticeBox />
-              {/* -------------------------- */}
 
               <div className="pb-4 border-b border-gray-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -455,7 +458,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                 <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
                 
                 {/* --- Name Fields --- */}
-                {/* Logic: Display Name inputs if the service type includes 'NAME' */}
                 {serviceId.includes('NAME') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">New Name Details</legend>
@@ -464,7 +466,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                       <DataInput label="New Last Name*" id="new-lname" value={newLastName} onChange={setNewLastName} Icon={UserIcon} />
                       <DataInput label="New Middle Name (Optional)" id="new-mname" value={newMiddleName} onChange={setNewMiddleName} Icon={UserIcon} isRequired={false} />
                      
-                      {/* --- Marriage Logic --- */}
                       <div className="pt-4 border-t border-gray-200">
                         <label className="block text-sm font-medium text-gray-700">Is this for female change of SurName?</label>
                         <div className="mt-2 grid grid-cols-2 gap-3">
@@ -491,12 +492,10 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                 )}
                 
                 {/* --- DOB Fields --- */}
-                {/* Logic: Display DOB inputs if the service type includes 'DOB' */}
                 {serviceId.includes('DOB') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">DOB Details</legend>
                     <div className="space-y-4">
-                      {/* Only ask for Full Name if 'NAME' fields are NOT already being asked for */}
                       {!serviceId.includes('NAME') && <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />}
                       <DataInput label="Old DOB*" id="oldDob" value={oldDob} onChange={setOldDob} Icon={CalendarDaysIcon} type="date" />
                       <DataInput label="New DOB*" id="newDob" value={newDob} onChange={setNewDob} Icon={CalendarDaysIcon} type="date" />
@@ -505,18 +504,17 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                 )}
                 
                 {/* --- Phone Fields --- */}
-                {/* Logic: Display Phone inputs if the service type includes 'PHONE' */}
                 {serviceId.includes('PHONE') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">Phone Details</legend>
                     <div className="space-y-4">
-                      {/* Only ask for Full Name if neither 'NAME' nor 'DOB' asked for it (prevents duplicate Full Name field) */}
                       {!serviceId.includes('NAME') && !serviceId.includes('DOB') && <DataInput label="Full Name*" id="fullName" value={fullName} onChange={setFullName} Icon={UserIcon} />}
                       <DataInput label="New Phone Number*" id="newPhone" value={newPhone} onChange={setNewPhone} Icon={PhoneIcon} type="tel" maxLength={11} />
                     </div>
                   </fieldset>
                 )}
                 
+                {/* --- ERROR/INFO ALERTS --- */}
                 {dobError && (
                   <div className="rounded-md bg-red-50 p-4 border border-red-200">
                     <p className="text-sm font-bold text-red-800">{dobError}</p>
@@ -525,6 +523,15 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                 {dobFee > 0 && (
                   <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
                     <p className="text-sm font-bold text-yellow-800">An additional fee of ₦{dobFee} applies for DOB changes over 5 years.</p>
+                  </div>
+                )}
+                {/* NEW: Bank Fee Alert */}
+                {bankFee > 0 && (
+                  <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200 flex items-center gap-3">
+                    <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600 flex-shrink-0" />
+                    <p className="text-sm font-bold text-yellow-800">
+                      An extra fee of ₦1,000 applies for selecting {bankType}.
+                    </p>
                   </div>
                 )}
                 
