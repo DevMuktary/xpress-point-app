@@ -19,7 +19,7 @@ export async function GET() {
       include: {
         user: {
           select: {
-            id: true, // <--- ADDED THIS: Required for Block button to work
+            id: true, // <--- REQUIRED for Block button to work
             firstName: true,
             lastName: true,
             businessName: true,
