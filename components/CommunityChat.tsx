@@ -26,7 +26,7 @@ type ChatMessage = {
     businessName: string | null;
     role: string;
     email: string;
-    isChatBlocked: boolean; // <--- Added this field
+    isChatBlocked: boolean; 
   };
 };
 
@@ -51,6 +51,8 @@ export default function CommunityChat({ currentUser }: Props) {
   const [isChatLocked, setIsChatLocked] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Track if we should stick to the bottom
+  const [stickToBottom, setStickToBottom] = useState(true);
 
   // --- Polling ---
   useEffect(() => {
@@ -62,7 +64,14 @@ export default function CommunityChat({ currentUser }: Props) {
         const data = await res.json();
         
         if (data.messages) {
-          setMessages(data.messages);
+          // Only update if we have new messages or different count
+          // (Simple check to reduce re-renders, though React usually handles this)
+          setMessages(prev => {
+            if (prev.length !== data.messages.length || prev[prev.length-1]?.id !== data.messages[data.messages.length-1]?.id) {
+                return data.messages;
+            }
+            return prev;
+          });
         }
         if (typeof data.isLocked !== 'undefined') {
           setIsChatLocked(data.isLocked);
@@ -77,12 +86,24 @@ export default function CommunityChat({ currentUser }: Props) {
     return () => clearInterval(interval);
   }, [isOpen, isPolling]);
 
-  // --- Scroll ---
+  // --- Smart Scroll Logic ---
   useEffect(() => {
-    if (scrollRef.current) {
+    // Only scroll if we are "sticking" to the bottom or if it's the first load
+    if (scrollRef.current && (stickToBottom || messages.length === 0)) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, stickToBottom]);
+
+  // Handle user scrolling manually
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    
+    // If user is within 50px of the bottom, snap them back to stick mode
+    // Otherwise, let them scroll freely
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setStickToBottom(isAtBottom);
+  };
 
   // --- Send Message ---
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -90,6 +111,7 @@ export default function CommunityChat({ currentUser }: Props) {
     if (!newMessage.trim()) return;
 
     setIsSending(true);
+    setStickToBottom(true); // Force scroll to bottom when sending
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -99,6 +121,10 @@ export default function CommunityChat({ currentUser }: Props) {
       
       if (res.ok) {
         setNewMessage("");
+        // Force immediate fetch to show new message instantly
+        const fetchRes = await fetch('/api/chat');
+        const fetchData = await fetchRes.json();
+        if(fetchData.messages) setMessages(fetchData.messages);
       } else {
         const err = await res.json();
         alert(err.error || "Failed to send");
@@ -192,6 +218,7 @@ export default function CommunityChat({ currentUser }: Props) {
             </div>
             
             <div className="flex items-center gap-2">
+              {/* Lock Button for Admins */}
               {currentUser.role === 'ADMIN' && (
                 <button 
                   onClick={handleToggleLock}
@@ -208,7 +235,11 @@ export default function CommunityChat({ currentUser }: Props) {
           </div>
 
           {/* Messages Area */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          <div 
+            ref={scrollRef} 
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+          >
             {messages.map((msg) => {
               const isMe = msg.user.email === currentUser.email; 
               
@@ -230,6 +261,12 @@ export default function CommunityChat({ currentUser }: Props) {
                     }`}>
                       <p className={`text-xs font-bold mb-1 ${isMe || msg.isAdmin ? 'text-blue-100' : 'text-blue-600'}`}>
                         {msg.isAdmin ? 'Admin Support' : (msg.user.businessName || msg.user.firstName)}
+                        
+                        {/* --- FIXED: Show Email for Admins --- */}
+                        {currentUser.role === 'ADMIN' && !isMe && (
+                          <span className="block text-[10px] font-normal opacity-70">{msg.user.email}</span>
+                        )}
+
                         {/* Show blocked status to admin */}
                         {currentUser.role === 'ADMIN' && msg.user.isChatBlocked && (
                             <span className="ml-2 text-red-500 text-[10px] bg-white px-1 rounded uppercase font-bold">BLOCKED</span>
