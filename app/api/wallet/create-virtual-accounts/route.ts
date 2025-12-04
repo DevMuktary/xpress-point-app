@@ -25,9 +25,8 @@ export async function POST(request: Request) {
   
   // 1. Get User
   const user = await getUserFromSession();
-  if (!user || !user.isIdentityVerified) {
-    console.error("[DEBUG] Auth check failed. User is not identity verified.");
-    return NextResponse.json({ error: 'Unauthorized. Please verify your identity first.' }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 
   // 2. Check for missing API keys
@@ -36,26 +35,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    // --- THIS IS THE FIX (Part 1) ---
-    // We now get the *specific* bankCode from the client
+    // Get the specific bankCode from the client
     const body = await request.json();
     const { bankCode } = body; // e.g., "20946"
 
     if (!bankCode) {
       return NextResponse.json({ error: 'Bank Code is required.' }, { status: 400 });
     }
-    // ---------------------------------
 
     // 3. Call Payment Point API
+    // Note: We send user.bvn/nin even if they are null, depending on upstream requirements
     const payload = {
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
       phoneNumber: formatPhone(user.phoneNumber),
-      bankCode: [bankCode], // <-- Pass only the single bank code
+      bankCode: [bankCode], 
       account_type: "STATIC",
       businessId: BUSINESS_ID,
-      bvn: user.bvn, // This is the NIN we saved in the BVN field
-      nin: user.nin,
+      bvn: user.bvn || undefined, 
+      nin: user.nin || undefined,
     };
     
     console.log("--- [DEBUG] Sending to Payment Point ---");
@@ -80,7 +78,7 @@ export async function POST(request: Request) {
       throw new Error(data.message || 'Failed to create virtual account.');
     }
 
-    // 4. Save the *single* new account
+    // 4. Save the new account
     const newAccount = data.bankAccounts[0];
     const accountData = {
       userId: user.id,
