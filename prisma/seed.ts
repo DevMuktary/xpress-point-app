@@ -393,6 +393,7 @@ const services = [
   { id: 'BVN_MOD_DOB', name: 'BVN Modification (DOB)', category: 'BVN', platformPrice: new Decimal(3000.00), defaultAgentPrice: new Decimal(3500.00), productCode: null },
   { id: 'BVN_MOD_PHONE', name: 'BVN Modification (Phone)', category: 'BVN', platformPrice: new Decimal(3000.00), defaultAgentPrice: new Decimal(3500.00), productCode: null },
   { id: 'BVN_MOD_NAME_DOB', name: 'BVN Modification (Name & DOB)', category: 'BVN', platformPrice: new Decimal(5000.00), defaultAgentPrice: new Decimal(5500.00), productCode: null },
+  { id: 'BVN_MOD_NAME_DOB_PHONE', name: 'BVN Modification (Name phone & DOB)', category: 'BVN', platformPrice: new Decimal(20000.00), defaultAgentPrice: new Decimal(55000.00), productCode: null },
   { id: 'BVN_MOD_NAME_PHONE', name: 'BVN Modification (Name & Phone)', category: 'BVN', platformPrice: new Decimal(5000.00), defaultAgentPrice: new Decimal(5500.00), productCode: null },
   { id: 'BVN_MOD_DOB_PHONE', name: 'BVN Modification (DOB & Phone)', category: 'BVN', platformPrice: new Decimal(5000.00), defaultAgentPrice: new Decimal(5500.00), productCode: null },
   { id: 'BVN_ENROLLMENT_ANDROID', name: 'BVN Android Enrollment', category: 'BVN', platformPrice: new Decimal(1000.00), defaultAgentPrice: new Decimal(1200.00), productCode: null },
