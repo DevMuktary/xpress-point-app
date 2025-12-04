@@ -13,7 +13,8 @@ import {
   ExclamationTriangleIcon,
   PencilSquareIcon,
   InformationCircleIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -43,6 +44,7 @@ const modTypes: { id: ModType, name: string }[] = [
 
 const SPECIAL_BANKS = ['FCMB', 'Keystone Bank'];
 const SPECIAL_BANK_FEE = 1000;
+const NEWSPAPER_FEE = 1500; // Extra charge for newspaper
 
 // --- "Modern Button" Component ---
 const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
@@ -138,14 +140,11 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
       </div>
       <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4 text-sm text-gray-700">
         <p>1. Make sure it is an <span className="font-bold">Agency Enrollment</span> or one of the <span className="font-bold">Listed Banks</span>.</p>
-        
         <p>2. If they did NIN Modification, make sure the modification is reflecting on their <span className="font-bold">VNIN Slip</span>. NIBSS does not do double modifications.</p>
-        
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
           <p className="font-bold mb-1">3. You can only change your details Once.</p>
-          <p>e.g. if you modified your name, you can't do it again. You're eligible to modify DOB, Phone Number and so on, same thing if it's DOB and others.</p>
+          <p>e.g. if you modified your name, you can't do it again. You're eligible to modify DOB, Phone Number and so on.</p>
         </div>
-
         <div>
             <p className="font-bold text-red-700 mb-1">4. NO REFUND if we process your work and found out:</p>
             <ul className="list-disc pl-5 space-y-1">
@@ -155,7 +154,6 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
                 <li>Or it's Complete Change of Name</li>
             </ul>
         </div>
-
         <div className="bg-red-50 p-3 rounded-lg border border-red-100 text-red-900">
             <p className="font-bold mb-1">You will be charged ₦1000 if we proceed your work and find out:</p>
              <ul className="list-disc pl-5 space-y-1">
@@ -165,16 +163,10 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
         </div>
       </div>
       <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-        <Link
-          href="/dashboard/services/bvn"
-          className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center transition-colors hover:bg-gray-100"
-        >
+        <Link href="/dashboard/services/bvn" className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 text-center hover:bg-gray-100">
           Go Back
         </Link>
-        <button
-          onClick={onClose}
-          className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-        >
+        <button onClick={onClose} className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white hover:bg-blue-700">
           I Understand & Agree
         </button>
       </div>
@@ -185,7 +177,6 @@ const BvnModificationTermsModal = ({ onClose }: { onClose: () => void }) => (
 // --- The Main Component ---
 export default function BvnModificationClientPage({ prices, availability }: Props) {
    
-  // --- State Management ---
   const [bankType, setBankType] = useState<BankType | null>(null);
   const [serviceId, setServiceId] = useState<ModType | null>(null);
    
@@ -195,7 +186,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(true); 
 
-  // --- Form Data State ---
   const [bvn, setBvn] = useState('');
   const [nin, setNin] = useState('');
   const [newFirstName, setNewFirstName] = useState('');
@@ -208,28 +198,36 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // --- "Marriage" State ---
+  // --- "Marriage" & "Newspaper" State ---
   const [isMarriage, setIsMarriage] = useState<boolean | null>(null);
+  const [hasNewspaper, setHasNewspaper] = useState<boolean | null>(null); // New state
+  
   const [newspaperFile, setNewspaperFile] = useState<File | null>(null);
   const [newspaperUrl, setNewspaperUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // --- Dynamic Fee Calculation ---
-  const { totalFee, dobFee, dobError, bankFee } = useMemo(() => {
-    if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null, bankFee: 0 };
+  const { totalFee, dobFee, dobError, bankFee, newspaperFee } = useMemo(() => {
+    if (!serviceId || !bankType) return { totalFee: 0, dobFee: 0, dobError: null, bankFee: 0, newspaperFee: 0 };
 
     const baseFee = prices[serviceId] || 0;
     let dobFee = 0;
     let bankFee = 0;
+    let newspaperFee = 0;
     let dobError: string | null = null;
     
-    // --- 1. Special Bank Fee ---
+    // 1. Special Bank Fee
     if (SPECIAL_BANKS.includes(bankType)) {
         bankFee = SPECIAL_BANK_FEE;
     }
 
-    // --- 2. DOB Fee Logic ---
+    // 2. Newspaper Fee (Added if user needs newspaper)
+    if (serviceId.includes('NAME') && isMarriage === true && hasNewspaper === false) {
+        newspaperFee = NEWSPAPER_FEE;
+    }
+
+    // 3. DOB Fee Logic
     if ((serviceId.includes('DOB')) && oldDob && newDob) {
       try {
         const oldDate = new Date(oldDob);
@@ -250,8 +248,8 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
       } catch { }
     }
     
-    return { totalFee: baseFee + dobFee + bankFee, dobFee, dobError, bankFee };
-  }, [serviceId, bankType, oldDob, newDob, prices]);
+    return { totalFee: baseFee + dobFee + bankFee + newspaperFee, dobFee, dobError, bankFee, newspaperFee };
+  }, [serviceId, bankType, oldDob, newDob, prices, isMarriage, hasNewspaper]);
 
   // --- File Upload Handler ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,7 +282,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
     }
   };
 
-  // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -294,7 +291,8 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
       setSubmitError(dobError);
       return;
     }
-    if (serviceId?.includes('NAME') && isMarriage === true && !newspaperUrl) {
+    // Only require upload if user said they HAVE a newspaper
+    if (serviceId?.includes('NAME') && isMarriage === true && hasNewspaper === true && !newspaperUrl) {
       setSubmitError("Please wait for the Newspaper Publication to finish uploading.");
       return;
     }
@@ -302,12 +300,15 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
     setIsConfirmModalOpen(true);
   };
    
-  // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
     
-    let formData: any = { bvn, nin, email, password, isMarriage };
+    // Added 'needsNewspaper' flag
+    let formData: any = { 
+        bvn, nin, email, password, isMarriage,
+        needsNewspaper: (isMarriage === true && hasNewspaper === false) 
+    };
     
     if (serviceId === 'BVN_MOD_NAME') {
       formData = { ...formData, newFirstName, newMiddleName, newLastName };
@@ -333,7 +334,8 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
           serviceId: serviceId, 
           bankType: bankType,
           formData, 
-          newspaperUrl: newspaperUrl || null 
+          // Only send URL if they uploaded one
+          newspaperUrl: hasNewspaper ? (newspaperUrl || null) : null 
         }),
       });
       
@@ -343,12 +345,13 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
       }
       
       setSuccess(data.message);
-      // Reset the form
+      // Reset
       setServiceId(null); setBankType(null);
       setBvn(''); setNin(''); setEmail(''); setPassword('');
       setNewFirstName(''); setNewLastName(''); setNewMiddleName('');
       setOldDob(''); setNewDob(''); setFullName(''); setNewPhone('');
-      setIsMarriage(null); setNewspaperFile(null); setNewspaperUrl(null);
+      setIsMarriage(null); setHasNewspaper(null); 
+      setNewspaperFile(null); setNewspaperUrl(null);
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -361,7 +364,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
     <div className="space-y-6">
       {(isLoading) && <Loading />}
       
-      {/* --- Success Message --- */}
       {success && (
         <div className="rounded-lg bg-blue-50 p-4 border border-blue-200 mb-6 flex gap-3">
           <CheckCircleIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
@@ -377,11 +379,9 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
         </div>
       )}
 
-      {/* --- The "Submit New Request" Form --- */}
       <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         <form onSubmit={handleOpenConfirmModal} className="space-y-6">
            
-          {/* --- Step 1: Select Institution --- */}
           {!bankType && (
             <div>
               <label className="text-lg font-semibold text-gray-900">1. Select Enrollment Institution</label>
@@ -399,7 +399,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
             </div>
           )}
 
-          {/* --- Step 2: Select Mod Type --- */}
           {bankType && !serviceId && (
             <div className="space-y-6">
               <div className="pb-4 border-b border-gray-200">
@@ -431,7 +430,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
             </div>
           )}
 
-          {/* --- Step 3: Enter Details --- */}
           {bankType && serviceId && (
             <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
                
@@ -457,7 +455,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                 <DataInput label="BVN Number*" id="bvn" value={bvn} onChange={setBvn} Icon={IdentificationIcon} />
                 <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} />
                 
-                {/* --- Name Fields --- */}
                 {serviceId.includes('NAME') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">New Name Details</legend>
@@ -466,32 +463,50 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                       <DataInput label="New Last Name*" id="new-lname" value={newLastName} onChange={setNewLastName} Icon={UserIcon} />
                       <DataInput label="New Middle Name (Optional)" id="new-mname" value={newMiddleName} onChange={setNewMiddleName} Icon={UserIcon} isRequired={false} />
                      
+                      {/* --- 1. Ask Marriage Question --- */}
                       <div className="pt-4 border-t border-gray-200">
                         <label className="block text-sm font-medium text-gray-700">Is this for female change of SurName?</label>
                         <div className="mt-2 grid grid-cols-2 gap-3">
-                          <ModTypeButton title="Yes" description="For SurName" selected={isMarriage === true} onClick={() => setIsMarriage(true)} />
-                          <ModTypeButton title="No" description="Other reason" selected={isMarriage === false} onClick={() => setIsMarriage(false)} />
+                          <ModTypeButton title="Yes" description="For SurName" selected={isMarriage === true} onClick={() => { setIsMarriage(true); setHasNewspaper(null); }} />
+                          <ModTypeButton title="No" description="Other reason" selected={isMarriage === false} onClick={() => { setIsMarriage(false); setHasNewspaper(null); }} />
                         </div>
                       </div>
 
+                      {/* --- 2. Ask Newspaper Question (Only if Marriage is Yes) --- */}
                       {isMarriage === true && (
-                        <div className="space-y-4 pt-4 border-t border-gray-200">
-                          <FileUpload 
-                            label="Upload Newspaper Publication*" id="newspaper-upload" 
-                            file={newspaperFile} fileUrl={newspaperUrl} 
-                            isUploading={isUploading} error={uploadError}
-                            onChange={handleFileUpload} 
-                          />
-                          <p className="text-xs text-blue-600 font-medium">
-                            Need one? <Link href="/dashboard/services/newspaper" className="underline hover:text-blue-800">Get one from us</Link>
-                          </p>
+                        <div className="pt-4 border-t border-gray-200 space-y-4 animate-in fade-in">
+                          <label className="block text-sm font-medium text-gray-700">Do you have a Newspaper Publication?</label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <ModTypeButton title="Yes" description="I have it" selected={hasNewspaper === true} onClick={() => setHasNewspaper(true)} />
+                            <ModTypeButton title="No" description="I don't have it" selected={hasNewspaper === false} onClick={() => setHasNewspaper(false)} />
+                          </div>
+
+                          {/* 3a. If YES: Show Upload */}
+                          {hasNewspaper === true && (
+                            <FileUpload 
+                                label="Upload Newspaper Publication*" id="newspaper-upload" 
+                                file={newspaperFile} fileUrl={newspaperUrl} 
+                                isUploading={isUploading} error={uploadError}
+                                onChange={handleFileUpload} 
+                            />
+                          )}
+
+                          {/* 3b. If NO: Show Fee Notice */}
+                          {hasNewspaper === false && (
+                            <div className="rounded-md bg-blue-50 p-4 border border-blue-200 flex items-center gap-3">
+                                <DocumentTextIcon className="h-6 w-6 text-blue-600 flex-shrink-0" />
+                                <p className="text-sm font-bold text-blue-800">
+                                    We will help you process the Newspaper publication.<br/>
+                                    <span className="text-blue-600 font-normal">An extra fee of ₦1,500 has been added.</span>
+                                </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   </fieldset>
                 )}
                 
-                {/* --- DOB Fields --- */}
                 {serviceId.includes('DOB') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">DOB Details</legend>
@@ -503,7 +518,6 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                   </fieldset>
                 )}
                 
-                {/* --- Phone Fields --- */}
                 {serviceId.includes('PHONE') && (
                   <fieldset className="rounded-lg border border-gray-300 p-4">
                     <legend className="text-sm font-medium text-gray-700 px-2">Phone Details</legend>
@@ -514,24 +528,13 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
                   </fieldset>
                 )}
                 
-                {/* --- ERROR/INFO ALERTS --- */}
-                {dobError && (
-                  <div className="rounded-md bg-red-50 p-4 border border-red-200">
-                    <p className="text-sm font-bold text-red-800">{dobError}</p>
-                  </div>
-                )}
-                {dobFee > 0 && (
-                  <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
-                    <p className="text-sm font-bold text-yellow-800">An additional fee of ₦{dobFee} applies for DOB changes over 5 years.</p>
-                  </div>
-                )}
-                {/* NEW: Bank Fee Alert */}
+                {dobError && <div className="rounded-md bg-red-50 p-4 border border-red-200"><p className="text-sm font-bold text-red-800">{dobError}</p></div>}
+                {dobFee > 0 && <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200"><p className="text-sm font-bold text-yellow-800">An additional fee of ₦{dobFee} applies for DOB changes over 5 years.</p></div>}
+                
                 {bankFee > 0 && (
                   <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200 flex items-center gap-3">
                     <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600 flex-shrink-0" />
-                    <p className="text-sm font-bold text-yellow-800">
-                      An extra fee of ₦1,000 applies for selecting {bankType}.
-                    </p>
+                    <p className="text-sm font-bold text-yellow-800">An extra fee of ₦1,000 applies for selecting {bankType}.</p>
                   </div>
                 )}
                 
@@ -546,15 +549,13 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
             </div>
           )}
            
-          {/* --- Submit Button --- */}
           {serviceId && (
             <div className="border-t border-gray-200 pt-6">
-              {submitError && !dobError && (
-                <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>
-              )}
+              {submitError && !dobError && <p className="mb-4 text-sm font-medium text-red-600 text-center">{submitError}</p>}
               <button
                 type="submit"
-                disabled={isLoading || !!dobError || isUploading || (serviceId.includes('NAME') && isMarriage === null)}
+                // Disable if NAME selected but marriage flow not complete
+                disabled={isLoading || !!dobError || isUploading || (serviceId.includes('NAME') && (isMarriage === null || (isMarriage && hasNewspaper === null)))}
                 className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
               >
                 {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${totalFee})`}
@@ -565,37 +566,25 @@ export default function BvnModificationClientPage({ prices, availability }: Prop
         </form>
       </div>
 
-      {/* --- Terms Modal --- */}
-      {isTermsModalOpen && (
-        <BvnModificationTermsModal onClose={() => setIsTermsModalOpen(false)} />
-      )}
+      {isTermsModalOpen && <BvnModificationTermsModal onClose={() => setIsTermsModalOpen(false)} />}
 
-      {/* --- Confirmation Modal --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 p-4">
               <h2 className="text-lg font-semibold text-gray-900">Please Confirm</h2>
-              <button onClick={() => setIsConfirmModalOpen(false)}>
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
-              </button>
+              <button onClick={() => setIsConfirmModalOpen(false)}><XMarkIcon className="h-5 w-5 text-gray-500" /></button>
             </div>
             <div className="p-6">
-              <p className="text-center text-gray-600 text-sm">
-                Please confirm you have filled in the right details. This action is irreversible.
-              </p>
+              <p className="text-center text-gray-600 text-sm">Please confirm you have filled in the right details. This action is irreversible.</p>
               <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
                 <p className="text-center text-2xl font-bold text-blue-700">₦{totalFee}</p>
               </div>
             </div>
             <div className="flex gap-4 border-t border-gray-200 bg-gray-50 p-4 rounded-b-2xl">
-              <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100">
-                CANCEL
-              </button>
-              <button onClick={handleFinalSubmit} className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
-                YES, SUBMIT
-              </button>
+              <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-800 border border-gray-300 transition-colors hover:bg-gray-100">CANCEL</button>
+              <button onClick={handleFinalSubmit} className="flex-1 rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700">YES, SUBMIT</button>
             </div>
           </div>
         </div>
