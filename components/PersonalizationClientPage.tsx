@@ -176,7 +176,7 @@ export default function PersonalizationClientPage({ initialRequests, serviceFee,
             <div className="ml-3 text-sm text-blue-800">
               <p className="font-bold mb-1">IMPORTANT NOTE:</p>
               <p>
-                This service will be processed within <strong>30 minutes to 1 hour</strong>. 
+                This service will be processed within <strong>24 to 48 hours</strong>. 
                 There might be a slight delay on weekends.
               </p>
               <p className="mt-1">
