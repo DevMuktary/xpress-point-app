@@ -22,6 +22,65 @@ import {
 // --- Import the Chat Widget ---
 import CommunityChat from '@/components/CommunityChat'; 
 
+// --- Constants for Dynamic Fee Calculation ---
+const DOB_GAP_FEE_MEDIUM = new Decimal(35000);
+const DOB_GAP_FEE_HIGH = new Decimal(45000);
+const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
+
+// --- Helper: Calculate Profit for a Single Request ---
+// Returns the profit (Revenue - Commission - Cost)
+const calculateRequestProfit = (req: any) => {
+  if (!req.service) return new Decimal(0);
+
+  let price = new Decimal(req.service.defaultAgentPrice);
+  const cost = new Decimal(req.service.platformPrice);
+  let commission = new Decimal(0);
+
+  // 1. Handle Dynamic Pricing (Specifically BVN DOB)
+  if (req.service.id.includes('BVN_MOD_DOB') && req.formData) {
+    try {
+      // Check if it's a BvnRequest with formData (User input)
+      // We parse formData safely
+      const data = typeof req.formData === 'string' ? JSON.parse(req.formData) : req.formData;
+      const { oldDob, newDob, bankType } = data;
+
+      if (oldDob && newDob) {
+        const oldDate = new Date(oldDob);
+        const newDate = new Date(newDob);
+        const diffTime = Math.abs(newDate.getTime() - oldDate.getTime());
+        const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+
+        if (diffYears > 5) {
+           // If bank is not in the exclusion list, add the fee
+           if (!NO_DOB_GAP_BANKS.includes(bankType)) {
+              if (diffYears > 10) {
+                price = price.plus(DOB_GAP_FEE_HIGH);
+              } else {
+                price = price.plus(DOB_GAP_FEE_MEDIUM);
+              }
+           }
+        }
+      }
+    } catch (e) {
+      // If date parsing fails, ignore dynamic fee (fallback to base)
+    }
+  }
+
+  // 2. Handle Aggregator Commission
+  if (req.user?.role === 'AGGREGATOR') {
+    // Check for specific aggregator price first
+    const specificPrice = req.service.aggregatorPrices?.find((ap: any) => ap.aggregatorId === req.user?.id);
+    if (specificPrice) {
+      commission = new Decimal(specificPrice.commission);
+    } else {
+      commission = new Decimal(req.service.defaultCommission);
+    }
+  }
+
+  // Profit = (Charged Price - Commission) - Platform Cost
+  return price.minus(commission).minus(cost);
+};
+
 // --- Stat Card Component ---
 const StatCard = ({ title, value, icon: Icon, color, href }: {
   title: string;
@@ -53,17 +112,52 @@ export default async function AdminDashboardPage() {
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  // Common include object for fetching request details needed for profit calc
+  const requestInclude = {
+    service: {
+      include: {
+        aggregatorPrices: true
+      }
+    },
+    user: {
+      select: {
+        id: true,
+        role: true
+      }
+    }
+  };
+
   // --- 1. Execute Main Queries ---
   const [
     totalAgents,
     totalAggregators,
     pendingPayouts,
     walletAggregate,
-    monthlyTransactions,
-    // Pending Counts
+    
+    // --- Monthly Completed Jobs (For Profit Calculation) ---
+    // We fetch full objects to calculate dynamic profit
+    monthlyBvnReqs,
+    monthlyModReqs, // Nin Mod
+    monthlyDelinkReqs,
+    monthlyValReqs,
+    monthlyIpeReqs,
+    monthlyPersReqs,
+    monthlyCacReqs,
+    monthlyTinReqs,
+    monthlyJambReqs,
+    monthlyResultReqs,
+    monthlyNewsReqs,
+    monthlyVtuReqs,
+    monthlyExamReqs,
+    monthlyNpcReqs,
+    monthlyVninReqs,
+    monthlyNinVerifications, // Instant verification via Transaction
+
+    // --- Pending Counts (Lifetime) ---
     ninModPending, ninDelinkPending, bvnPending, cacPending, 
     tinPending, jambPending, resultPending, newspaperPending,
-    // Completed Counts
+    
+    // --- Completed Counts (Lifetime) ---
     ninModSuccess, ninDelinkSuccess, ninValSuccess, ipeSuccess, 
     persSuccess, bvnSuccess, cacSuccess, tinSuccess, 
     jambSuccess, resultSuccess, newspaperSuccess, vtuSuccess, examPinSuccess
@@ -72,22 +166,37 @@ export default async function AdminDashboardPage() {
     prisma.user.count({ where: { role: 'AGGREGATOR' } }),
     prisma.withdrawalRequest.count({ where: { status: 'PENDING' } }),
     prisma.wallet.aggregate({ _sum: { balance: true } }),
+
+    // --- FETCHING MONTHLY COMPLETED REQUESTS ---
+    prisma.bvnRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.modificationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.delinkRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.validationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.ipeRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.personalizationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.cacRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.tinRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.jambRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.resultRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.newspaperRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.vtuRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.examPinRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.npcRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    prisma.vninRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
     
-    // Monthly Transactions
+    // For NIN Verification (Instant), we use Transactions as they don't have a persistent 'Request' with status
     prisma.transaction.findMany({
       where: {
-        type: 'SERVICE_CHARGE',
+        verificationId: { not: null }, // Only NIN Verifications
         status: 'COMPLETED',
-        serviceId: { not: null },
         createdAt: { gte: firstDayOfMonth }
       },
-      select: {
-        amount: true,
-        service: { select: { platformPrice: true } }
+      include: {
+        service: true // No need for user/aggregator check usually as instant services often exclude commission, but let's check basic profit
       }
     }),
 
-    // PENDING counts
+    // --- PENDING COUNTS ---
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
     prisma.bvnRequest.count({ where: { status: 'PENDING' } }),
@@ -97,7 +206,7 @@ export default async function AdminDashboardPage() {
     prisma.resultRequest.count({ where: { status: 'PENDING' } }),
     prisma.newspaperRequest.count({ where: { status: 'PENDING' } }),
 
-    // COMPLETED counts (for calculating successful jobs)
+    // --- COMPLETED COUNTS (Lifetime) ---
     prisma.modificationRequest.count({ where: { status: 'COMPLETED' } }),
     prisma.delinkRequest.count({ where: { status: 'COMPLETED' } }),
     prisma.validationRequest.count({ where: { status: 'COMPLETED' } }),
@@ -117,15 +226,31 @@ export default async function AdminDashboardPage() {
   const totalPendingJobs = ninModPending + ninDelinkPending + bvnPending + cacPending + tinPending + jambPending + resultPending + newspaperPending;
   const totalSuccessful = ninModSuccess + ninDelinkSuccess + ninValSuccess + ipeSuccess + persSuccess + bvnSuccess + cacSuccess + tinSuccess + jambSuccess + resultSuccess + newspaperSuccess + vtuSuccess + examPinSuccess;
 
+  // --- Calculate Monthly Profit (Based on Completed Jobs) ---
   let monthlyProfit = new Decimal(0);
-  for (const tx of monthlyTransactions) {
+
+  const allMonthlyCompleted = [
+    ...monthlyBvnReqs, ...monthlyModReqs, ...monthlyDelinkReqs, ...monthlyValReqs,
+    ...monthlyIpeReqs, ...monthlyPersReqs, ...monthlyCacReqs, ...monthlyTinReqs,
+    ...monthlyJambReqs, ...monthlyResultReqs, ...monthlyNewsReqs, ...monthlyVtuReqs,
+    ...monthlyExamReqs, ...monthlyNpcReqs, ...monthlyVninReqs
+  ];
+
+  // Process Requests
+  allMonthlyCompleted.forEach(req => {
+    monthlyProfit = monthlyProfit.plus(calculateRequestProfit(req));
+  });
+
+  // Process Instant Verifications (Transaction based)
+  monthlyNinVerifications.forEach(tx => {
     if (tx.service) {
       const revenue = tx.amount.abs();
       const cost = tx.service.platformPrice;
-      const profit = revenue.minus(cost); 
-      monthlyProfit = monthlyProfit.plus(profit);
+      // Note: Assuming no commission logic for instant verifications for now, or applied differently
+      monthlyProfit = monthlyProfit.plus(revenue.minus(cost));
     }
-  }
+  });
+
 
   const totalUserFunds = walletAggregate._sum.balance || new Decimal(0);
 
@@ -279,7 +404,6 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* --- ADMIN COMMUNITY CHAT WIDGET --- */}
-      {/* Because user.role is ADMIN, this widget will automatically show Delete/Block controls */}
       <CommunityChat currentUser={user} />
       
     </div>
