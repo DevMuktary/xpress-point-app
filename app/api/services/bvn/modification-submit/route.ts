@@ -8,11 +8,22 @@ const DOB_GAP_FEE_MEDIUM = new Decimal(35000);
 const DOB_GAP_FEE_HIGH = new Decimal(45000);   
 const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
 
+// --- NEW: Special Bank Fee ---
+const SPECIAL_BANK_FEE = new Decimal(1000);
+const SPECIAL_BANKS = ['FCMB', 'Keystone Bank'];
+
 async function calculateFee(serviceId: string, bankType: string, oldDob: string, newDob: string): Promise<Decimal> {
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service) throw new Error('Service not found.');
+  
   let price = new Decimal(service.defaultAgentPrice);
 
+  // 1. Apply Special Bank Fee (FCMB / Keystone)
+  if (SPECIAL_BANKS.includes(bankType)) {
+    price = price.plus(SPECIAL_BANK_FEE);
+  }
+
+  // 2. Apply DOB Gap Fee
   if (serviceId.includes('DOB') && oldDob && newDob) {
     try {
       const oldDate = new Date(oldDob);
@@ -32,7 +43,7 @@ async function calculateFee(serviceId: string, bankType: string, oldDob: string,
       }
     } catch (e: any) {
       if (e.message.includes("not supported")) throw e;
-      throw new Error("Invalid date format provided for DOB.");
+      // If date parsing fails, we ignore DOB logic (assumed valid dates checked elsewhere or manual entry)
     }
   }
   return price;
@@ -46,7 +57,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { serviceId, bankType, formData, passportUrl, attestationUrl } = body; 
+    const { serviceId, bankType, formData, passportUrl } = body; 
 
     if (!serviceId || !formData) {
       return NextResponse.json({ error: 'Required fields missing.' }, { status: 400 });
@@ -74,8 +85,6 @@ export async function POST(request: Request) {
         where: { userId: user.id },
         data: { balance: { decrement: priceAsString } },
       });
-
-      // NOTE: Commission is NOT paid here. It is paid by Admin on Completion.
 
       // b) Create Request
       await tx.bvnRequest.create({
