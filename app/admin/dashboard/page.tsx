@@ -30,6 +30,7 @@ const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
 // --- Helper: Calculate Profit for a Single Request ---
 // Returns the profit (Revenue - Commission - Cost)
 const calculateRequestProfit = (req: any) => {
+  // If the request model doesn't have a linked service (e.g. IPE, Delink), we return 0
   if (!req.service) return new Decimal(0);
 
   let price = new Decimal(req.service.defaultAgentPrice);
@@ -69,7 +70,6 @@ const calculateRequestProfit = (req: any) => {
   // 2. Handle Aggregator Commission
   if (req.user?.role === 'AGGREGATOR') {
     // Check for specific aggregator price first
-    // Using 'AggregatorPrice' (PascalCase) to match schema
     const specificPrice = req.service.AggregatorPrice?.find((ap: any) => ap.aggregatorId === req.user?.id);
     if (specificPrice) {
       commission = new Decimal(specificPrice.commission);
@@ -113,13 +113,25 @@ export default async function AdminDashboardPage() {
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Common include object for fetching request details needed for profit calc
-  const requestInclude = {
+  // --- INCLUDE OBJECTS ---
+  
+  // 1. For models that HAVE a 'service' relation
+  const requestIncludeService = {
     service: {
       include: {
         AggregatorPrice: true 
       }
     },
+    user: {
+      select: {
+        id: true,
+        role: true
+      }
+    }
+  };
+
+  // 2. For models that DO NOT have a 'service' relation (Ipe, Delink, Validation, Personalization)
+  const requestIncludeUser = {
     user: {
       select: {
         id: true,
@@ -136,13 +148,9 @@ export default async function AdminDashboardPage() {
     walletAggregate,
     
     // --- Monthly Completed Jobs (For Profit Calculation) ---
-    // We fetch full objects to calculate dynamic profit
+    // Models with 'service' relation:
     monthlyBvnReqs,
-    monthlyModReqs, // Nin Mod
-    monthlyDelinkReqs,
-    monthlyValReqs,
-    monthlyIpeReqs,
-    monthlyPersReqs,
+    monthlyModReqs, 
     monthlyCacReqs,
     monthlyTinReqs,
     monthlyJambReqs,
@@ -152,6 +160,13 @@ export default async function AdminDashboardPage() {
     monthlyExamReqs,
     monthlyNpcReqs,
     monthlyVninReqs,
+    
+    // Models WITHOUT 'service' relation:
+    monthlyDelinkReqs,
+    monthlyValReqs,
+    monthlyIpeReqs,
+    monthlyPersReqs,
+
     monthlyNinVerifications, // Instant verification via Transaction
 
     // --- Pending Counts (Lifetime) ---
@@ -168,35 +183,35 @@ export default async function AdminDashboardPage() {
     prisma.withdrawalRequest.count({ where: { status: 'PENDING' } }),
     prisma.wallet.aggregate({ _sum: { balance: true } }),
 
-    // --- FETCHING MONTHLY COMPLETED REQUESTS ---
-    prisma.bvnRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.modificationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.delinkRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.validationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.ipeRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.personalizationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.cacRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.tinRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.jambRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.resultRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.newspaperRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
+    // --- COMPLETED REQUESTS (WITH SERVICE) ---
+    prisma.bvnRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.modificationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.cacRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.tinRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.jambRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.resultRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.newspaperRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    // VTU & ExamPin use createdAt
+    prisma.vtuRequest.findMany({ where: { status: 'COMPLETED', createdAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.examPinRequest.findMany({ where: { status: 'COMPLETED', createdAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.npcRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+    prisma.vninRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeService }),
+
+    // --- COMPLETED REQUESTS (WITHOUT SERVICE) ---
+    prisma.delinkRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeUser }),
+    prisma.validationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeUser }),
+    prisma.ipeRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeUser }),
+    prisma.personalizationRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestIncludeUser }),
     
-    // Using 'createdAt' for VTU and ExamPin because they don't have 'updatedAt'
-    prisma.vtuRequest.findMany({ where: { status: 'COMPLETED', createdAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.examPinRequest.findMany({ where: { status: 'COMPLETED', createdAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    
-    prisma.npcRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    prisma.vninRequest.findMany({ where: { status: 'COMPLETED', updatedAt: { gte: firstDayOfMonth } }, include: requestInclude }),
-    
-    // For NIN Verification (Instant), we use Transactions as they don't have a persistent 'Request' with status
+    // For NIN Verification (Instant), we use Transactions
     prisma.transaction.findMany({
       where: {
-        verificationId: { not: null }, // Only NIN Verifications
+        verificationId: { not: null }, 
         status: 'COMPLETED',
         createdAt: { gte: firstDayOfMonth }
       },
       include: {
-        service: true // No need for user/aggregator check usually as instant services often exclude commission, but let's check basic profit
+        service: true
       }
     }),
 
@@ -234,10 +249,11 @@ export default async function AdminDashboardPage() {
   let monthlyProfit = new Decimal(0);
 
   const allMonthlyCompleted = [
-    ...monthlyBvnReqs, ...monthlyModReqs, ...monthlyDelinkReqs, ...monthlyValReqs,
-    ...monthlyIpeReqs, ...monthlyPersReqs, ...monthlyCacReqs, ...monthlyTinReqs,
+    ...monthlyBvnReqs, ...monthlyModReqs, ...monthlyCacReqs, ...monthlyTinReqs,
     ...monthlyJambReqs, ...monthlyResultReqs, ...monthlyNewsReqs, ...monthlyVtuReqs,
-    ...monthlyExamReqs, ...monthlyNpcReqs, ...monthlyVninReqs
+    ...monthlyExamReqs, ...monthlyNpcReqs, ...monthlyVninReqs,
+    // These will return 0 profit because they have no linked service in DB
+    ...monthlyDelinkReqs, ...monthlyValReqs, ...monthlyIpeReqs, ...monthlyPersReqs
   ];
 
   // Process Requests
@@ -250,7 +266,7 @@ export default async function AdminDashboardPage() {
     if (tx.service) {
       const revenue = tx.amount.abs();
       const cost = tx.service.platformPrice;
-      // Note: Assuming no commission logic for instant verifications for now, or applied differently
+      // Note: Assuming no commission logic for instant verifications for now
       monthlyProfit = monthlyProfit.plus(revenue.minus(cost));
     }
   });
