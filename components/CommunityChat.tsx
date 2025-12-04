@@ -7,7 +7,9 @@ import {
   PaperAirplaneIcon, 
   TrashIcon, 
   NoSymbolIcon,
-  UserIcon
+  UserIcon,
+  LockClosedIcon,
+  LockOpenIcon
 } from '@heroicons/react/24/outline';
 
 // --- Custom Type for Chat Message ---
@@ -17,6 +19,7 @@ type ChatMessage = {
   createdAt: string;
   isAdmin: boolean;
   user: {
+    id: string; // <--- Added ID so blocking works
     firstName: string;
     lastName: string;
     businessName: string | null;
@@ -25,7 +28,6 @@ type ChatMessage = {
   };
 };
 
-// --- UPDATED Props: Use a loose type or pick specific fields ---
 type Props = {
   currentUser: {
     id: string;
@@ -33,7 +35,7 @@ type Props = {
     lastName: string;
     email: string;
     role: string;
-    isChatBlocked?: boolean; // Optional because session might not have it yet
+    isChatBlocked?: boolean;
     businessName?: string | null;
   };
 };
@@ -43,10 +45,14 @@ export default function CommunityChat({ currentUser }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [isPolling, setIsPolling] = useState(true);
+  
+  // --- Global Lock State ---
+  const [isChatLocked, setIsChatLocked] = useState(false);
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // --- Polling for new messages every 3 seconds ---
+  // --- Polling for new messages & Lock Status ---
   useEffect(() => {
     if (!isOpen || !isPolling) return;
 
@@ -54,8 +60,13 @@ export default function CommunityChat({ currentUser }: Props) {
       try {
         const res = await fetch('/api/chat');
         const data = await res.json();
+        
         if (data.messages) {
           setMessages(data.messages);
+        }
+        // Update Lock Status from server
+        if (typeof data.isLocked !== 'undefined') {
+          setIsChatLocked(data.isLocked);
         }
       } catch (error) {
         console.error("Chat poll error", error);
@@ -63,7 +74,7 @@ export default function CommunityChat({ currentUser }: Props) {
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000);
+    const interval = setInterval(fetchMessages, 3000); // Poll every 3s
     return () => clearInterval(interval);
   }, [isOpen, isPolling]);
 
@@ -74,6 +85,7 @@ export default function CommunityChat({ currentUser }: Props) {
     }
   }, [messages, isOpen]);
 
+  // --- Send Message ---
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -88,8 +100,6 @@ export default function CommunityChat({ currentUser }: Props) {
       
       if (res.ok) {
         setNewMessage("");
-        // Immediate fetch update
-        // const data = await res.json(); // We rely on polling for now
       } else {
         const err = await res.json();
         alert(err.error || "Failed to send");
@@ -115,6 +125,7 @@ export default function CommunityChat({ currentUser }: Props) {
     }
   };
 
+  // --- FIXED: Uses userId now, not email ---
   const handleBlockUser = async (userId: string) => {
     if (!confirm("Block this user from chatting?")) return;
     try {
@@ -126,6 +137,28 @@ export default function CommunityChat({ currentUser }: Props) {
       alert("User blocked.");
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // --- NEW: Toggle Lock Chat (Admin Only) ---
+  const handleToggleLock = async () => {
+    const newLockStatus = !isChatLocked;
+    const confirmMsg = newLockStatus 
+      ? "Lock the chat? Only Admins will be able to talk." 
+      : "Unlock the chat for everyone?";
+      
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      setIsChatLocked(newLockStatus); // Optimistic update
+      await fetch('/api/admin/chat/lock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locked: newLockStatus }),
+      });
+    } catch (err) {
+      console.error(err);
+      setIsChatLocked(!newLockStatus); // Revert on error
     }
   };
 
@@ -142,12 +175,36 @@ export default function CommunityChat({ currentUser }: Props) {
               <ChatBubbleLeftRightIcon className="h-6 w-6" />
               <div>
                 <h3 className="font-bold text-sm">Community Chat</h3>
-                <p className="text-xs text-blue-100">Connect with other agents</p>
+                {isChatLocked ? (
+                  <p className="text-xs text-red-200 font-semibold flex items-center gap-1">
+                    <LockClosedIcon className="h-3 w-3" /> Locked by Admin
+                  </p>
+                ) : (
+                  <p className="text-xs text-blue-100">Connect with other agents</p>
+                )}
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="hover:bg-blue-700 p-1 rounded">
-              <XMarkIcon className="h-5 w-5" />
-            </button>
+            
+            <div className="flex items-center gap-2">
+              {/* Lock Button for Admins */}
+              {currentUser.role === 'ADMIN' && (
+                <button 
+                  onClick={handleToggleLock}
+                  className="p-1.5 rounded hover:bg-blue-700 transition-colors"
+                  title={isChatLocked ? "Unlock Chat" : "Lock Chat"}
+                >
+                  {isChatLocked ? (
+                    <LockClosedIcon className="h-5 w-5 text-red-300" />
+                  ) : (
+                    <LockOpenIcon className="h-5 w-5 text-blue-200" />
+                  )}
+                </button>
+              )}
+              
+              <button onClick={() => setIsOpen(false)} className="hover:bg-blue-700 p-1 rounded">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Messages Area */}
@@ -192,7 +249,8 @@ export default function CommunityChat({ currentUser }: Props) {
                       <button onClick={() => handleDeleteMessage(msg.id)} className="text-red-500 hover:text-red-700 text-[10px] flex items-center gap-1">
                         <TrashIcon className="h-3 w-3" /> Delete
                       </button>
-                      <button onClick={() => handleBlockUser(msg.user.email)} className="text-gray-500 hover:text-gray-700 text-[10px] flex items-center gap-1">
+                      {/* FIX: Now using msg.user.id instead of email */}
+                      <button onClick={() => handleBlockUser(msg.user.id)} className="text-gray-500 hover:text-gray-700 text-[10px] flex items-center gap-1">
                         <NoSymbolIcon className="h-3 w-3" /> Block
                       </button>
                     </div>
@@ -208,19 +266,25 @@ export default function CommunityChat({ currentUser }: Props) {
 
           {/* Input Area */}
           <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-gray-200">
-            {/* Optional Chaining in case isChatBlocked is undefined */}
             {currentUser?.isChatBlocked ? (
                <div className="text-center text-red-500 text-sm py-2 bg-red-50 rounded">
                  You have been blocked from chatting.
                </div>
+            ) : isChatLocked && currentUser.role !== 'ADMIN' ? (
+              // Locked State for non-admins
+              <div className="text-center text-gray-500 text-sm py-2 bg-gray-100 rounded flex items-center justify-center gap-2">
+                 <LockClosedIcon className="h-4 w-4" /> Chat is currently locked by Admin.
+               </div>
             ) : (
+              // Active Input
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  placeholder={isChatLocked ? "Chat is locked (Admin Override)..." : "Type a message..."}
+                  className={`flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none 
+                    ${isChatLocked ? 'bg-red-50 border-red-200 placeholder:text-red-300' : ''}`}
                   disabled={isSending}
                 />
                 <button 
