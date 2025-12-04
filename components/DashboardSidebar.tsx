@@ -21,7 +21,8 @@ import {
   ArrowRightOnRectangleIcon,
   RectangleStackIcon,
   Squares2X2Icon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  BuildingLibraryIcon
 } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
 
@@ -33,19 +34,23 @@ export default function DashboardSidebar({ userRole }: Props) {
   const pathname = usePathname();
   
   // State for the main "Services Hub" folder
-  const [isServicesOpen, setIsServicesOpen] = useState(false);
+  const [isServicesOpen, setIsServicesOpen] = useState(true); // Default open for better UX
   
-  // State for specific sub-menus (like NIN)
-  // We store the name of the currently open sub-menu
+  // State for specific sub-menus
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
 
-  // Automatically open menus if the user is currently on a service page
+  // --- Auto-Open Menu based on Active Route ---
   useEffect(() => {
-    if (pathname?.startsWith('/dashboard/services')) {
-      setIsServicesOpen(true);
-      if (pathname.includes('/nin')) {
-        setOpenSubMenu('NIN Services');
-      }
+    if (pathname) {
+      if (pathname.includes('/nin')) setOpenSubMenu('NIN Services');
+      else if (pathname.includes('/bvn')) setOpenSubMenu('BVN Services');
+      else if (pathname.includes('/jamb')) setOpenSubMenu('JAMB Services');
+      else if (pathname.includes('/exam-pins')) setOpenSubMenu('Exam Pins');
+      else if (pathname.includes('/vtu')) setOpenSubMenu('VTU & Bills');
+      else if (pathname.includes('/cac')) setOpenSubMenu('CAC Registration');
+      else if (pathname.includes('/tin')) setOpenSubMenu('Tax (TIN)');
+      else if (pathname.includes('/newspaper')) setOpenSubMenu('Newspaper');
+      else if (pathname.includes('/npc')) setOpenSubMenu('NPC Services');
     }
   }, [pathname]);
 
@@ -57,29 +62,102 @@ export default function DashboardSidebar({ userRole }: Props) {
     { name: 'Fund Wallet', href: '/dashboard/fund-wallet', icon: CreditCardIcon },
   ];
 
-  // --- 2. Services Navigation (Updated with NIN Sub-items) ---
+  // --- 2. Services Navigation (ALL COLLAPSIBLE) ---
   const serviceLinks = [
     { 
       name: 'NIN Services', 
-      href: '/dashboard/services/nin', // keeping this as base
+      href: '/dashboard/services/nin', 
       icon: IdentificationIcon,
-      // HERE ARE THE NEW ITEMS YOU WANTED
       subItems: [
-        { name: 'Verify (NIN)', href: '/dashboard/services/nin/verify' },
-        { name: 'Verify (Phone)', href: '/dashboard/services/nin/phone' },
-        { name: 'IPE Clearance', href: '/dashboard/services/nin/ipe' },
-        { name: 'Personalization', href: '/dashboard/services/nin/personalization' },
+        { name: 'Verify by NIN', href: '/dashboard/services/nin/verify-by-nin' },
+        { name: 'Verify by Phone', href: '/dashboard/services/nin/verify-by-phone' },
+        { name: 'IPE Clearance', href: '/dashboard/services/nin/ipe-clearance' },
+        { name: 'Personalization', href: '/dashboard/services/nin/personalize' },
         { name: 'Validation', href: '/dashboard/services/nin/validation' },
         { name: 'Modification', href: '/dashboard/services/nin/modification' },
+        { name: 'Print VNIN Slip', href: '/dashboard/services/nin/vnin-slip' },
+        { name: 'NIN Delink', href: '/dashboard/services/nin/delink' },
       ]
     },
-    { name: 'BVN Services', href: '/dashboard/services/bvn', icon: ShieldCheckIcon },
-    { name: 'JAMB Services', href: '/dashboard/services/jamb', icon: AcademicCapIcon },
-    { name: 'JTB TIN Services', href: '/dashboard/services/tin', icon: DocumentTextIcon },
-    { name: 'Result Checker', href: '/dashboard/services/exam-pins', icon: RectangleStackIcon },
-    { name: 'CAC Registration', href: '/dashboard/services/cac', icon: BriefcaseIcon },
-    { name: 'Newspapers', href: '/dashboard/services/newspaper', icon: NewspaperIcon },
-    { name: 'VTU & Bills', href: '/dashboard/services/vtu', icon: DevicePhoneMobileIcon },
+    { 
+      name: 'BVN Services', 
+      href: '/dashboard/services/bvn', 
+      icon: ShieldCheckIcon,
+      subItems: [
+        { name: 'BVN Verification', href: '/dashboard/services/bvn/verification' },
+        { name: 'BVN Retrieval', href: '/dashboard/services/bvn/retrieval' },
+        { name: 'BVN Modification', href: '/dashboard/services/bvn/modification' },
+        { name: 'BVN Enrollment', href: '/dashboard/services/bvn/enrollment' },
+        { name: 'VNIN to NIBSS', href: '/dashboard/services/bvn/vnin-to-nibss' },
+      ]
+    },
+    { 
+      name: 'JAMB Services', 
+      href: '/dashboard/services/jamb', 
+      icon: AcademicCapIcon,
+      subItems: [
+        { name: 'Profile Code', href: '/dashboard/services/jamb/profile-code' },
+        { name: 'Print Slips', href: '/dashboard/services/jamb/slips' },
+        { name: 'History', href: '/dashboard/history/jamb' },
+      ]
+    },
+    { 
+      name: 'Exam Pins', 
+      href: '/dashboard/services/exam-pins', 
+      icon: RectangleStackIcon,
+      subItems: [
+        { name: 'WAEC Pins', href: '/dashboard/services/exam-pins/waec' },
+        { name: 'NECO Pins', href: '/dashboard/services/exam-pins/neco' },
+        { name: 'NABTEB Pins', href: '/dashboard/services/exam-pins/nabteb' },
+        { name: 'Purchase History', href: '/dashboard/history/exam-pins' },
+      ]
+    },
+    { 
+      name: 'VTU & Bills', 
+      href: '/dashboard/services/vtu', 
+      icon: DevicePhoneMobileIcon,
+      subItems: [
+        { name: 'Buy Airtime', href: '/dashboard/services/vtu/airtime' },
+        { name: 'Buy Data', href: '/dashboard/services/vtu/data' },
+        { name: 'Transaction History', href: '/dashboard/history/vtu' },
+      ]
+    },
+    { 
+      name: 'CAC Registration', 
+      href: '/dashboard/services/cac', 
+      icon: BriefcaseIcon,
+      subItems: [
+        { name: 'New Application', href: '/dashboard/services/cac' },
+        { name: 'Application History', href: '/dashboard/history/cac' },
+      ]
+    },
+    { 
+      name: 'Tax (TIN)', 
+      href: '/dashboard/services/tin', 
+      icon: DocumentTextIcon,
+      subItems: [
+        { name: 'New Application', href: '/dashboard/services/tin' },
+        { name: 'Application History', href: '/dashboard/history/tin' },
+      ]
+    },
+    { 
+      name: 'Newspaper', 
+      href: '/dashboard/services/newspaper', 
+      icon: NewspaperIcon,
+      subItems: [
+        { name: 'New Publication', href: '/dashboard/services/newspaper' },
+        { name: 'Request History', href: '/dashboard/history/newspaper' },
+      ]
+    },
+    { 
+      name: 'NPC Services', 
+      href: '/dashboard/services/npc', 
+      icon: BuildingLibraryIcon,
+      subItems: [
+        { name: 'Birth Attestation', href: '/dashboard/services/npc' },
+        { name: 'History', href: '/dashboard/history/npc' },
+      ]
+    },
   ];
 
   // --- 3. Management Navigation ---
@@ -88,29 +166,25 @@ export default function DashboardSidebar({ userRole }: Props) {
     { name: 'Profile Settings', href: '/dashboard/profile', icon: UserCircleIcon },
   ];
 
-  // --- Helper: Toggle Logic ---
+  // --- Toggle Logic ---
   const handleSubMenuClick = (name: string) => {
-    if (openSubMenu === name) {
-      setOpenSubMenu(null); // Close if already open
-    } else {
-      setOpenSubMenu(name); // Open this one
-    }
+    // If clicking the same one, toggle it off. Else open the new one.
+    setOpenSubMenu(openSubMenu === name ? null : name);
   };
 
-  // --- Helper Component for Standard Links ---
+  // --- Nav Item Component ---
   const NavLink = ({ item, isChild = false }: { item: any, isChild?: boolean }) => {
-    const active = isActive(item.href);
-    
-    // If this item has sub-items (Like NIN), render a Dropdown Button instead of a Link
+    // If item has subItems, it acts as an Accordion Button
     if (item.subItems) {
       const isOpen = openSubMenu === item.name;
-      const isParentActive = pathname?.startsWith(item.href);
+      // Check if any child is active to highlight the parent
+      const isParentActive = item.subItems.some((sub: any) => isActive(sub.href));
 
       return (
         <div className="flex flex-col">
           <button
             onClick={() => handleSubMenuClick(item.name)}
-            className={`group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200
+            className={`group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 w-full
               ${isParentActive 
                 ? 'bg-blue-50 text-blue-700' 
                 : 'text-gray-600 hover:bg-gray-50 hover:text-blue-700'
@@ -120,32 +194,37 @@ export default function DashboardSidebar({ userRole }: Props) {
               <item.icon className={`h-5 w-5 ${isParentActive ? 'text-blue-600' : 'text-gray-400'}`} />
               {item.name}
             </div>
-            <ChevronRightIcon className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+            <ChevronRightIcon className={`h-3 w-3 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
           </button>
 
-          {/* Render the Children (Verify, IPE, etc.) */}
-          {isOpen && (
-            <div className="flex flex-col mt-1 ml-6 space-y-1 border-l-2 border-gray-100 pl-2">
-              {item.subItems.map((sub: any) => (
+          {/* Sub-Menu Items */}
+          <div 
+            className={`overflow-hidden transition-all duration-300 ease-in-out border-l-2 border-gray-100 ml-6
+            ${isOpen ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+          >
+            {item.subItems.map((sub: any) => {
+              const isSubActive = pathname === sub.href;
+              return (
                 <Link
                   key={sub.name}
                   href={sub.href}
-                  className={`block px-3 py-2 text-xs font-medium rounded-lg transition-colors
-                    ${pathname === sub.href 
-                      ? 'bg-blue-600 text-white shadow-sm' 
-                      : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
+                  className={`block px-4 py-2 text-xs font-medium rounded-r-lg transition-colors mb-1
+                    ${isSubActive 
+                      ? 'text-blue-700 bg-blue-50/50 border-l-2 border-blue-600 -ml-[2px]' 
+                      : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
                     }`}
                 >
                   {sub.name}
                 </Link>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
       );
     }
 
-    // Standard Link (No sub-items)
+    // Standard Link
+    const active = isActive(item.href);
     return (
       <Link
         href={item.href}
@@ -208,8 +287,8 @@ export default function DashboardSidebar({ userRole }: Props) {
           <button
             onClick={() => setIsServicesOpen(!isServicesOpen)}
             className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 mb-1
-              ${isServicesOpen || pathname?.startsWith('/dashboard/services') 
-                ? 'bg-blue-50 text-blue-800' 
+              ${isServicesOpen 
+                ? 'bg-gray-50 text-gray-900' 
                 : 'text-gray-600 hover:bg-gray-50'
               }`}
           >
@@ -224,7 +303,7 @@ export default function DashboardSidebar({ userRole }: Props) {
           
           <div 
             className={`overflow-hidden transition-all duration-300 ease-in-out space-y-1
-            ${isServicesOpen ? 'max-h-[1200px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+            ${isServicesOpen ? 'max-h-[2000px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
           >
             {serviceLinks.map((item) => (
               <NavLink key={item.name} item={item} isChild={true} />
