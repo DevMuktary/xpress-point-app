@@ -15,9 +15,11 @@ export default async function BvnModificationPage() {
     redirect('/login?error=Please+login+to+continue');
   }
 
+  // --- ADD THE NEW ID HERE ---
   const serviceIds = [
     'BVN_MOD_NAME', 'BVN_MOD_DOB', 'BVN_MOD_PHONE',
-    'BVN_MOD_NAME_DOB', 'BVN_MOD_NAME_PHONE', 'BVN_MOD_DOB_PHONE'
+    'BVN_MOD_NAME_DOB', 'BVN_MOD_NAME_PHONE', 'BVN_MOD_DOB_PHONE',
+    'BVN_MOD_NAME_DOB_PHONE' // <--- Added
   ];
   
   // 1. Select isActive along with price
@@ -27,7 +29,6 @@ export default async function BvnModificationPage() {
   });
 
   // 2. Check if ALL services are unavailable
-  // If no services found, or all have isActive = false
   const allServicesDown = services.length > 0 && services.every(s => !s.isActive);
 
   if (allServicesDown) {
