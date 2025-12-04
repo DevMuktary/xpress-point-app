@@ -8,22 +8,33 @@ const DOB_GAP_FEE_MEDIUM = new Decimal(35000);
 const DOB_GAP_FEE_HIGH = new Decimal(45000);   
 const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
 
-// --- NEW: Special Bank Fee ---
 const SPECIAL_BANK_FEE = new Decimal(1000);
 const SPECIAL_BANKS = ['FCMB', 'Keystone Bank'];
+const NEWSPAPER_FEE = new Decimal(1500); // New Fee for Newspaper service
 
-async function calculateFee(serviceId: string, bankType: string, oldDob: string, newDob: string): Promise<Decimal> {
+async function calculateFee(
+    serviceId: string, 
+    bankType: string, 
+    oldDob: string, 
+    newDob: string,
+    needsNewspaper: boolean // <--- New Param
+): Promise<Decimal> {
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service) throw new Error('Service not found.');
   
   let price = new Decimal(service.defaultAgentPrice);
 
-  // 1. Apply Special Bank Fee (FCMB / Keystone)
+  // 1. Apply Special Bank Fee
   if (SPECIAL_BANKS.includes(bankType)) {
     price = price.plus(SPECIAL_BANK_FEE);
   }
 
-  // 2. Apply DOB Gap Fee
+  // 2. Apply Newspaper Fee
+  if (needsNewspaper) {
+    price = price.plus(NEWSPAPER_FEE);
+  }
+
+  // 3. Apply DOB Gap Fee
   if (serviceId.includes('DOB') && oldDob && newDob) {
     try {
       const oldDate = new Date(oldDob);
@@ -43,7 +54,6 @@ async function calculateFee(serviceId: string, bankType: string, oldDob: string,
       }
     } catch (e: any) {
       if (e.message.includes("not supported")) throw e;
-      // If date parsing fails, we ignore DOB logic (assumed valid dates checked elsewhere or manual entry)
     }
   }
   return price;
@@ -63,8 +73,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Required fields missing.' }, { status: 400 });
     }
 
+    // Extract flag from form data
+    const needsNewspaper = formData.needsNewspaper === true;
+
     // 1. Calculate Price
-    const price = await calculateFee(serviceId, bankType, formData.oldDob, formData.newDob);
+    const price = await calculateFee(
+        serviceId, 
+        bankType, 
+        formData.oldDob, 
+        formData.newDob,
+        needsNewspaper
+    );
     
     // 2. Check Wallet
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -80,13 +99,11 @@ export async function POST(request: Request) {
 
     // 3. Transaction
     await prisma.$transaction(async (tx) => {
-      // a) Charge User
       await tx.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: priceAsString } },
       });
 
-      // b) Create Request
       await tx.bvnRequest.create({
         data: {
           userId: user.id,
@@ -99,7 +116,6 @@ export async function POST(request: Request) {
         },
       });
 
-      // c) Log Transaction
       await tx.transaction.create({
         data: {
           userId: user.id,
