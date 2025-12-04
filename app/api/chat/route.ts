@@ -2,9 +2,16 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 
-// GET: Fetch latest messages
+// GET: Fetch latest messages AND Lock Status
 export async function GET() {
   try {
+    // 1. Check if chat is locked (Global System Setting)
+    const lockSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'CHAT_LOCKED' }
+    });
+    const isLocked = lockSetting?.value === 'true';
+
+    // 2. Fetch Messages
     const messages = await prisma.chatMessage.findMany({
       where: { isDeleted: false },
       take: 50, // Last 50 messages
@@ -12,17 +19,19 @@ export async function GET() {
       include: {
         user: {
           select: {
+            id: true, // <--- ADDED THIS: Required for Block button to work
             firstName: true,
             lastName: true,
             businessName: true,
             role: true,
-            email: true, // Only Admin UI will display this
+            email: true, 
             agentCode: true
           }
         }
       }
     });
-    return NextResponse.json({ messages });
+    
+    return NextResponse.json({ messages, isLocked });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch chat' }, { status: 500 });
   }
@@ -33,7 +42,17 @@ export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Check if blocked
+  // 1. Check Global Lock (Admins bypass this)
+  if (user.role !== 'ADMIN') {
+    const lockSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'CHAT_LOCKED' }
+    });
+    if (lockSetting?.value === 'true') {
+      return NextResponse.json({ error: 'Chat is currently locked by Admin.' }, { status: 403 });
+    }
+  }
+
+  // 2. Check if User is Individually Blocked
   const dbUser = await prisma.user.findUnique({ where: { id: user.id }});
   if (dbUser?.isChatBlocked) {
     return NextResponse.json({ error: 'You are blocked from the community chat.' }, { status: 403 });
@@ -51,7 +70,15 @@ export async function POST(request: Request) {
       },
       include: {
         user: {
-           select: { firstName: true, lastName: true, businessName: true, role: true, email: true, agentCode: true }
+           select: { 
+             id: true, 
+             firstName: true, 
+             lastName: true, 
+             businessName: true, 
+             role: true, 
+             email: true, 
+             agentCode: true 
+            }
         }
       }
     });
