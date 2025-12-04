@@ -17,7 +17,7 @@ import ServiceUnavailable from '@/components/ServiceUnavailable';
 // --- Type Definitions ---
 type Props = {
   fee: number;
-  isActive: boolean; // <--- ADDED THIS
+  isActive: boolean; 
 };
 
 // --- Reusable Input Component ---
@@ -171,6 +171,12 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
     setSubmitError(null);
     setReceipt(null); 
 
+    // --- Validation Checks ---
+    if (!ticketId.trim()) {
+      setSubmitError("Ticket ID is required.");
+      return;
+    }
+
     if (!vninSlipUrl) {
       setSubmitError("Please wait for the VNIN slip to finish uploading.");
       return;
@@ -251,13 +257,13 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
 
           <div className="space-y-4">
             <DataInput 
-              label="Ticket ID" 
+              label="Ticket ID*" 
               id="ticketId" 
               value={ticketId} 
               onChange={setTicketId} 
               Icon={IdentificationIcon} 
-              isRequired={false} 
-              placeholder="Enter Ticket ID (Optional)"
+              isRequired={true} 
+              placeholder="Enter Ticket ID"
             />
             
             <FileUpload 
