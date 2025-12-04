@@ -69,7 +69,8 @@ const calculateRequestProfit = (req: any) => {
   // 2. Handle Aggregator Commission
   if (req.user?.role === 'AGGREGATOR') {
     // Check for specific aggregator price first
-    const specificPrice = req.service.aggregatorPrices?.find((ap: any) => ap.aggregatorId === req.user?.id);
+    // FIX: Access 'AggregatorPrice' (PascalCase) matching schema
+    const specificPrice = req.service.AggregatorPrice?.find((ap: any) => ap.aggregatorId === req.user?.id);
     if (specificPrice) {
       commission = new Decimal(specificPrice.commission);
     } else {
@@ -113,10 +114,11 @@ export default async function AdminDashboardPage() {
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   // Common include object for fetching request details needed for profit calc
+  // FIX: Changed 'aggregatorPrices' to 'AggregatorPrice' to match schema
   const requestInclude = {
     service: {
       include: {
-        aggregatorPrices: true
+        AggregatorPrice: true 
       }
     },
     user: {
