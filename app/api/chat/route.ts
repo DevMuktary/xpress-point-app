@@ -5,7 +5,7 @@ import { getUserFromSession } from '@/lib/auth';
 // GET: Fetch latest messages AND Lock Status
 export async function GET() {
   try {
-    // 1. Check if chat is locked (Global System Setting)
+    // 1. Check if chat is locked
     const lockSetting = await prisma.systemSetting.findUnique({
       where: { key: 'CHAT_LOCKED' }
     });
@@ -19,13 +19,14 @@ export async function GET() {
       include: {
         user: {
           select: {
-            id: true, // <--- REQUIRED for Block button to work
+            id: true,
             firstName: true,
             lastName: true,
             businessName: true,
             role: true,
             email: true, 
-            agentCode: true
+            agentCode: true,
+            isChatBlocked: true // <--- ADDED THIS so we know if they are blocked
           }
         }
       }
@@ -77,7 +78,8 @@ export async function POST(request: Request) {
              businessName: true, 
              role: true, 
              email: true, 
-             agentCode: true 
+             agentCode: true,
+             isChatBlocked: true 
             }
         }
       }
