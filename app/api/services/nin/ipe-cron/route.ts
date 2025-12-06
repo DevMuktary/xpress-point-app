@@ -42,14 +42,14 @@ export async function GET(request: Request) {
 
         const data = response.data;
         
-        if (data.success === true) {
-          // Success: Capture New ID with robust checking
+        // Check for success indicators
+        if (data.success === true || data.status === 'success' || (data.reply && !data.error)) {
+          // Success: Capture New ID (checking 'reply' first)
           const newId = 
+            data.reply || 
             data.new_tracking_id || 
             data.data?.new_tracking_id || 
             data.newTrackingId || 
-            data.NewTrackingId ||
-            data.response?.new_tracking_id || 
             null;
 
           await prisma.ipeRequest.update({
@@ -63,13 +63,18 @@ export async function GET(request: Request) {
           results.push({ id: req.id, status: 'COMPLETED' });
         
         } else {
-           // Check if failed
+           // Check for strict failure
            const msg = (data.message || "").toLowerCase();
            
-           // Fix: Removed "not found" from failure criteria
-           const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("decline");
+           // Only fail on explicit rejection words
+           const isDefiniteFailure = 
+             msg.includes("fail") || 
+             msg.includes("error") || 
+             msg.includes("invalid") || 
+             msg.includes("decline") || 
+             msg.includes("reject");
 
-           if (isFailed) {
+           if (isDefiniteFailure) {
               await prisma.ipeRequest.update({
                 where: { id: req.id },
                 data: {
@@ -79,7 +84,7 @@ export async function GET(request: Request) {
               });
               results.push({ id: req.id, status: 'FAILED' });
            }
-           // Else leave as PROCESSING
+           // Else: Do nothing, leave as PROCESSING
         }
 
       } catch (err: any) {
