@@ -5,11 +5,12 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- CONFIGURATION ---
-const API_KEY = process.env.ROBOST_API_KEY || "dd1cd7d9e00b3565cbf8410f4662226d93f71daf18b904811cd98dcfd4296868";
+// STRICTLY read from Environment Variables
+const API_KEY = process.env.ROBOST_API_KEY;
 const PHONE_VERIFY_ENDPOINT = 'https://robosttech.com/api/nin_phone';
 
 if (!API_KEY) {
-  console.error("CRITICAL: ROBOST_API_KEY is not set.");
+  console.error("CRITICAL: ROBOST_API_KEY is not set in environment variables.");
 }
 
 function parseApiError(error: any): string {
@@ -34,6 +35,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
+  // 1. Critical Check for API Key
+  if (!API_KEY) {
+    return NextResponse.json({ error: 'Service configuration error. Please contact support.' }, { status: 500 });
+  }
+
   try {
     const body = await request.json();
     const { phone } = body; 
@@ -42,7 +48,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Phone number is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Check Wallet ---
+    // --- 2. Get Price & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
@@ -55,7 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call RobostTech API ---
+    // --- 3. Call RobostTech API ---
     // Ensure phone format is correct (usually 080...)
     
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
@@ -74,12 +80,12 @@ export async function POST(request: Request) {
     const apiRes = response.data;
     console.log("ROBOST PHONE RAW RESPONSE:", JSON.stringify(apiRes, null, 2));
     
-    // --- 3. Handle Response ---
+    // --- 4. Handle Response ---
     if (apiRes.success && apiRes.data) {
       
       const responseData = apiRes.data;
 
-      // --- 4. Data Mapping ---
+      // --- 5. Data Mapping ---
       const mappedData = {
         photo: responseData.photo || "",
         firstname: responseData.firstname, 
@@ -95,17 +101,17 @@ export async function POST(request: Request) {
         
         telephoneno: responseData.telephoneno, 
         
-        birthlga: responseData.birthLGA, // Note casing from example
+        birthlga: responseData.birthLGA, 
         birthstate: responseData.birthState,
         
         gender: responseData.gender,
-        maritalstatus: responseData.maritalstatus, // Example might not have it, safe to be undefined
+        maritalstatus: responseData.maritalstatus,
         profession: responseData.profession,
         religion: responseData.religion,
         signature: responseData.signature,
       };
 
-      // --- 5. Charge User & Save Transaction ---
+      // --- 6. Charge User & Save Transaction ---
       const [_, verificationRecord] = await prisma.$transaction([
         prisma.wallet.update({
           where: { userId: user.id },
@@ -131,7 +137,7 @@ export async function POST(request: Request) {
         }),
       ]);
 
-      // --- 6. Return Success Data to Frontend ---
+      // --- 7. Return Success Data to Frontend ---
       const slipPrices = await prisma.service.findMany({
         where: { id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] } },
         select: { 
