@@ -21,22 +21,35 @@ export function middleware(req: NextRequest) {
 
   // This extracts the 'luminax' from 'luminax.xpresspoint.net'
   const subdomain = hostname.split('.')[0];
+
+  // --- AGENCY PORTAL WHITELIST ---
+  // If the subdomain is 'agency', we treat it differently.
+  if (subdomain === 'agency') {
+    // If they are visiting the root (agency.xpresspoint.net/),
+    // show them the Agency Portal page (/agency).
+    if (url.pathname === '/') {
+      url.pathname = '/agency';
+      return NextResponse.rewrite(url);
+    }
+    // For any other path (e.g., /login, /dashboard), let them proceed
+    // so the URL stays as agency.xpresspoint.net/...
+    return NextResponse.next();
+  }
   
-  // --- THIS IS THE FIX ---
-  // If the user is on a subdomain AND trying to visit the root...
+  // --- AGGREGATOR LOGIC ---
+  // If the user is on a subdomain (that isn't 'agency') AND trying to visit the root...
   if (url.pathname === '/') {
-    // ...invisibly show them the registration page.
+    // ...invisibly show them the registration page for that aggregator.
     url.pathname = `/register/${subdomain}`;
     return NextResponse.rewrite(url);
   }
 
-  // If the user is on a subdomain AND trying to visit *any other page*...
+  // If the user is on an aggregator subdomain AND trying to visit *any other page*...
   // (like /dashboard, /login, /verify-otp)
   // ...redirect them to the *main* domain.
   const mainDomainUrl = new URL(url.pathname, `https://${MAIN_DOMAIN}`);
   mainDomainUrl.search = url.search;
   return NextResponse.redirect(mainDomainUrl);
-  // -----------------------
 }
 
 // "World-class" config: This middleware *only* runs
