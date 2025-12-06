@@ -122,7 +122,7 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
     }
   };
 
-  // --- NEW: Manual Status Check Handler ---
+  // --- MANUAL STATUS CHECK HANDLER ---
   const handleCheckStatus = async (trackingId: string, requestId: string) => {
     if (checkingIds.has(requestId)) return; // Prevent double clicks
 
@@ -142,10 +142,15 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
         throw new Error(data.error || 'Check failed.');
       }
 
-      // Update the request in the list with the new status
+      // Update the request in the list with the new status AND newTrackingId
       setRequests(prev => prev.map(req => 
         req.id === requestId 
-          ? { ...req, status: data.status as RequestStatus, statusMessage: data.message } 
+          ? { 
+              ...req, 
+              status: data.status as RequestStatus, 
+              statusMessage: data.message,
+              newTrackingId: data.newTrackingId || req.newTrackingId // <--- FIX: Update newTrackingId here!
+            } 
           : req
       ));
 
@@ -284,11 +289,12 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
                   {request.statusMessage}
                 </div>
 
+                {/* --- DISPLAY NEW TRACKING ID IF EXISTS --- */}
                 {request.status === 'COMPLETED' && request.newTrackingId && (
-                  <div className="mt-3 rounded-lg bg-green-50 p-3 border border-green-100 flex items-center gap-2">
+                  <div className="mt-3 rounded-lg bg-green-50 p-3 border border-green-100 flex items-center gap-2 animate-in fade-in">
                     <CheckCircleIcon className="h-5 w-5 text-green-600" />
                     <p className="text-sm font-bold text-green-800">
-                      New Tracking ID: <span className="font-mono text-green-900">{request.newTrackingId}</span>
+                      New Tracking ID: <span className="font-mono text-green-900 ml-1 select-all">{request.newTrackingId}</span>
                     </p>
                   </div>
                 )}
