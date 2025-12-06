@@ -113,7 +113,7 @@ export default function SignUpPage() {
           businessName,
           address,
           email,
-          phone: phoneNumber, // <--- FIXED: Changed from 'phoneNumber' to 'phone' to match backend
+          phone: phoneNumber, 
           password,
         }),
       });
@@ -254,6 +254,14 @@ export default function SignUpPage() {
           <button type="submit" className={styles.button} disabled={isLoading || !agreed || !isPasswordStrong || !passwordsMatch}>
             {isLoading ? 'Creating Account...' : 'Create Account'}
           </button>
+
+          {/* --- ADDED LOGIN LINK --- */}
+          <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: '#666' }}>
+            Have an account?{' '}
+            <Link href="/login" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
+              Login
+            </Link>
+          </div>
 
         </form>
       </div>
