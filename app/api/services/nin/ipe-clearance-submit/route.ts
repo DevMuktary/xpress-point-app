@@ -3,15 +3,14 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
-import { processCommission } from '@/lib/commission'; // <--- THE FIX
+import { processCommission } from '@/lib/commission'; 
 
-// Get API credentials
-const RAUDAH_API_KEY = process.env.RAUDAH_API_KEY;
-const SUBMIT_ENDPOINT = 'https://raudah.com.ng/api/nin/ipe-clearance';
-const REFUND_CODES = ["404", "405", "406", "407", "409"]; 
+// --- CONFIGURATION ---
+const API_KEY = process.env.ROBOSTTECH_API_KEY;
+const SUBMIT_ENDPOINT = 'https://robosttech.com/api/clearance';
 
-if (!RAUDAH_API_KEY) {
-  console.error("CRITICAL: RAUDAH_API_KEY is not set.");
+if (!API_KEY) {
+  console.error("CRITICAL: ROBOSTTECH_API_KEY is not set.");
 }
 
 function parseApiError(error: any): string {
@@ -33,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 
-  if (!RAUDAH_API_KEY) {
+  if (!API_KEY) {
     return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
@@ -45,8 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tracking ID is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Service & Price (Standardized) ---
-    // Hardcoded ID for IPE Clearance
+    // --- 1. Get Service & Price ---
     const serviceId = 'NIN_IPE_CLEARANCE';
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     
@@ -54,7 +52,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // PRICE FIX: Use Default Agent Price for everyone
     const price = new Decimal(service.defaultAgentPrice);
 
     // Check Wallet
@@ -72,41 +69,33 @@ export async function POST(request: Request) {
       }
     });
     if (existingRequest) {
-      return NextResponse.json({ error: 'You already have a pending or processing request for this Tracking ID.' }, { status: 409 });
+      return NextResponse.json({ error: 'You already have a pending request for this Tracking ID.' }, { status: 409 });
     }
 
-    // --- 3. Call External API (Raudah) ---
-    // We call API *before* charging (as per your specific IPE flow)
+    // --- 3. Call RobostTech API ---
+    console.log(`[ROBOST] Submitting IPE Clearance: ${trackingId}`);
+
     const response = await axios.post(SUBMIT_ENDPOINT, 
       { 
-        value: trackingId,
-        ref: `XPRESSPOINT_IPE_${user.id}_${Date.now()}`
+        tracking_id: trackingId 
       },
       {
         headers: { 
-          'Authorization': RAUDAH_API_KEY,
+          'api-key': API_KEY,
           'Content-Type': 'application/json' 
         },
-        timeout: 15000,
+        timeout: 30000,
       }
     );
 
     const data = response.data;
+    console.log("ROBOST IPE SUBMIT RESPONSE:", JSON.stringify(data, null, 2));
     
-    // --- 4. Auto-Refund Logic ---
-    if (data.response_code && REFUND_CODES.includes(data.response_code)) {
-      console.log(`IPE Auto-Refund: ${data.message}`);
-      return NextResponse.json({ error: `Sorry 😞 ${data.message}` }, { status: 400 });
-    }
-    
-    // --- 5. Handle Success ---
-    const isSuccess1 = (data.response_code === "00" && data.transactionStatus === "SUCCESSFUL");
-    const isSuccess2 = (data.status === "Successful" && data.reply);
-
-    if (isSuccess1 || isSuccess2) {
+    // --- 4. Handle Success ---
+    // Robost usually returns { success: true, ... }
+    if (data.success || response.status === 200) {
       const priceAsString = price.toString();
 
-      // --- EXECUTE TRANSACTION ---
       await prisma.$transaction(async (tx) => {
         // a) Charge User
         await tx.wallet.update({
@@ -114,8 +103,7 @@ export async function POST(request: Request) {
           data: { balance: { decrement: priceAsString } },
         });
 
-        // b) PROCESS COMMISSION (The Definite Fix)
-        // This calculates and credits the aggregator instantly
+        // b) Process Commission
         await processCommission(tx, user.id, service.id);
 
         // c) Create IPE Request
@@ -124,7 +112,7 @@ export async function POST(request: Request) {
             userId: user.id,
             trackingId: trackingId,
             status: 'PROCESSING',
-            statusMessage: 'Submitted. Awaiting completion.'
+            statusMessage: data.message || 'Submitted. Awaiting clearance.'
           },
         });
 
@@ -136,20 +124,19 @@ export async function POST(request: Request) {
             type: 'SERVICE_CHARGE',
             amount: price.negated(),
             description: `IPE Clearance (${trackingId})`,
-            reference: data.transactionReference || data.reply || `IPE-${Date.now()}`,
+            reference: `IPE-${Date.now()}`,
             status: 'COMPLETED',
           },
         });
       });
 
       return NextResponse.json(
-        { message: data.message || 'Request submitted successfully! You can check the status shortly.' },
+        { message: data.message || 'Request submitted successfully! Check back later for status.' },
         { status: 200 }
       );
       
     } else {
-      // --- Failure ---
-      throw new Error(data.message || data.description || "Submission failed. Please check the Tracking ID.");
+      throw new Error(data.message || "Submission failed at provider.");
     }
 
   } catch (error: any) {
