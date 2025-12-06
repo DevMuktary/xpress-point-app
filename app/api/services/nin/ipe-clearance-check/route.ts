@@ -57,8 +57,14 @@ export async function POST(request: Request) {
     
     if (data.success === true) {
       // --- SUCCESS / CLEARED ---
-      // Try to find the new ID in various likely fields from RobostTech
-      const newId = data.new_tracking_id || data.data?.new_tracking_id || data.newTrackingId || null;
+      // Fix: Try to find the new ID in various likely fields from RobostTech
+      const newId = 
+        data.new_tracking_id || 
+        data.data?.new_tracking_id || 
+        data.newTrackingId || 
+        data.NewTrackingId ||
+        data.response?.new_tracking_id || // sometimes nested in response
+        null;
 
       await prisma.ipeRequest.update({
         where: { id: existingRequest.id },
@@ -80,8 +86,8 @@ export async function POST(request: Request) {
       // --- NOT SUCCESSFUL YET (Pending or Failed) ---
       const msg = (data.message || "").toLowerCase();
       
-      // Keywords that definitely mean "Fail"
-      const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("not found") || msg.includes("decline") || msg.includes("rejected");
+      // Fix: Removed "not found" so pending items aren't marked as failed
+      const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("decline") || msg.includes("rejected");
 
       if (isFailed) {
          await prisma.ipeRequest.update({
@@ -93,7 +99,7 @@ export async function POST(request: Request) {
           });
           return NextResponse.json({ status: 'FAILED', message: `Request Failed: ${data.message}` });
       } else {
-         // Default to PROCESSING for "pending" OR ambiguous messages
+         // Default to PROCESSING for "pending", "not found" (in queue), OR ambiguous messages
          // We do NOT update the DB status here, just return the status to frontend
          return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Still processing.' });
       }
