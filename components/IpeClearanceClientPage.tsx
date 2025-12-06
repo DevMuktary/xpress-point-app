@@ -74,8 +74,8 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [trackingId, setTrackingId] = useState('');
   
-  // New state for manual check loading
-  const [checkingId, setCheckingId] = useState<string | null>(null);
+  // Track which IDs are currently being checked manually
+  const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set());
 
   const fee = serviceFee;
 
@@ -109,9 +109,9 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
       }
       
       setSuccess(data.message);
-      // Add new request to the top of the list if it exists
+      // Add the new request to the top of the list if it exists
       if (data.newRequest) {
-          setRequests([data.newRequest, ...requests]);
+        setRequests([data.newRequest, ...requests]);
       }
       setTrackingId('');
 
@@ -124,48 +124,48 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
 
   // --- NEW: Manual Status Check Handler ---
   const handleCheckStatus = async (trackingId: string, requestId: string) => {
-    setCheckingId(requestId);
+    if (checkingIds.has(requestId)) return; // Prevent double clicks
+
+    // Add ID to checking set
+    setCheckingIds(prev => new Set(prev).add(requestId));
+
     try {
       const response = await fetch('/api/services/nin/ipe-clearance-check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trackingId }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
-         throw new Error(data.error || "Failed to check status");
+        throw new Error(data.error || 'Check failed.');
       }
 
-      // Update the specific request in the list based on the response
-      if (data.status) {
-          setRequests(prev => prev.map(req => {
-              if (req.id === requestId) {
-                  return { 
-                      ...req, 
-                      status: data.status, 
-                      statusMessage: data.message,
-                      // If the API returned a new Tracking ID (for completed requests), update it
-                      newTrackingId: data.newTrackingId || req.newTrackingId
-                  };
-              }
-              return req;
-          }));
-          
-          if (data.status === 'COMPLETED') {
-              alert("Success! The IPE has been cleared.");
-          } else if (data.status === 'FAILED') {
-              alert("Request Failed: " + data.message);
-          } else {
-              alert("Status Update: " + data.message);
-          }
+      // Update the request in the list with the new status
+      setRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { ...req, status: data.status as RequestStatus, statusMessage: data.message } 
+          : req
+      ));
+
+      if (data.status === 'COMPLETED') {
+        alert("Success! The IPE has been cleared.");
+      } else if (data.status === 'FAILED') {
+        alert(`Clearance Failed: ${data.message}`);
+      } else {
+        alert(`Current Status: ${data.message}`);
       }
 
     } catch (err: any) {
-      alert(err.message || "An error occurred while checking status.");
+      alert(err.message || "Failed to check status. Please try again.");
     } finally {
-      setCheckingId(null);
+      // Remove ID from checking set
+      setCheckingIds(prev => {
+        const next = new Set(prev);
+        next.delete(requestId);
+        return next;
+      });
     }
   };
    
@@ -259,6 +259,8 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
         <div className="mt-4 space-y-4">
           {requests.map((request) => {
             const statusInfo = getStatusInfo(request.status);
+            const isChecking = checkingIds.has(request.id);
+
             return (
               <div key={request.id} className="rounded-xl border border-gray-200 p-4 hover:border-blue-300 transition-colors bg-gray-50/50">
                 <div className="flex justify-between items-start mb-3">
@@ -278,24 +280,8 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
                   </span>
                 </div>
                 
-                <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-700 shadow-sm flex flex-col gap-2">
-                  <p>{request.statusMessage}</p>
-                  
-                  {/* --- MANUAL CHECK BUTTON (Only for Processing items) --- */}
-                  {request.status === 'PROCESSING' && (
-                    <button 
-                        onClick={() => handleCheckStatus(request.trackingId, request.id)}
-                        disabled={checkingId === request.id}
-                        className="self-start mt-1 text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-semibold hover:bg-blue-100 transition-colors flex items-center gap-1.5 border border-blue-200"
-                    >
-                        {checkingId === request.id ? (
-                            <ArrowPathIcon className="h-3 w-3 animate-spin" />
-                        ) : (
-                            <ArrowPathIcon className="h-3 w-3" />
-                        )}
-                        {checkingId === request.id ? "Checking..." : "Check Status"}
-                    </button>
-                  )}
+                <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-700 shadow-sm">
+                  {request.statusMessage}
                 </div>
 
                 {request.status === 'COMPLETED' && request.newTrackingId && (
@@ -304,6 +290,20 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
                     <p className="text-sm font-bold text-green-800">
                       New Tracking ID: <span className="font-mono text-green-900">{request.newTrackingId}</span>
                     </p>
+                  </div>
+                )}
+
+                {/* --- MANUAL CHECK BUTTON --- */}
+                {(request.status === 'PROCESSING' || request.status === 'PENDING') && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 flex justify-end">
+                    <button
+                      onClick={() => handleCheckStatus(request.trackingId, request.id)}
+                      disabled={isChecking}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                    >
+                      <ArrowPathIcon className={`h-3.5 w-3.5 ${isChecking ? 'animate-spin' : ''}`} />
+                      {isChecking ? 'Checking...' : 'Check Status'}
+                    </button>
                   </div>
                 )}
               </div>
