@@ -1,15 +1,16 @@
-import { NextResponse } from 'next/server';
+]]import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- CONFIGURATION ---
-const API_KEY = process.env.ROBOST_API_KEY || "dd1cd7d9e00b3565cbf8410f4662226d93f71daf18b904811cd98dcfd4296868"; 
+// STRICTLY read from Environment Variables
+const API_KEY = process.env.ROBOST_API_KEY; 
 const ENDPOINT = "https://robosttech.com/api/nin_verify";
 
 if (!API_KEY) {
-  console.error("CRITICAL: ROBOST_API_KEY is not set.");
+  console.error("CRITICAL: ROBOST_API_KEY is not set in environment variables.");
 }
 
 // --- HELPER: Error Parser ---
@@ -40,6 +41,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
+  // 1. Critical Check for API Key
+  if (!API_KEY) {
+    console.error("Service Error: ROBOST_API_KEY missing.");
+    return NextResponse.json({ error: 'Service configuration error. Please contact support.' }, { status: 500 });
+  }
+
   try {
     const body = await request.json();
     const { nin } = body; 
@@ -48,7 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'NIN is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Service & Check Wallet ---
+    // --- 2. Get Service & Check Wallet ---
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
@@ -61,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call RobostTech API ---
+    // --- 3. Call RobostTech API ---
     console.log(`[ROBOST] Verifying NIN: ${nin} for user ${user.id}`);
 
     const response = await axios.post(
@@ -87,40 +94,20 @@ export async function POST(request: Request) {
 
     // --- 4. Data Mapping ---
     const mappedData = {
-      // Photo
       photo: responseData.photo || "",
-      
-      // Names
       firstname: responseData.firstname,
       surname: responseData.surname,
       middlename: responseData.middlename || "",
-      
-      // Dates
       birthdate: responseData.birthdate,
-      
-      // NIN
       nin: responseData.nin,
-      
       trackingId: responseData.trackingId || `TRK-${Date.now()}`,
-      
-      // Address
       residence_AdressLine1: responseData.residence_AdressLine1 || responseData.residence_Town,
-      
-      // LGA & State
       residence_lga: responseData.residence_lga,
       residence_state: responseData.residence_state,
-      
-      // Phone
       telephoneno: responseData.telephoneno,
-      
-      // Gender
       gender: responseData.gender,
-      
-      // Birth Details
       birthlga: responseData.birthlga,
       birthstate: responseData.birthstate,
-      
-      // Other
       maritalstatus: responseData.maritalstatus,
       profession: responseData.profession,
       religion: responseData.religion,
