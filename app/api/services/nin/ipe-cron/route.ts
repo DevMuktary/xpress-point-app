@@ -7,12 +7,6 @@ const API_KEY = process.env.ROBOSTTECH_API_KEY;
 const CHECK_ENDPOINT = 'https://robosttech.com/api/clearance_status';
 
 export async function GET(request: Request) {
-  // Simple security check (optional, or use a cron secret)
-  // const authHeader = request.headers.get('authorization');
-  // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  // }
-
   if (!API_KEY) {
     console.error("CRITICAL: ROBOSTTECH_API_KEY is not set for Cron.");
     return NextResponse.json({ error: 'Config error' }, { status: 500 });
@@ -22,8 +16,8 @@ export async function GET(request: Request) {
     // 1. Fetch PROCESSING requests
     const pendingRequests = await prisma.ipeRequest.findMany({
       where: { status: 'PROCESSING' },
-      take: 20, // Process in batches
-      orderBy: { updatedAt: 'asc' } // Oldest first
+      take: 20, 
+      orderBy: { updatedAt: 'asc' } 
     });
 
     if (pendingRequests.length === 0) {
@@ -49,21 +43,25 @@ export async function GET(request: Request) {
         const data = response.data;
         
         if (data.success === true) {
-          // Success
+          // Success: Capture New ID
+          const newId = data.new_tracking_id || data.data?.new_tracking_id || null;
+
           await prisma.ipeRequest.update({
             where: { id: req.id },
             data: {
               status: 'COMPLETED',
-              statusMessage: data.message || 'Cleared successfully'
+              statusMessage: data.message || 'Cleared successfully',
+              newTrackingId: newId
             }
           });
           results.push({ id: req.id, status: 'COMPLETED' });
         
         } else {
-           // Check if failed or just pending
-           const msg = data.message?.toLowerCase() || "";
-           if (!msg.includes("pending") && !msg.includes("progress")) {
-              // Mark as failed
+           // Check if failed
+           const msg = (data.message || "").toLowerCase();
+           const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("not found") || msg.includes("decline");
+
+           if (isFailed) {
               await prisma.ipeRequest.update({
                 where: { id: req.id },
                 data: {
@@ -78,7 +76,6 @@ export async function GET(request: Request) {
 
       } catch (err: any) {
         console.error(`Cron Check Error for ${req.trackingId}:`, err.message);
-        // Don't update status, try again next cron
       }
     }
 
