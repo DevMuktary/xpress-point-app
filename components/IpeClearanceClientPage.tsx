@@ -124,9 +124,8 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
 
   // --- MANUAL STATUS CHECK HANDLER ---
   const handleCheckStatus = async (trackingId: string, requestId: string) => {
-    if (checkingIds.has(requestId)) return; // Prevent double clicks
+    if (checkingIds.has(requestId)) return; 
 
-    // Add ID to checking set
     setCheckingIds(prev => new Set(prev).add(requestId));
 
     try {
@@ -149,7 +148,8 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
               ...req, 
               status: data.status as RequestStatus, 
               statusMessage: data.message,
-              newTrackingId: data.newTrackingId || req.newTrackingId // <--- FIX: Update newTrackingId here!
+              // IMPORTANT: Update the newTrackingId if it's returned by the API
+              newTrackingId: data.newTrackingId || req.newTrackingId 
             } 
           : req
       ));
@@ -165,7 +165,6 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
     } catch (err: any) {
       alert(err.message || "Failed to check status. Please try again.");
     } finally {
-      // Remove ID from checking set
       setCheckingIds(prev => {
         const next = new Set(prev);
         next.delete(requestId);
@@ -300,6 +299,7 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
                 )}
 
                 {/* --- MANUAL CHECK BUTTON --- */}
+                {/* Ensure button only shows for PENDING or PROCESSING, and NOT if it just completed/failed */}
                 {(request.status === 'PROCESSING' || request.status === 'PENDING') && (
                   <div className="mt-3 pt-3 border-t border-gray-200 flex justify-end">
                     <button
