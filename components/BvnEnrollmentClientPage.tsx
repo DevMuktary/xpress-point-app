@@ -22,7 +22,7 @@ import ServiceUnavailable from '@/components/ServiceUnavailable';
 // --- Type Definitions ---
 type Props = {
   fee: number;
-  isActive: boolean; // <--- ADDED THIS TO FIX THE BUILD ERROR
+  isActive: boolean; 
 };
 
 // --- Data for States, LGAs, and Zones ---
@@ -154,6 +154,9 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
   const [agentLocation, setAgentLocation] = useState('');
   const [agentBvn, setAgentBvn] = useState('');
   const [bankName, setBankName] = useState('');
+  // --- NEW FIELD ---
+  const [bankAccountNumber, setBankAccountNumber] = useState(''); 
+  // -----------------
   const [accountName, setAccountName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -194,8 +197,9 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
     
+    // --- Added bankAccountNumber to formData ---
     const formData = {
-      agentLocation, agentBvn, bankName, accountName,
+      agentLocation, agentBvn, bankName, bankAccountNumber, accountName,
       firstName, lastName, dob, email, altEmail,
       phone, altPhone, address, state, lga, zone
     };
@@ -222,7 +226,7 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
       });
       
       // Reset the form
-      setAgentLocation(''); setAgentBvn(''); setBankName(''); setAccountName('');
+      setAgentLocation(''); setAgentBvn(''); setBankName(''); setBankAccountNumber(''); setAccountName('');
       setFirstName(''); setLastName(''); setDob(''); setEmail(''); setAltEmail('');
       setPhone(''); setAltPhone(''); setAddress(''); setState(''); setLga(''); setZone('');
       setAvailableLgas([]);
@@ -267,6 +271,18 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
             <DataInput label="Agent Location*" id="agentLocation" value={agentLocation} onChange={setAgentLocation} Icon={MapPinIcon} />
             <DataInput label="Agent BVN*" id="agentBvn" value={agentBvn} onChange={setAgentBvn} Icon={IdentificationIcon} />
             <DataInput label="Bank Name*" id="bankName" value={bankName} onChange={setBankName} Icon={BuildingOfficeIcon} />
+            
+            {/* --- NEW FIELD --- */}
+            <DataInput 
+              label="Bank Account Number*" 
+              id="bankAccountNumber" 
+              value={bankAccountNumber} 
+              onChange={setBankAccountNumber} 
+              Icon={BuildingOfficeIcon} 
+              type="tel" // Use tel for number keypad on mobile
+            />
+            {/* ----------------- */}
+
             <DataInput label="Account Name*" id="accountName" value={accountName} onChange={setAccountName} Icon={UserIcon} />
             <DataInput label="First Name*" id="firstName" value={firstName} onChange={setFirstName} Icon={UserIcon} />
             <DataInput label="Last Name*" id="lastName" value={lastName} onChange={setLastName} Icon={UserIcon} />
