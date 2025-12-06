@@ -124,8 +124,9 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
 
   // --- MANUAL STATUS CHECK HANDLER ---
   const handleCheckStatus = async (trackingId: string, requestId: string) => {
-    if (checkingIds.has(requestId)) return; 
+    if (checkingIds.has(requestId)) return; // Prevent double clicks
 
+    // Add ID to checking set
     setCheckingIds(prev => new Set(prev).add(requestId));
 
     try {
@@ -165,6 +166,7 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
     } catch (err: any) {
       alert(err.message || "Failed to check status. Please try again.");
     } finally {
+      // Remove ID from checking set
       setCheckingIds(prev => {
         const next = new Set(prev);
         next.delete(requestId);
@@ -267,39 +269,40 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
 
             return (
               <div key={request.id} className="rounded-xl border border-gray-200 p-4 hover:border-blue-300 transition-colors bg-gray-50/50">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                      <span className="text-gray-500 font-normal">Tracking ID:</span> {request.trackingId}
+                {/* --- FIX: Added flex-wrap and better sizing to prevent overlap --- */}
+                <div className="flex flex-wrap justify-between items-start mb-3 gap-2">
+                  <div className="min-w-0 max-w-full">
+                    <p className="text-sm font-bold text-gray-900 flex flex-wrap items-center gap-2 break-all">
+                      <span className="text-gray-500 font-normal whitespace-nowrap">Tracking ID:</span> 
+                      {request.trackingId}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {new Date(request.createdAt).toLocaleString()}
                     </p>
                   </div>
                   <span 
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${statusInfo.color}`}
+                    className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${statusInfo.color}`}
                   >
                     <statusInfo.icon className={`h-3.5 w-3.5 ${request.status === 'PROCESSING' ? 'animate-spin' : ''}`} />
                     {statusInfo.text}
                   </span>
                 </div>
                 
-                <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-700 shadow-sm">
+                <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-700 shadow-sm break-words">
                   {request.statusMessage}
                 </div>
 
                 {/* --- DISPLAY NEW TRACKING ID IF EXISTS --- */}
                 {request.status === 'COMPLETED' && request.newTrackingId && (
-                  <div className="mt-3 rounded-lg bg-green-50 p-3 border border-green-100 flex items-center gap-2 animate-in fade-in">
-                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                    <p className="text-sm font-bold text-green-800">
+                  <div className="mt-3 rounded-lg bg-green-50 p-3 border border-green-100 flex flex-wrap items-center gap-2 animate-in fade-in">
+                    <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <p className="text-sm font-bold text-green-800 break-all">
                       New Tracking ID: <span className="font-mono text-green-900 ml-1 select-all">{request.newTrackingId}</span>
                     </p>
                   </div>
                 )}
 
                 {/* --- MANUAL CHECK BUTTON --- */}
-                {/* Ensure button only shows for PENDING or PROCESSING, and NOT if it just completed/failed */}
                 {(request.status === 'PROCESSING' || request.status === 'PENDING') && (
                   <div className="mt-3 pt-3 border-t border-gray-200 flex justify-end">
                     <button
@@ -338,7 +341,7 @@ export default function IpeClearanceClientPage({ initialRequests, serviceFee, is
               </div>
               <p className="text-center text-gray-600 text-sm leading-relaxed">
                 Are you sure you want to submit this IPE Clearance request for <br/>
-                <strong className="text-gray-900 text-base block mt-1">{trackingId}</strong>
+                <strong className="text-gray-900 text-base block mt-1 break-all">{trackingId}</strong>
               </p>
               <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
