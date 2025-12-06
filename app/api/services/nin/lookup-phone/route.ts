@@ -4,12 +4,12 @@ import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// Using the new, stable ConfirmIdent provider
-const CONFIRMIDENT_API_KEY = process.env.CONFIRMIDENT_API_KEY;
-const PHONE_VERIFY_ENDPOINT = 'https://confirmident.com.ng/api/nin_phone';
+// --- CONFIGURATION ---
+const API_KEY = process.env.ROBOST_API_KEY || "dd1cd7d9e00b3565cbf8410f4662226d93f71daf18b904811cd98dcfd4296868";
+const PHONE_VERIFY_ENDPOINT = 'https://robosttech.com/api/nin_phone';
 
-if (!CONFIRMIDENT_API_KEY) {
-  console.error("CRITICAL: CONFIRMIDENT_API_KEY is not set.");
+if (!API_KEY) {
+  console.error("CRITICAL: ROBOST_API_KEY is not set.");
 }
 
 function parseApiError(error: any): string {
@@ -34,10 +34,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
-  if (!CONFIRMIDENT_API_KEY) {
-    return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
-  }
-
   try {
     const body = await request.json();
     const { phone } = body; 
@@ -52,8 +48,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
     }
     
-    // --- PRICE CHANGE ONLY (No Commission) ---
-    // Using defaultAgentPrice for everyone
     const price = new Decimal(service.defaultAgentPrice);
     
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -61,47 +55,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call External API (ConfirmIdent) ---
-    // Call API *before* charging (Safe for lookups)
-    const phoneToSend = phone.startsWith('0') ? `+234${phone.substring(1)}` : phone;
-
+    // --- 2. Call RobostTech API ---
+    // Ensure phone format is correct (usually 080...)
+    
     const response = await axios.post(PHONE_VERIFY_ENDPOINT, 
       { 
-        phone: phoneToSend 
+        phone: phone 
       },
       {
         headers: { 
-          'api-key': CONFIRMIDENT_API_KEY, 
+          'api-key': API_KEY, 
           'Content-Type': 'application/json' 
         },
-        timeout: 15000,
+        timeout: 60000,
       }
     );
     
-    const data = response.data;
+    const apiRes = response.data;
+    console.log("ROBOST PHONE RAW RESPONSE:", JSON.stringify(apiRes, null, 2));
     
-    // --- 3. Handle ConfirmIdent Response ---
-    if (data.data) {
+    // --- 3. Handle Response ---
+    if (apiRes.success && apiRes.data) {
       
-      const responseData = data.data;
+      const responseData = apiRes.data;
 
       // --- 4. Data Mapping ---
       const mappedData = {
-        photo: responseData.photo,
+        photo: responseData.photo || "",
         firstname: responseData.firstname, 
         surname: responseData.surname,   
-        middlename: responseData.middlename,
-        birthdate: responseData.birthdate.replace(/-/g, '-'),
-        nin: responseData.NIN,
-        trackingId: responseData.trackingId,
-        residence_AdressLine1: responseData.residence_AdressLine1,
-        birthlga: responseData.birthlga,
-        gender: responseData.gender,
+        middlename: responseData.middlename || "",
+        birthdate: responseData.birthdate,
+        nin: responseData.nin,
+        trackingId: responseData.tracking_id || `TRK-${Date.now()}`,
+        
+        residence_AdressLine1: responseData.residence_AdressLine1 || responseData.residence_Town,
         residence_lga: responseData.residence_lga,
         residence_state: responseData.residence_state,
+        
         telephoneno: responseData.telephoneno, 
-        birthstate: responseData.birthstate,
-        maritalstatus: responseData.maritalstatus,
+        
+        birthlga: responseData.birthLGA, // Note casing from example
+        birthstate: responseData.birthState,
+        
+        gender: responseData.gender,
+        maritalstatus: responseData.maritalstatus, // Example might not have it, safe to be undefined
         profession: responseData.profession,
         religion: responseData.religion,
         signature: responseData.signature,
@@ -127,7 +125,7 @@ export async function POST(request: Request) {
             type: 'SERVICE_CHARGE',
             amount: price.negated(),
             description: `NIN Lookup by Phone (${phone})`,
-            reference: data.transaction_id || `NIN-PHONE-${Date.now()}`,
+            reference: `NIN-PHONE-${Date.now()}`,
             status: 'COMPLETED',
           },
         }),
@@ -144,7 +142,6 @@ export async function POST(request: Request) {
       
       const getPrice = (id: string) => {
         const s = slipPrices.find(sp => sp.id === id);
-        // We now display defaultAgentPrice to everyone because that is what they will be charged
         return s ? s.defaultAgentPrice : 0;
       };
 
@@ -160,8 +157,8 @@ export async function POST(request: Request) {
       });
 
     } else {
-      const errorMessage = data.message || "NIN verification failed.";
-      return NextResponse.json({ error: `Sorry 😢 ${errorMessage}` }, { status: 404 });
+      const errorMessage = apiRes.message || "NIN verification failed.";
+      return NextResponse.json({ error: `${errorMessage}` }, { status: 404 });
     }
 
   } catch (error: any) {
