@@ -54,16 +54,21 @@ export async function POST(request: Request) {
     console.log("ROBOST IPE CHECK RESPONSE:", JSON.stringify(data, null, 2));
     
     // --- 3. Handle Response ---
+    // API Documentation implies:
+    // Success -> returns "reply" (new tracking ID) or similar fields
+    // Failure -> returns explicit failure message
     
-    if (data.success === true) {
+    // Check for success indicators
+    if (data.success === true || data.status === 'success' || (data.reply && !data.error)) {
+      
       // --- SUCCESS / CLEARED ---
-      // Fix: Try to find the new ID in various likely fields from RobostTech
+      // We check 'reply' first as per your documentation note
       const newId = 
+        data.reply || 
         data.new_tracking_id || 
         data.data?.new_tracking_id || 
         data.newTrackingId || 
         data.NewTrackingId ||
-        data.response?.new_tracking_id || // sometimes nested in response
         null;
 
       await prisma.ipeRequest.update({
@@ -71,11 +76,10 @@ export async function POST(request: Request) {
         data: {
           status: 'COMPLETED',
           statusMessage: data.message || 'IPE Cleared successfully',
-          newTrackingId: newId, // <--- SAVING THE NEW ID
+          newTrackingId: newId, // Saving the new ID found in 'reply'
         },
       });
       
-      // Return the new ID to the frontend immediately
       return NextResponse.json({ 
           status: 'COMPLETED', 
           message: 'Success! Your IPE Clearance is complete.', 
@@ -83,13 +87,20 @@ export async function POST(request: Request) {
       });
 
     } else {
-      // --- NOT SUCCESSFUL YET (Pending or Failed) ---
+      // --- NOT COMPLETED YET ---
       const msg = (data.message || "").toLowerCase();
       
-      // Fix: Removed "not found" so pending items aren't marked as failed
-      const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("decline") || msg.includes("rejected");
+      // STRICT FAILURE CHECK:
+      // Only mark as FAILED if it is definitely a permanent error (declined/rejected/invalid).
+      // We explicitly EXCLUDE "not found" so it stays PROCESSING.
+      const isDefiniteFailure = 
+        msg.includes("fail") || 
+        msg.includes("error") || 
+        msg.includes("invalid") || 
+        msg.includes("decline") || 
+        msg.includes("reject");
 
-      if (isFailed) {
+      if (isDefiniteFailure) {
          await prisma.ipeRequest.update({
             where: { id: existingRequest.id },
             data: {
@@ -99,15 +110,17 @@ export async function POST(request: Request) {
           });
           return NextResponse.json({ status: 'FAILED', message: `Request Failed: ${data.message}` });
       } else {
-         // Default to PROCESSING for "pending", "not found" (in queue), OR ambiguous messages
-         // We do NOT update the DB status here, just return the status to frontend
-         return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Still processing.' });
+         // Default to PROCESSING for "pending", "not found" (in queue), or waiting
+         return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Still processing. Please check back later.' });
       }
     }
 
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message || "An error occurred.";
     console.error(`IPE Clearance (Check) Error:`, errorMessage);
+    
+    // If the API call itself fails (network error), we usually keep it as processing 
+    // unless it's a 4xx error that implies invalid data.
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
