@@ -2,33 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
-import { Decimal } from '@prisma/client/runtime/library';
-import { processCommission } from '@/lib/commission'; 
 
 // --- CONFIGURATION ---
 const API_KEY = process.env.ROBOSTTECH_API_KEY;
-const SUBMIT_ENDPOINT = 'https://robosttech.com/api/clearance';
+const CHECK_ENDPOINT = 'https://robosttech.com/api/clearance_status';
 
 if (!API_KEY) {
   console.error("CRITICAL: ROBOSTTECH_API_KEY is not set.");
 }
 
-function parseApiError(error: any): string {
-  if (error.code === 'ECONNABORTED') {
-    return 'The service timed out. Please try again.';
-  }
-  if (error.response && error.response.data && (error.response.data.message || error.response.data.description)) {
-    return error.response.data.message || error.response.data.description;
-  }
-  if (error.message) {
-    return error.message;
-  }
-  return 'An internal server error occurred.';
-}
-
 export async function POST(request: Request) {
   const user = await getUserFromSession();
-  if (!user || !user.isIdentityVerified) {
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 
@@ -44,113 +29,80 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tracking ID is required.' }, { status: 400 });
     }
 
-    // --- 1. Get Service & Price ---
-    const serviceId = 'NIN_IPE_CLEARANCE';
-    const service = await prisma.service.findUnique({ where: { id: serviceId } });
-    
-    if (!service || !service.isActive) {
-      return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
-    }
-    
-    const price = new Decimal(service.defaultAgentPrice);
-
-    // Check Wallet
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-    if (!wallet || wallet.balance.lessThan(price)) {
-      return NextResponse.json({ error: `Insufficient funds. This service costs ₦${price}.` }, { status: 402 });
-    }
-
-    // --- 2. Check for Duplicates ---
+    // --- 1. Find Request ---
     const existingRequest = await prisma.ipeRequest.findFirst({
-      where: { 
-        userId: user.id, 
-        trackingId: trackingId,
-        status: { in: ['PENDING', 'PROCESSING'] }
-      }
+      where: { userId: user.id, trackingId: trackingId },
     });
-    if (existingRequest) {
-      return NextResponse.json({ error: 'You already have a pending request for this Tracking ID.' }, { status: 409 });
+
+    if (!existingRequest) {
+      return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
     }
 
-    // --- 3. Call RobostTech API ---
-    console.log(`[ROBOST] Submitting IPE Clearance: ${trackingId}`);
-
-    const response = await axios.post(SUBMIT_ENDPOINT, 
-      { 
-        tracking_id: trackingId 
-      },
+    // --- 2. Call RobostTech API ---
+    const response = await axios.post(CHECK_ENDPOINT, 
+      { tracking_id: trackingId },
       {
         headers: { 
           'api-key': API_KEY,
           'Content-Type': 'application/json' 
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
     const data = response.data;
-    console.log("ROBOST IPE SUBMIT RESPONSE:", JSON.stringify(data, null, 2));
+    console.log("ROBOST IPE CHECK RESPONSE:", JSON.stringify(data, null, 2));
     
-    // --- 4. Handle Success ---
-    // Robost usually returns { success: true, ... } or just 200 OK
-    if (data.success || response.status === 200) {
-      const priceAsString = price.toString();
+    // --- 3. Handle Response ---
+    
+    if (data.success === true) {
+      // --- SUCCESS / CLEARED ---
+      // Try to find the new ID in various likely fields
+      const newId = data.new_tracking_id || data.data?.new_tracking_id || data.newTrackingId || null;
 
-      // We capture the created request here
-      const newIpeRequest = await prisma.$transaction(async (tx) => {
-        // a) Charge User
-        await tx.wallet.update({
-          where: { userId: user.id },
-          data: { balance: { decrement: priceAsString } },
-        });
-
-        // b) Process Commission
-        await processCommission(tx, user.id, service.id);
-
-        // c) Create IPE Request (Capture and return it)
-        const createdReq = await tx.ipeRequest.create({
-          data: {
-            userId: user.id,
-            trackingId: trackingId,
-            status: 'PROCESSING',
-            statusMessage: data.message || 'Submitted. Awaiting clearance.'
-          },
-        });
-
-        // d) Log Transaction
-        await tx.transaction.create({
-          data: {
-            userId: user.id,
-            serviceId: service.id,
-            type: 'SERVICE_CHARGE',
-            amount: price.negated(),
-            description: `IPE Clearance (${trackingId})`,
-            reference: `IPE-${Date.now()}`,
-            status: 'COMPLETED',
-          },
-        });
-
-        return createdReq; // Return to outside scope
-      });
-
-      return NextResponse.json(
-        { 
-          message: data.message || 'Request submitted successfully! Check back later for status.',
-          newRequest: newIpeRequest // <--- RETURN THIS so frontend doesn't crash
+      await prisma.ipeRequest.update({
+        where: { id: existingRequest.id },
+        data: {
+          status: 'COMPLETED',
+          statusMessage: data.message || 'IPE Cleared successfully',
+          newTrackingId: newId, // <--- SAVING THE NEW ID
         },
-        { status: 200 }
-      );
+      });
       
+      return NextResponse.json({ status: 'COMPLETED', message: 'Success! Your IPE Clearance is complete.', newTrackingId: newId });
+
     } else {
-      throw new Error(data.message || "Submission failed at provider.");
+      // --- NOT SUCCESSFUL YET (Pending or Failed) ---
+      const msg = (data.message || "").toLowerCase();
+      
+      // Keywords that definitely mean "Wait"
+      const isPending = msg.includes("pending") || msg.includes("progress") || msg.includes("wait") || msg.includes("queue") || msg.includes("processing");
+      
+      // Keywords that definitely mean "Fail"
+      const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("not found") || msg.includes("decline") || msg.includes("rejected");
+
+      if (isFailed) {
+         // Only mark FAILED if we are sure
+         await prisma.ipeRequest.update({
+            where: { id: existingRequest.id },
+            data: {
+              status: 'FAILED',
+              statusMessage: data.message || 'Clearance failed.',
+            },
+          });
+          return NextResponse.json({ status: 'FAILED', message: `Request Failed: ${data.message}` });
+      } else {
+         // Default to PROCESSING for "pending" OR ambiguous messages (Safety net)
+         return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Still processing.' });
+      }
     }
 
   } catch (error: any) {
-    const errorMessage = parseApiError(error);
-    console.error(`IPE Clearance (Submit) Error:`, errorMessage);
+    const errorMessage = error.response?.data?.message || error.message || "An error occurred.";
+    console.error(`IPE Clearance (Check) Error:`, errorMessage);
     return NextResponse.json(
       { error: errorMessage },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }
