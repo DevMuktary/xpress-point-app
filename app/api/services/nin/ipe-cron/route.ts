@@ -43,8 +43,14 @@ export async function GET(request: Request) {
         const data = response.data;
         
         if (data.success === true) {
-          // Success: Capture New ID
-          const newId = data.new_tracking_id || data.data?.new_tracking_id || null;
+          // Success: Capture New ID with robust checking
+          const newId = 
+            data.new_tracking_id || 
+            data.data?.new_tracking_id || 
+            data.newTrackingId || 
+            data.NewTrackingId ||
+            data.response?.new_tracking_id || 
+            null;
 
           await prisma.ipeRequest.update({
             where: { id: req.id },
@@ -59,7 +65,9 @@ export async function GET(request: Request) {
         } else {
            // Check if failed
            const msg = (data.message || "").toLowerCase();
-           const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("not found") || msg.includes("decline");
+           
+           // Fix: Removed "not found" from failure criteria
+           const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("decline");
 
            if (isFailed) {
               await prisma.ipeRequest.update({
