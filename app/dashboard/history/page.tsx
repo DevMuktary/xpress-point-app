@@ -76,21 +76,7 @@ export default function HistoryHubPage() {
           colorClass: "bg-indigo-100 text-indigo-600",
           description: "Email delinking status"
         },
-        // Adding Personalization here as it fits NIN category often
-        {
-          title: "NIN Personalization",
-          href: "/dashboard/history/personalization",
-          icon: FingerPrintIcon,
-          colorClass: "bg-indigo-100 text-indigo-600",
-          description: "Tracking ID status"
-        },
-         {
-          title: "IPE Clearance",
-          href: "/dashboard/history/ipe",
-          icon: ShieldCheckIcon,
-          colorClass: "bg-indigo-100 text-indigo-600",
-          description: "Clearance status"
-        }
+        
       ]
     },
     {
