@@ -38,10 +38,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
     }
 
-    if (existingRequest.status === 'COMPLETED') {
-      return NextResponse.json({ status: 'COMPLETED', message: 'This request is already complete.' });
-    }
-
     // --- 2. Call RobostTech API ---
     const response = await axios.post(CHECK_ENDPOINT, 
       { tracking_id: trackingId },
@@ -58,34 +54,35 @@ export async function POST(request: Request) {
     console.log("ROBOST IPE CHECK RESPONSE:", JSON.stringify(data, null, 2));
     
     // --- 3. Handle Response ---
-    // We expect { success: true, ... } for a valid check
-    // Logic: If 'success' is true, it might mean it's found/cleared.
-    // If 'success' is false, it might mean pending or failed.
     
     if (data.success === true) {
       // --- SUCCESS / CLEARED ---
-      // We assume success=true means the IPE is cleared or the check passed positive
+      // Try to find the new ID in various likely fields
+      const newId = data.new_tracking_id || data.data?.new_tracking_id || data.newTrackingId || null;
+
       await prisma.ipeRequest.update({
         where: { id: existingRequest.id },
         data: {
           status: 'COMPLETED',
           statusMessage: data.message || 'IPE Cleared successfully',
-          // newTrackingId: data.data?.new_tracking_id // Uncomment if Robost provides a new ID
+          newTrackingId: newId, // <--- SAVING THE NEW ID
         },
       });
       
-      return NextResponse.json({ status: 'COMPLETED', message: 'Success! Your IPE Clearance is complete.' });
+      return NextResponse.json({ status: 'COMPLETED', message: 'Success! Your IPE Clearance is complete.', newTrackingId: newId });
 
     } else {
-      // --- NOT SUCCESSFUL YET (Failed or Pending) ---
-      // We need to differentiate based on message if possible.
-      // For now, if success is false, we treat it as processing or failed depending on message.
+      // --- NOT SUCCESSFUL YET (Pending or Failed) ---
+      const msg = (data.message || "").toLowerCase();
       
-      const msg = data.message?.toLowerCase() || "";
-      if (msg.includes("pending") || msg.includes("progress")) {
-         return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Still processing.' });
-      } else {
-         // Assume Failed if not pending
+      // Keywords that definitely mean "Wait"
+      const isPending = msg.includes("pending") || msg.includes("progress") || msg.includes("wait") || msg.includes("queue") || msg.includes("processing");
+      
+      // Keywords that definitely mean "Fail"
+      const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("not found") || msg.includes("decline") || msg.includes("rejected");
+
+      if (isFailed) {
+         // Only mark FAILED if we are sure
          await prisma.ipeRequest.update({
             where: { id: existingRequest.id },
             data: {
@@ -94,6 +91,9 @@ export async function POST(request: Request) {
             },
           });
           return NextResponse.json({ status: 'FAILED', message: `Request Failed: ${data.message}` });
+      } else {
+         // Default to PROCESSING for "pending" OR ambiguous messages (Safety net)
+         return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Still processing.' });
       }
     }
 
