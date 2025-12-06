@@ -1,78 +1,25 @@
-"use client"; // This is an interactive component
+"use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   LinkIcon,
   GlobeAltIcon,
-  ClipboardIcon,
-  ClipboardDocumentCheckIcon,
   BanknotesIcon
 } from '@heroicons/react/24/outline';
-import CopyButton from '@/components/CopyButton'; 
+import CopyButton from '@/components/CopyButton';
 
 // Type Definitions
-type Props = {
-  subdomain: string;
-  businessName: string;
-};
-
 type EarningItem = {
   service: string;
   category: string;
   amount: number;
 };
 
-// --- Hardcoded Earnings Data ---
-const earningsData: EarningItem[] = [
-  { service: "BVN Android Enrollment", category: "BVN", amount: 500 },
-  { service: "BVN Modification (DOB)", category: "BVN", amount: 250 },
-  { service: "BVN Modification (DOB & Phone)", category: "BVN", amount: 300 },
-  { service: "BVN Modification (Name)", category: "BVN", amount: 250 },
-  { service: "BVN Modification (Name & DOB)", category: "BVN", amount: 300 },
-  { service: "BVN Modification (Name & Phone)", category: "BVN", amount: 300 },
-  { service: "BVN Modification (Name phone & DOB)", category: "BVN", amount: 0 },
-  { service: "BVN Modification (Phone)", category: "BVN", amount: 250 },
-  { service: "BVN PREMIUM SLIP", category: "BVN", amount: 25 },
-  { service: "BVN Retrieval (C.R.M)", category: "BVN", amount: 70 },
-  { service: "BVN Retrieval (Phone)", category: "BVN", amount: 50 },
-  { service: "BVN STANDARD SLIP", category: "BVN", amount: 25 },
-  { service: "VNIN to NIBSS", category: "BVN", amount: 100 },
-  { service: "CAC Business Name Registration", category: "CAC", amount: 500 },
-  { service: "CAC Document Retrieval", category: "CAC", amount: 500 },
-  { service: "JAMB Direct Entry (DE) Pin", category: "EXAM_PINS", amount: 50 },
-  { service: "JAMB UTME Pin", category: "EXAM_PINS", amount: 50 },
-  { service: "NABTEB Result Pin", category: "EXAM_PINS", amount: 50 },
-  { service: "NABTEB Result Request (Manual)", category: "EXAM_PINS", amount: 100 },
-  { service: "NECO Result Pin", category: "EXAM_PINS", amount: 50 },
-  { service: "NECO Result Request (Manual)", category: "EXAM_PINS", amount: 100 },
-  { service: "WAEC Result Pin", category: "EXAM_PINS", amount: 50 },
-  { service: "WAEC Result Request (Manual)", category: "EXAM_PINS", amount: 100 },
-  { service: "JAMB Admission Letter", category: "JAMB", amount: 100 },
-  { service: "JAMB Profile Code Retrieval", category: "JAMB", amount: 100 },
-  { service: "JAMB Registration Slip", category: "JAMB", amount: 100 },
-  { service: "JAMB Result Slip", category: "JAMB", amount: 100 },
-  { service: "Newspaper Change of Name", category: "NEWSPAPER", amount: 200 },
-  { service: "NIN Delink / Retrieve Email", category: "NIN", amount: 100 },
-  { service: "NIN IPE Clearance", category: "NIN", amount: 50 },
-  { service: "NIN Modification (Address)", category: "NIN", amount: 250 },
-  { service: "NIN Modification (Date of Birth)", category: "NIN", amount: 1000 },
-  { service: "NIN Modification (Name)", category: "NIN", amount: 250 },
-  { service: "NIN Modification (Phone)", category: "NIN", amount: 250 },
-  { service: "NIN Personalization", category: "NIN", amount: 25 },
-  { service: "NIN Premium Slip", category: "NIN", amount: 20 },
-  { service: "NIN Regular Slip", category: "NIN", amount: 20 },
-  { service: "NIN Standard Slip", category: "NIN", amount: 25 },
-  { service: "NIN Validation (No Record Found)", category: "NIN", amount: 50 },
-  { service: "NIN Validation (Record Update)", category: "NIN", amount: 50 },
-  { service: "NIN Verification Lookup", category: "NIN", amount: 0 },
-  { service: "VNIN Slip (Instant)", category: "NIN", amount: 25 },
-  { service: "NPC Attestation", category: "NPC", amount: 300 },
-  { service: "Aggregator Upgrade Fee", category: "SYSTEM", amount: 0 },
-  { service: "TIN Registration (Business)", category: "TIN", amount: 150 },
-  { service: "TIN Registration (Personal)", category: "TIN", amount: 100 },
-  { service: "TIN Retrieval (Business)", category: "TIN", amount: 100 },
-  { service: "TIN Retrieval (Personal)", category: "TIN", amount: 50 },
-];
+type Props = {
+  subdomain: string;
+  businessName: string;
+  earningsData: EarningItem[]; // <--- Receiving dynamic data
+};
 
 // --- Helper: Category Badge Color ---
 const getCategoryColor = (cat: string) => {
@@ -89,9 +36,8 @@ const getCategoryColor = (cat: string) => {
 };
 
 // --- The Main Component ---
-export default function AggregatorBrandClientPage({ subdomain, businessName }: Props) {
+export default function AggregatorBrandClientPage({ subdomain, businessName, earningsData }: Props) {
   
-  // Create the two links
   const subdomainLink = `https://${subdomain}.xpresspoint.net`;
   const registerLink = `https://xpresspoint.net/register/${subdomain}`;
 
@@ -140,7 +86,7 @@ export default function AggregatorBrandClientPage({ subdomain, businessName }: P
         </div>
       </div>
 
-      {/* --- Section 2: Earnings Table --- */}
+      {/* --- Section 2: Earnings Table (Dynamic) --- */}
       <div className="rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 bg-gray-50/50">
           <div className="flex items-center gap-3">
@@ -182,6 +128,14 @@ export default function AggregatorBrandClientPage({ subdomain, businessName }: P
                   </td>
                 </tr>
               ))}
+              
+              {earningsData.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500 italic">
+                    No active services found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
