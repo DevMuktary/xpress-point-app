@@ -92,11 +92,12 @@ export async function POST(request: Request) {
     console.log("ROBOST IPE SUBMIT RESPONSE:", JSON.stringify(data, null, 2));
     
     // --- 4. Handle Success ---
-    // Robost usually returns { success: true, ... }
+    // Robost usually returns { success: true, ... } or just 200 OK
     if (data.success || response.status === 200) {
       const priceAsString = price.toString();
 
-      await prisma.$transaction(async (tx) => {
+      // We capture the created request here
+      const newIpeRequest = await prisma.$transaction(async (tx) => {
         // a) Charge User
         await tx.wallet.update({
           where: { userId: user.id },
@@ -106,8 +107,8 @@ export async function POST(request: Request) {
         // b) Process Commission
         await processCommission(tx, user.id, service.id);
 
-        // c) Create IPE Request
-        await tx.ipeRequest.create({
+        // c) Create IPE Request (Capture and return it)
+        const createdReq = await tx.ipeRequest.create({
           data: {
             userId: user.id,
             trackingId: trackingId,
@@ -128,10 +129,15 @@ export async function POST(request: Request) {
             status: 'COMPLETED',
           },
         });
+
+        return createdReq; // Return to outside scope
       });
 
       return NextResponse.json(
-        { message: data.message || 'Request submitted successfully! Check back later for status.' },
+        { 
+          message: data.message || 'Request submitted successfully! Check back later for status.',
+          newRequest: newIpeRequest // <--- RETURN THIS so frontend doesn't crash
+        },
         { status: 200 }
       );
       
