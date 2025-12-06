@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     
     if (data.success === true) {
       // --- SUCCESS / CLEARED ---
-      // Try to find the new ID in various likely fields
+      // Try to find the new ID in various likely fields from RobostTech
       const newId = data.new_tracking_id || data.data?.new_tracking_id || data.newTrackingId || null;
 
       await prisma.ipeRequest.update({
@@ -69,20 +69,21 @@ export async function POST(request: Request) {
         },
       });
       
-      return NextResponse.json({ status: 'COMPLETED', message: 'Success! Your IPE Clearance is complete.', newTrackingId: newId });
+      // Return the new ID to the frontend immediately
+      return NextResponse.json({ 
+          status: 'COMPLETED', 
+          message: 'Success! Your IPE Clearance is complete.', 
+          newTrackingId: newId 
+      });
 
     } else {
       // --- NOT SUCCESSFUL YET (Pending or Failed) ---
       const msg = (data.message || "").toLowerCase();
       
-      // Keywords that definitely mean "Wait"
-      const isPending = msg.includes("pending") || msg.includes("progress") || msg.includes("wait") || msg.includes("queue") || msg.includes("processing");
-      
       // Keywords that definitely mean "Fail"
       const isFailed = msg.includes("fail") || msg.includes("error") || msg.includes("invalid") || msg.includes("not found") || msg.includes("decline") || msg.includes("rejected");
 
       if (isFailed) {
-         // Only mark FAILED if we are sure
          await prisma.ipeRequest.update({
             where: { id: existingRequest.id },
             data: {
@@ -92,7 +93,8 @@ export async function POST(request: Request) {
           });
           return NextResponse.json({ status: 'FAILED', message: `Request Failed: ${data.message}` });
       } else {
-         // Default to PROCESSING for "pending" OR ambiguous messages (Safety net)
+         // Default to PROCESSING for "pending" OR ambiguous messages
+         // We do NOT update the DB status here, just return the status to frontend
          return NextResponse.json({ status: 'PROCESSING', message: data.message || 'Still processing.' });
       }
     }
