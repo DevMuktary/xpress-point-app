@@ -5,17 +5,17 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- CONFIGURATION ---
-const ZEPA_API_BASE_URL = process.env.ZEPA_API_BASE_URL; 
-const ZEPA_API_TOKEN = process.env.ZEPA_API_TOKEN;
+const API_KEY = process.env.ROBOST_API_KEY || "dd1cd7d9e00b3565cbf8410f4662226d93f71daf18b904811cd98dcfd4296868"; 
+const ENDPOINT = "https://robosttech.com/api/nin_verify";
 
-if (!ZEPA_API_BASE_URL || !ZEPA_API_TOKEN) {
-  console.error("CRITICAL: ZEPA_API_BASE_URL or ZEPA_API_TOKEN is not set.");
+if (!API_KEY) {
+  console.error("CRITICAL: ROBOST_API_KEY is not set.");
 }
 
 // --- HELPER: Error Parser ---
 function parseApiError(error: any): string {
   if (error.response) {
-    console.error("--- [ZEPA API ERROR] ---");
+    console.error("--- [ROBOST API ERROR] ---");
     console.error("Status:", error.response.status);
     console.error("Body:", JSON.stringify(error.response.data, null, 2));
   } else {
@@ -29,7 +29,6 @@ function parseApiError(error: any): string {
   if (error.response && error.response.data) {
     const data = error.response.data;
     if (data.message) return typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
-    if (data.error) return typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
   }
 
   return error.message || 'An internal server error occurred.';
@@ -39,10 +38,6 @@ export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user || !user.isIdentityVerified) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
-  }
-
-  if (!ZEPA_API_BASE_URL || !ZEPA_API_TOKEN) {
-    return NextResponse.json({ error: 'Service configuration error.' }, { status: 500 });
   }
 
   try {
@@ -66,79 +61,68 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call ZEPA API (SWITCHED TO V2) ---
-    console.log(`[ZEPA V2] Verifying NIN: ${nin} for user ${user.id}`);
-    
-    // Clean URL construction
-    const baseUrl = ZEPA_API_BASE_URL.replace(/\/$/, ""); 
-    
-    // UPDATED: Now pointing to /v2
-    const endpoint = `${baseUrl}/api/v1/verify-nin/v2`;
+    // --- 2. Call RobostTech API ---
+    console.log(`[ROBOST] Verifying NIN: ${nin} for user ${user.id}`);
 
     const response = await axios.post(
-      endpoint,
+      ENDPOINT,
       { nin: nin },
       {
         headers: { 
-          'Authorization': `Bearer ${ZEPA_API_TOKEN}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'api-key': API_KEY,
+          'Content-Type': 'application/json'
         },
-        timeout: 60000, // V2 might take longer, increased to 60s
+        timeout: 60000, 
       }
     );
 
-    const data = response.data;
+    const apiRes = response.data;
+    console.log("ROBOST RAW RESPONSE:", JSON.stringify(apiRes, null, 2));
 
-    // --- CRITICAL DEBUGGING LOG ---
-    // Watch this log to see if V2 returns the address!
-    console.log("ZEPA V2 RAW RESPONSE:", JSON.stringify(data, null, 2));
-
-    // --- 3. Validate Response ---
-    const responseData = data.data || data; 
-
-    if (!responseData) {
-      throw new Error("API returned success but no data payload found.");
+    if (!apiRes.success || !apiRes.data) {
+        throw new Error(apiRes.message || "Verification failed");
     }
 
-    // --- 4. Data Mapping (With Telephone Fix & Expanded Address Fields) ---
+    const responseData = apiRes.data;
+
+    // --- 4. Data Mapping ---
     const mappedData = {
       // Photo
-      photo: responseData.photo || responseData.image || responseData.picture || responseData.photo_base64 || "",
+      photo: responseData.photo || "",
       
       // Names
-      firstname: responseData.firstname || responseData.firstName || responseData.first_name || responseData.FirstName,
-      surname: responseData.surname || responseData.lastName || responseData.last_name || responseData.Surname,
-      middlename: responseData.middlename || responseData.middleName || responseData.middle_name || responseData.othername || responseData.otherName || "",
+      firstname: responseData.firstname,
+      surname: responseData.surname,
+      middlename: responseData.middlename || "",
       
       // Dates
-      birthdate: (responseData.birthdate || responseData.dateOfBirth || responseData.dob || responseData.birthDate || "").replace(/-/g, '-'),
+      birthdate: responseData.birthdate,
       
       // NIN
-      nin: responseData.nin || responseData.NIN || nin,
+      nin: responseData.nin,
       
-      trackingId: responseData.trackingId || responseData.tracking_id || `TRK-${Date.now()}`,
+      trackingId: responseData.trackingId || `TRK-${Date.now()}`,
       
-      // Address (Expanded for V2)
-      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address || responseData.residenceAddress || responseData.residence_address || responseData.fullAddress || responseData.addressLine1 || responseData.residence_Town,
+      // Address
+      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.residence_Town,
       
       // LGA & State
-      residence_lga: responseData.residence_lga || responseData.lga || responseData.residenceLga || responseData.LGA,
-      residence_state: responseData.residence_state || responseData.state || responseData.residenceState || responseData.stateOfResidence,
+      residence_lga: responseData.residence_lga,
+      residence_state: responseData.residence_state,
       
-      // Phone (With Capital N fix)
-      telephoneno: responseData.telephoneNo || responseData.telephoneno || responseData.phoneNumber || responseData.phone_number || responseData.phone || responseData.mobile || responseData.tel,
+      // Phone
+      telephoneno: responseData.telephoneno,
       
       // Gender
-      gender: responseData.gender || responseData.sex,
+      gender: responseData.gender,
       
       // Birth Details
-      birthlga: responseData.birthlga || responseData.birthLga,
-      birthstate: responseData.birthstate || responseData.birthState,
+      birthlga: responseData.birthlga,
+      birthstate: responseData.birthstate,
       
       // Other
-      maritalstatus: responseData.maritalstatus || responseData.maritalStatus,
-      profession: responseData.profession || responseData.occupation,
+      maritalstatus: responseData.maritalstatus,
+      profession: responseData.profession,
       religion: responseData.religion,
       signature: responseData.signature,
     };
@@ -162,7 +146,7 @@ export async function POST(request: Request) {
           serviceId: service.id,
           type: 'SERVICE_CHARGE',
           amount: price.negated(),
-          description: `NIN Verification Lookup V2 (${nin})`,
+          description: `NIN Verification Lookup (${nin})`,
           reference: `NIN-LOOKUP-${Date.now()}`,
           status: 'COMPLETED',
         },
