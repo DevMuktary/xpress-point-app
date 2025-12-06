@@ -12,13 +12,9 @@ import {
   HomeIcon, 
   EnvelopeIcon 
 } from '@heroicons/react/24/outline';
-// --- THIS IS THE FIX (Part 1) ---
 import PhoneInput from 'react-phone-number-input/input';
-// We import the *type* from the 'libphonenumber-js' package
 import { E164Number } from 'libphonenumber-js'; 
-// ---------------------------------
 
-// Add new props for the Aggregator
 type Props = {
   aggregatorId?: string;
   aggregatorName?: string;
@@ -27,29 +23,25 @@ type Props = {
 export default function SignupClientPage({ aggregatorId, aggregatorName }: Props) {
   const router = useRouter();
   
-  // --- Form States ---
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState<E164Number | string>(''); // Use the correct type
+  const [phone, setPhone] = useState<E164Number | string>(''); 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   
-  // --- UI States ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // --- Form Submission Handler ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // --- New Validation Logic ---
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -58,7 +50,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
       setError("You must agree to the Terms of Service.");
       return;
     }
-    // ----------------------------
 
     setIsLoading(true);
 
@@ -83,7 +74,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
         throw new Error(data.error || 'Registration failed. Please try again.');
       }
 
-      // Success! Send to the OTP page
       router.push(`/verify-otp?phone=${encodeURIComponent(phone)}`);
 
     } catch (err: any) {
@@ -108,17 +98,14 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
         onSubmit={handleSubmit}
       >
         <div className="space-y-4">
-          {/* --- Name Fields --- */}
           <div className="grid grid-cols-2 gap-4">
             <DataInput label="First Name*" id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} Icon={UserIcon} />
             <DataInput label="Last Name*" id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} Icon={UserIcon} />
           </div>
 
-          {/* --- Business Fields (Optional) --- */}
           <DataInput label="Business Name (Optional)" id="business-name" value={businessName} onChange={(e) => setBusinessName(e.target.value)} Icon={BriefcaseIcon} isRequired={false} />
           <DataInput label="Business Address (Optional)" id="address" value={address} onChange={(e) => setAddress(e.target.value)} Icon={HomeIcon} isRequired={false} />
 
-          {/* --- Contact Fields --- */}
           <DataInput label="Email Address*" id="email" value={email} onChange={(e) => setEmail(e.target.value.toLowerCase())} Icon={EnvelopeIcon} type="email" />
           
           <div>
@@ -138,7 +125,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
             </div>
           </div>
 
-          {/* --- Password Fields --- */}
           <PasswordInput
             label="Create Password*"
             id="password"
@@ -157,7 +143,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
           />
         </div>
 
-        {/* --- Terms of Service --- */}
         <div className="flex items-start">
           <div className="flex h-6 items-center">
             <input
@@ -180,7 +165,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
           </div>
         </div>
 
-        {/* Submit Button */}
         <div>
           <button
             type="submit"
@@ -191,10 +175,11 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
           </button>
         </div>
         
+        {/* --- FIXED LINK TEXT --- */}
         <div className="text-center text-sm text-gray-600">
-          Already have an account?{' '}
+          Have an account?{' '}
           <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-            Sign in
+            Login
           </Link>
         </div>
       </form>
@@ -202,7 +187,6 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
   );
 }
 
-// --- Reusable Input Component ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: {
   label: string, id: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, Icon: React.ElementType, type?: string, isRequired?: boolean, placeholder?: string
 }) => (
@@ -223,7 +207,6 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
   </div>
 );
 
-// --- Reusable Password Component ---
 const PasswordInput = ({ label, id, value, onChange, show, onToggle }: {
   label: string, id: string, value: string, onChange: (value: string) => void, show: boolean, onToggle: () => void
 }) => (
