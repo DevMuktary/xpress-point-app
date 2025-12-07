@@ -14,7 +14,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, query, userId, amount, reason } = body; 
-    // action: 'SEARCH' | 'FUND' | 'TOGGLE_BLOCK'
 
     // --- ACTION: SEARCH USER ---
     if (action === 'SEARCH') {
@@ -27,14 +26,13 @@ export async function POST(request: Request) {
             { phoneNumber: { contains: query } },
             { firstName: { contains: query, mode: 'insensitive' } },
             { lastName: { contains: query, mode: 'insensitive' } },
-            { agentCode: { contains: query } } // Search by Agent Code too
+            { agentCode: { contains: query } } 
           ]
         },
-        take: 5, // Limit results
+        take: 5,
         include: { wallet: true }
       });
 
-      // Serialize Decimal
       const safeUsers = users.map(u => ({
         id: u.id,
         firstName: u.firstName,
@@ -58,19 +56,17 @@ export async function POST(request: Request) {
       const amountString = amountDecimal.toString();
 
       await prisma.$transaction(async (tx) => {
-        // 1. Credit Wallet
         await tx.wallet.update({
           where: { userId },
           data: { balance: { increment: amountString } }
         });
 
-        // 2. Log Transaction (Type: ADMIN_CREDIT)
         await tx.transaction.create({
           data: {
             userId,
-            serviceId: null, // No specific service
+            serviceId: null,
             type: 'ADMIN_CREDIT',
-            amount: amountDecimal, // Positive for credit
+            amount: amountDecimal,
             description: reason || `Wallet Funded by Admin`,
             reference: `ADM-FUND-${Date.now()}`,
             status: 'COMPLETED'
@@ -100,6 +96,61 @@ export async function POST(request: Request) {
         message: `User ${newStatus ? 'Blocked' : 'Unblocked'} successfully`,
         isBlocked: newStatus
       });
+    }
+
+    // --- ACTION: DELETE USER (New Feature) ---
+    if (action === 'DELETE_USER') {
+      if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+
+      // Run as a transaction to ensure clean removal
+      await prisma.$transaction(async (tx) => {
+        
+        // 1. Unlink Agents (if this user is an Aggregator)
+        // We don't delete the agents, we just remove their aggregator link
+        await tx.user.updateMany({
+          where: { aggregatorId: userId },
+          data: { aggregatorId: null }
+        });
+
+        // 2. Delete All Related Records (Manual Cascade)
+        // We delete from child tables first to avoid foreign key errors
+        const whereUser = { userId: userId };
+
+        await tx.wallet.deleteMany({ where: whereUser });
+        await tx.virtualAccount.deleteMany({ where: whereUser });
+        await tx.transaction.deleteMany({ where: whereUser });
+        await tx.ninVerification.deleteMany({ where: whereUser });
+        await tx.otp.deleteMany({ where: whereUser });
+        await tx.passwordResetToken.deleteMany({ where: whereUser });
+        await tx.chatMessage.deleteMany({ where: whereUser });
+        await tx.withdrawalRequest.deleteMany({ where: whereUser });
+        await tx.pendingAccountChange.deleteMany({ where: whereUser });
+        await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); // Special field name
+
+        // Requests
+        await tx.personalizationRequest.deleteMany({ where: whereUser });
+        await tx.ipeRequest.deleteMany({ where: whereUser });
+        await tx.validationRequest.deleteMany({ where: whereUser });
+        await tx.modificationRequest.deleteMany({ where: whereUser });
+        await tx.delinkRequest.deleteMany({ where: whereUser });
+        await tx.newspaperRequest.deleteMany({ where: whereUser });
+        await tx.cacRequest.deleteMany({ where: whereUser });
+        await tx.tinRequest.deleteMany({ where: whereUser });
+        await tx.jambRequest.deleteMany({ where: whereUser });
+        await tx.examPinRequest.deleteMany({ where: whereUser });
+        await tx.resultRequest.deleteMany({ where: whereUser });
+        await tx.vtuRequest.deleteMany({ where: whereUser });
+        await tx.bvnRequest.deleteMany({ where: whereUser });
+        await tx.vninRequest.deleteMany({ where: whereUser });
+        await tx.npcRequest.deleteMany({ where: whereUser });
+
+        // 3. Finally, Delete the User
+        await tx.user.delete({
+          where: { id: userId }
+        });
+      });
+
+      return NextResponse.json({ success: true, message: 'User and all related data deleted successfully.' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
