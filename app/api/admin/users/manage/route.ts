@@ -98,36 +98,58 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- ACTION: DELETE USER (New Feature) ---
+    // --- ACTION: DELETE USER (FIXED) ---
     if (action === 'DELETE_USER') {
       if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+
+      // 1. Fetch User First to get AgentCode (Critical for BVN Cleanup)
+      const userToDelete = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { agentCode: true }
+      });
+
+      if (!userToDelete) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
 
       // Run as a transaction to ensure clean removal
       await prisma.$transaction(async (tx) => {
         
-        // 1. Unlink Agents (if this user is an Aggregator)
-        // We don't delete the agents, we just remove their aggregator link
+        console.log(`[DELETE USER] Starting deletion for ${userId}`);
+
+        // A. Unlink Agents (if this user is an Aggregator)
         await tx.user.updateMany({
           where: { aggregatorId: userId },
           data: { aggregatorId: null }
         });
 
-        // 2. Delete All Related Records (Manual Cascade)
-        // We delete from child tables first to avoid foreign key errors
+        // B. Delete BVN Enrollment Results (Using Agent Code)
+        if (userToDelete.agentCode) {
+           await tx.bvnEnrollmentResult.deleteMany({
+             where: { agentCode: userToDelete.agentCode }
+           });
+        }
+
+        // C. Delete All Related Records (Strict Order)
         const whereUser = { userId: userId };
 
+        // 1. Transactions (Must go before Wallets/Verifications)
+        await tx.transaction.deleteMany({ where: whereUser });
+        
+        // 2. Financials
         await tx.wallet.deleteMany({ where: whereUser });
         await tx.virtualAccount.deleteMany({ where: whereUser });
-        await tx.transaction.deleteMany({ where: whereUser });
+        await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); 
+        await tx.withdrawalRequest.deleteMany({ where: whereUser });
+        await tx.pendingAccountChange.deleteMany({ where: whereUser });
+
+        // 3. Verifications & Logs
         await tx.ninVerification.deleteMany({ where: whereUser });
         await tx.otp.deleteMany({ where: whereUser });
         await tx.passwordResetToken.deleteMany({ where: whereUser });
         await tx.chatMessage.deleteMany({ where: whereUser });
-        await tx.withdrawalRequest.deleteMany({ where: whereUser });
-        await tx.pendingAccountChange.deleteMany({ where: whereUser });
-        await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); // Special field name
 
-        // Requests
+        // 4. All Service Requests
         await tx.personalizationRequest.deleteMany({ where: whereUser });
         await tx.ipeRequest.deleteMany({ where: whereUser });
         await tx.validationRequest.deleteMany({ where: whereUser });
@@ -144,10 +166,12 @@ export async function POST(request: Request) {
         await tx.vninRequest.deleteMany({ where: whereUser });
         await tx.npcRequest.deleteMany({ where: whereUser });
 
-        // 3. Finally, Delete the User
+        // D. Finally, Delete the User
         await tx.user.delete({
           where: { id: userId }
         });
+        
+        console.log(`[DELETE USER] Successfully deleted ${userId}`);
       });
 
       return NextResponse.json({ success: true, message: 'User and all related data deleted successfully.' });
@@ -157,6 +181,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("Admin Manage User Error:", error);
+    // Return the actual error message so we can see what table is blocking it
     return NextResponse.json({ error: error.message || "Operation failed" }, { status: 500 });
   }
 }
