@@ -70,13 +70,22 @@ export async function processCommission(
     const amountString = commissionAmount.toString();
     
     try {
-      const updatedWallet = await tx.wallet.update({
+      // --- FIX START ---
+      // We use 'upsert' instead of 'update'. 
+      // This creates the wallet if the Aggregator has never logged in/created one.
+      const updatedWallet = await tx.wallet.upsert({
         where: { userId: user.aggregatorId },
-        data: { 
+        create: {
+          userId: user.aggregatorId,
+          balance: 0, // Main balance starts at 0
+          commissionBalance: amountString // Initialize commission with this first earning
+        },
+        update: { 
           commissionBalance: { increment: amountString } 
         },
-        select: { commissionBalance: true } // Let's see the new balance
+        select: { commissionBalance: true } 
       });
+      // --- FIX END ---
       
       console.log(`[COMMISSION DEBUG] ✅ SUCCESS! Credited ₦${amountString} to Aggregator. New Balance: ₦${updatedWallet.commissionBalance}`);
     } catch (error: any) {
