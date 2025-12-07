@@ -9,7 +9,8 @@ import {
   CheckCircleIcon,
   ArrowPathIcon,
   ShieldCheckIcon,
-  WalletIcon
+  WalletIcon,
+  TrashIcon // <--- MAKE SURE THIS IS IMPORTED
 } from '@heroicons/react/24/outline';
 
 type UserResult = {
@@ -31,7 +32,8 @@ export default function AdminUserManageClient() {
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
 
   // Modal States
-  const [modalType, setModalType] = useState<'FUND' | 'BLOCK' | null>(null);
+  // Added 'DELETE' to the type
+  const [modalType, setModalType] = useState<'FUND' | 'BLOCK' | 'DELETE' | null>(null);
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -116,6 +118,37 @@ export default function AdminUserManageClient() {
 
     } catch (e) {
       alert("Action failed.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- DELETE USER (NEW) ---
+  const handleDelete = async () => {
+    if (!selectedUser) return;
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'DELETE_USER', 
+          userId: selectedUser.id 
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      alert(data.message);
+      // Remove user from the list
+      setUsers(users.filter(u => u.id !== selectedUser.id));
+      setSelectedUser(null);
+      setModalType(null);
+
+    } catch (e: any) {
+      alert("Delete failed: " + e.message);
     } finally {
       setIsProcessing(false);
     }
@@ -218,7 +251,7 @@ export default function AdminUserManageClient() {
           </div>
 
           {/* Actions */}
-          <div className="p-6 flex gap-4">
+          <div className="p-6 flex flex-col md:flex-row gap-4">
             <button 
               onClick={() => setModalType('FUND')}
               className="flex-1 py-4 rounded-xl bg-green-600 text-white font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
@@ -237,6 +270,14 @@ export default function AdminUserManageClient() {
               ) : (
                 <><NoSymbolIcon className="h-6 w-6" /> Suspend User</>
               )}
+            </button>
+            
+            {/* DELETE BUTTON - ADDED HERE */}
+            <button 
+              onClick={() => setModalType('DELETE')}
+              className="flex-none w-full md:w-auto px-6 py-4 rounded-xl bg-white border border-red-200 text-red-600 font-bold hover:bg-red-50 transition-all flex items-center justify-center"
+            >
+              <TrashIcon className="h-6 w-6" />
             </button>
           </div>
 
@@ -301,6 +342,37 @@ export default function AdminUserManageClient() {
               <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg">Cancel</button>
               <button onClick={handleBlock} disabled={isProcessing} className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 disabled:opacity-50">
                 {isProcessing ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. DELETE Modal (ADDED HERE) */}
+      {modalType === 'DELETE' && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 border-2 border-red-500">
+            <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600">
+              <TrashIcon className="h-8 w-8" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 text-center">
+              DELETE USER?
+            </h3>
+            <div className="bg-red-50 p-3 rounded-lg mt-4 mb-6">
+              <p className="text-center text-red-800 text-sm font-medium">
+                Warning: This action is permanent and cannot be undone.
+              </p>
+              <ul className="mt-2 text-xs text-red-700 list-disc list-inside">
+                <li>Deletes Wallet & History</li>
+                <li>Deletes All Transactions</li>
+                <li>Deletes All Application Data</li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-3">
+              <button onClick={() => setModalType(null)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl">Cancel</button>
+              <button onClick={handleDelete} disabled={isProcessing} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 shadow-lg shadow-red-200">
+                {isProcessing ? 'Deleting...' : 'DELETE FOREVER'}
               </button>
             </div>
           </div>
