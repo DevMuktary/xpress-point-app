@@ -10,14 +10,14 @@ import {
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 
-// Define the type strictly
+// 1. Explicitly define the User Type
 export type SerializedUser = {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
   phoneNumber: string;
-  role: string;
+  role: string; // Expecting a simple string here
   isIdentityVerified: boolean;
   createdAt: string;
   walletBalance: string;
@@ -26,7 +26,7 @@ export type SerializedUser = {
   businessName: string | null;
 };
 
-// Explicit Interface for Props
+// 2. Define the Props Interface
 interface AdminUsersClientPageProps {
   initialUsers: SerializedUser[];
 }
@@ -34,16 +34,16 @@ interface AdminUsersClientPageProps {
 export default function AdminUsersClientPage({ initialUsers }: AdminUsersClientPageProps) {
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL'); // 'ALL', 'AGENT', 'AGGREGATOR'
+  const [roleFilter, setRoleFilter] = useState<string>('ALL'); 
 
   // --- Filtering Logic ---
   const filteredUsers = useMemo(() => {
     return initialUsers.filter(user => {
-      // 1. Search Filter
+      // Search Filter
       const searchString = `${user.firstName} ${user.lastName} ${user.email} ${user.phoneNumber}`.toLowerCase();
       const matchesSearch = searchString.includes(searchTerm.toLowerCase());
 
-      // 2. Role Filter
+      // Role Filter
       const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
 
       return matchesSearch && matchesRole;
@@ -58,7 +58,7 @@ export default function AdminUsersClientPage({ initialUsers }: AdminUsersClientP
   return (
     <div className="space-y-6">
       
-      {/* --- 1. Controls Toolbar --- */}
+      {/* --- Controls Toolbar --- */}
       <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
         
         {/* Search Bar */}
@@ -93,7 +93,7 @@ export default function AdminUsersClientPage({ initialUsers }: AdminUsersClientP
         </div>
       </div>
 
-      {/* --- 2. Users Table --- */}
+      {/* --- Users Table --- */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
