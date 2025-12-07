@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Loading from '@/app/loading';
-import { EyeIcon, EyeSlashIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, InformationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,24 +17,21 @@ export default function LoginPage() {
   // --- UI States ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); // <--- NEW STATE
   const [showPassword, setShowPassword] = useState(false);
 
-  // --- Check for URL Errors ---
+  // --- Check for URL Errors & Success Messages ---
   useEffect(() => {
     const urlError = searchParams.get('error');
+    const urlSuccess = searchParams.get('success'); // <--- CHECK FOR SUCCESS
+
     if (urlError) {
-      let message = urlError.replace(/\+/g, ' ');
-
-      // Map backend error codes to friendly messages
-      if (urlError === 'expired_link') {
-        message = 'Your verification link has expired. Please log in and request a new one.';
-      } else if (urlError === 'invalid_link') {
-        message = 'This verification link is invalid or has already been used.';
-      } else if (urlError === 'config_error') {
-        message = 'System configuration error. Please contact support.';
-      }
-
-      setError(message);
+      setError(urlError.replace(/\+/g, ' ')); 
+      setSuccessMessage(null);
+    }
+    if (urlSuccess) {
+      setSuccessMessage(urlSuccess.replace(/\+/g, ' '));
+      setError(null);
     }
   }, [searchParams]);
 
@@ -42,6 +39,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setIsLoading(true);
 
     try {
@@ -84,9 +82,25 @@ export default function LoginPage() {
             </h2>
           </div>
 
+          {/* --- Success Message Display --- */}
+          {successMessage && (
+            <div className="rounded-lg bg-green-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-700">
+                    {successMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* --- Error Message Display --- */}
           {error && (
-            <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+            <div className="rounded-lg bg-red-50 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <InformationCircleIcon className="h-5 w-5 text-red-500" />
