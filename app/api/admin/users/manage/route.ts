@@ -98,63 +98,63 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- ACTION: DELETE USER (FIXED) ---
+    // --- ACTION: DELETE USER (COMPLETE CLEANUP) ---
     if (action === 'DELETE_USER') {
       if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
 
-      // 1. Fetch User First to get AgentCode (Critical for BVN Cleanup)
+      // 1. Fetch User First to get AgentCode (Needed for BVN Results)
       const userToDelete = await prisma.user.findUnique({
         where: { id: userId },
-        select: { agentCode: true }
+        select: { agentCode: true, email: true }
       });
 
       if (!userToDelete) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      // Run as a transaction to ensure clean removal
+      console.log(`[DELETE] Starting cleanup for user: ${userToDelete.email} (${userId})`);
+
+      // Run as a transaction to ensure everything is wiped or nothing is
       await prisma.$transaction(async (tx) => {
         
-        console.log(`[DELETE USER] Starting deletion for ${userId}`);
-
-        // A. Unlink Agents (if this user is an Aggregator)
+        // A. Unlink Agents (if this user was an Aggregator)
+        // We set their aggregatorId to null so they don't point to a ghost
         await tx.user.updateMany({
           where: { aggregatorId: userId },
           data: { aggregatorId: null }
         });
 
-        // B. Delete BVN Enrollment Results (Using Agent Code)
+        // B. Delete BVN Enrollment Results (Linked by Agent Code, not ID)
         if (userToDelete.agentCode) {
            await tx.bvnEnrollmentResult.deleteMany({
              where: { agentCode: userToDelete.agentCode }
            });
         }
 
-        // C. Delete All Related Records (Strict Order)
+        // C. Delete ALL Related Records by User ID
+        // We must delete these first to remove foreign key locks
         const whereUser = { userId: userId };
 
-        // 1. Transactions (Must go before Wallets/Verifications)
+        // 1. Financials & Logs
         await tx.transaction.deleteMany({ where: whereUser });
-        
-        // 2. Financials
         await tx.wallet.deleteMany({ where: whereUser });
         await tx.virtualAccount.deleteMany({ where: whereUser });
-        await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); 
         await tx.withdrawalRequest.deleteMany({ where: whereUser });
         await tx.pendingAccountChange.deleteMany({ where: whereUser });
+        await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); // Special Field
 
-        // 3. Verifications & Logs
+        // 2. Identity & Security
         await tx.ninVerification.deleteMany({ where: whereUser });
         await tx.otp.deleteMany({ where: whereUser });
         await tx.passwordResetToken.deleteMany({ where: whereUser });
         await tx.chatMessage.deleteMany({ where: whereUser });
 
-        // 4. All Service Requests
+        // 3. Service Requests (The common blockers)
         await tx.personalizationRequest.deleteMany({ where: whereUser });
         await tx.ipeRequest.deleteMany({ where: whereUser });
         await tx.validationRequest.deleteMany({ where: whereUser });
         await tx.modificationRequest.deleteMany({ where: whereUser });
-        await tx.delinkRequest.deleteMany({ where: whereUser });
+        await tx.delinkRequest.deleteMany({ where: whereUser }); // <--- Checked
         await tx.newspaperRequest.deleteMany({ where: whereUser });
         await tx.cacRequest.deleteMany({ where: whereUser });
         await tx.tinRequest.deleteMany({ where: whereUser });
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
           where: { id: userId }
         });
         
-        console.log(`[DELETE USER] Successfully deleted ${userId}`);
+        console.log(`[DELETE] Successfully deleted user: ${userId}`);
       });
 
       return NextResponse.json({ success: true, message: 'User and all related data deleted successfully.' });
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("Admin Manage User Error:", error);
-    // Return the actual error message so we can see what table is blocking it
+    // Return the specific error message to help debug if it fails again
     return NextResponse.json({ error: error.message || "Operation failed" }, { status: 500 });
   }
 }
