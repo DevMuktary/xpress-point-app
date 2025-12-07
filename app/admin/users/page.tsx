@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import AdminUsersClientPage from '@/components/AdminUsersClientPage';
+import AdminUsersClientPage, { SerializedUser } from '@/components/AdminUsersClientPage';
 
 export default async function AdminUsersPage() {
   const user = await getUserFromSession();
@@ -28,13 +28,13 @@ export default async function AdminUsersPage() {
   });
 
   // 2. Serialize Data (Convert Dates and Decimals to strings)
-  const serializedUsers = users.map(u => ({
+  const serializedUsers: SerializedUser[] = users.map(u => ({
     id: u.id,
     firstName: u.firstName,
     lastName: u.lastName,
     email: u.email,
     phoneNumber: u.phoneNumber,
-    role: u.role,
+    role: u.role as string, // <--- Cast Prisma Enum to string
     isIdentityVerified: u.isIdentityVerified,
     createdAt: u.createdAt.toISOString(),
     walletBalance: u.wallet?.balance.toString() || "0.00",
