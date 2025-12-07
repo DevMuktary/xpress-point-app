@@ -1,196 +1,382 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
   MagnifyingGlassIcon, 
-  FunnelIcon, 
-  CheckBadgeIcon, 
-  XCircleIcon,
+  UserIcon, 
+  BanknotesIcon, 
+  NoSymbolIcon, 
+  CheckCircleIcon,
+  ArrowPathIcon,
+  ShieldCheckIcon,
   WalletIcon,
-  UserIcon,
-  BuildingOfficeIcon
+  TrashIcon // <--- IMPORT THIS
 } from '@heroicons/react/24/outline';
 
-// Define the type based on the serialized data we sent
-type SerializedUser = {
+type UserResult = {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
   phoneNumber: string;
   role: string;
-  isIdentityVerified: boolean;
-  createdAt: string;
+  isBlocked: boolean;
   walletBalance: string;
   commissionBalance: string;
-  aggregatorName: string | null;
-  businessName: string | null;
 };
 
-export default function AdminUsersClientPage({ initialUsers }: { initialUsers: SerializedUser[] }) {
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL'); // 'ALL', 'AGENT', 'AGGREGATOR'
+export default function AdminUserManageClient() {
+  const [query, setQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [users, setUsers] = useState<UserResult[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
 
-  // --- Filtering Logic ---
-  const filteredUsers = useMemo(() => {
-    return initialUsers.filter(user => {
-      // 1. Search Filter
-      const searchString = `${user.firstName} ${user.lastName} ${user.email} ${user.phoneNumber}`.toLowerCase();
-      const matchesSearch = searchString.includes(searchTerm.toLowerCase());
+  // Modal States
+  // Added 'DELETE' to the type
+  const [modalType, setModalType] = useState<'FUND' | 'BLOCK' | 'DELETE' | null>(null);
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-      // 2. Role Filter
-      const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
+  // --- Search ---
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query) return;
+    setIsSearching(true);
+    setUsers([]);
+    setSelectedUser(null);
 
-      return matchesSearch && matchesRole;
-    });
-  }, [initialUsers, searchTerm, roleFilter]);
+    try {
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'SEARCH', query })
+      });
+      const data = await res.json();
+      if (data.users) setUsers(data.users);
+    } catch (e) {
+      alert("Search failed");
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
-  // --- Format Currency ---
-  const formatCurrency = (amount: string) => {
-    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(Number(amount));
+  // --- Fund Wallet ---
+  const handleFund = async () => {
+    if (!selectedUser || !amount) return;
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'FUND', 
+          userId: selectedUser.id, 
+          amount: amount, 
+          reason: reason 
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed");
+
+      alert(`Successfully funded ₦${amount}`);
+      const newBalance = (parseFloat(selectedUser.walletBalance) + parseFloat(amount)).toFixed(2);
+      setSelectedUser({ ...selectedUser, walletBalance: newBalance });
+      setModalType(null);
+      setAmount(''); setReason('');
+      
+    } catch (e) {
+      alert("Funding failed.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- Toggle Block ---
+  const handleBlock = async () => {
+    if (!selectedUser) return;
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'TOGGLE_BLOCK', 
+          userId: selectedUser.id 
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error("Failed");
+
+      alert(data.message);
+      setSelectedUser({ ...selectedUser, isBlocked: data.isBlocked });
+      setModalType(null);
+
+    } catch (e) {
+      alert("Action failed.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- DELETE USER (NEW) ---
+  const handleDelete = async () => {
+    if (!selectedUser) return;
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'DELETE_USER', 
+          userId: selectedUser.id 
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      alert(data.message);
+      // Remove user from the list
+      setUsers(users.filter(u => u.id !== selectedUser.id));
+      setSelectedUser(null);
+      setModalType(null);
+
+    } catch (e: any) {
+      alert("Delete failed: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       
-      {/* --- 1. Controls Toolbar --- */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-        
-        {/* Search Bar */}
-        <div className="relative flex-1 max-w-md">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+      {/* 1. Search Bar */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+        <form onSubmit={handleSearch} className="flex gap-4">
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="absolute left-3 top-3 h-6 w-6 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search by Email, Phone, Name, or Agent Code..." 
+              className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Search by name, email, phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full rounded-xl border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5"
-          />
-        </div>
+          <button 
+            type="submit" 
+            disabled={isSearching}
+            className="px-8 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-all flex items-center"
+          >
+            {isSearching ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : "Search"}
+          </button>
+        </form>
+      </div>
 
-        {/* Filter Tabs */}
-        <div className="flex bg-gray-100 p-1 rounded-xl self-start md:self-center">
-          {['ALL', 'AGENT', 'AGGREGATOR'].map((role) => (
-            <button
-              key={role}
-              onClick={() => setRoleFilter(role)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all
-                ${roleFilter === role 
-                  ? 'bg-white text-blue-600 shadow-sm' 
-                  : 'text-gray-500 hover:text-gray-700'
-                }`}
+      {/* 2. Search Results */}
+      {users.length > 0 && !selectedUser && (
+        <div className="grid grid-cols-1 gap-4 animate-in fade-in slide-in-from-top-4">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider ml-1">Search Results</h3>
+          {users.map(user => (
+            <button 
+              key={user.id}
+              onClick={() => setSelectedUser(user)}
+              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition-all text-left"
             >
-              {role === 'ALL' ? 'All Users' : role}s
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+                  {user.firstName[0]}{user.lastName[0]}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">{user.firstName} {user.lastName}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className={`px-2 py-1 rounded text-xs font-bold ${user.role === 'AGGREGATOR' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
+                  {user.role}
+                </span>
+              </div>
             </button>
           ))}
         </div>
-      </div>
+      )}
 
-      {/* --- 2. Users Table --- */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role & Status</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Balances</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Relationships</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Joined</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-blue-50/30 transition-colors">
-                  
-                  {/* User Info */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                        {user.firstName[0]}{user.lastName[0]}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-bold text-gray-900">{user.firstName} {user.lastName}</div>
-                        <div className="text-xs text-gray-500">{user.email}</div>
-                        <div className="text-xs text-gray-400">{user.phoneNumber}</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Role & Status */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col gap-1 items-start">
-                      <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${user.role === 'AGGREGATOR' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                        {user.role}
-                      </span>
-                      {user.isIdentityVerified ? (
-                         <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                           <CheckBadgeIcon className="h-4 w-4" /> Verified
-                         </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs text-gray-400 font-medium">
-                           <XCircleIcon className="h-4 w-4" /> Unverified
-                         </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Balances */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-medium flex items-center gap-1">
-                      <WalletIcon className="h-4 w-4 text-gray-400" />
-                      {formatCurrency(user.walletBalance)}
-                    </div>
-                    {user.role === 'AGGREGATOR' && (
-                       <div className="text-xs text-purple-600 font-medium mt-1">
-                         Comm: {formatCurrency(user.commissionBalance)}
-                       </div>
-                    )}
-                  </td>
-
-                  {/* Relationships */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {user.role === 'AGGREGATOR' ? (
-                        <div className="flex items-center gap-1">
-                          <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium text-gray-700">{user.businessName || 'No Business Name'}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <UserIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-xs">Upline: </span>
-                          <span className="font-medium text-gray-700">{user.aggregatorName || 'None'}</span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Joined Date */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* 3. Selected User Management Panel */}
+      {selectedUser && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden animate-in zoom-in-95 duration-200">
           
-          {filteredUsers.length === 0 && (
-            <div className="p-12 text-center text-gray-500 bg-gray-50">
-              <UserIcon className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-              <p>No users found matching your filters.</p>
+          {/* Header */}
+          <div className="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-white border-4 border-blue-50 flex items-center justify-center shadow-sm">
+                <UserIcon className="h-8 w-8 text-gray-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{selectedUser.firstName} {selectedUser.lastName}</h2>
+                <p className="text-gray-500 text-sm">{selectedUser.email} • {selectedUser.phoneNumber}</p>
+                {selectedUser.isBlocked && (
+                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-bold">
+                    <NoSymbolIcon className="h-3 w-3"/> BLOCKED
+                  </span>
+                )}
+              </div>
             </div>
-          )}
+            <button onClick={() => setSelectedUser(null)} className="text-sm text-blue-600 font-medium hover:underline">
+              Close
+            </button>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 border-b border-gray-200">
+            <div className="p-6 border-r border-gray-200">
+               <p className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
+                 <WalletIcon className="h-4 w-4"/> Wallet Balance
+               </p>
+               <p className="text-2xl font-extrabold text-gray-900 mt-1">₦{Number(selectedUser.walletBalance).toLocaleString()}</p>
+            </div>
+            <div className="p-6">
+               <p className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
+                 <ShieldCheckIcon className="h-4 w-4"/> Commission
+               </p>
+               <p className="text-2xl font-extrabold text-gray-900 mt-1">₦{Number(selectedUser.commissionBalance).toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="p-6 flex flex-col md:flex-row gap-4">
+            <button 
+              onClick={() => setModalType('FUND')}
+              className="flex-1 py-4 rounded-xl bg-green-600 text-white font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+            >
+              <BanknotesIcon className="h-6 w-6" /> Fund Wallet
+            </button>
+            <button 
+              onClick={() => setModalType('BLOCK')}
+              className={`flex-1 py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2
+                ${selectedUser.isBlocked 
+                  ? 'bg-gray-800 text-white hover:bg-gray-900' 
+                  : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'}`}
+            >
+              {selectedUser.isBlocked ? (
+                <><CheckCircleIcon className="h-6 w-6" /> Unblock User</>
+              ) : (
+                <><NoSymbolIcon className="h-6 w-6" /> Suspend User</>
+              )}
+            </button>
+            {/* DELETE BUTTON */}
+            <button 
+              onClick={() => setModalType('DELETE')}
+              className="flex-none w-full md:w-auto px-6 py-4 rounded-xl bg-white border border-red-200 text-red-600 font-bold hover:bg-red-50 transition-all flex items-center justify-center"
+            >
+              <TrashIcon className="h-6 w-6" />
+            </button>
+          </div>
+
         </div>
-      </div>
+      )}
+
+      {/* --- MODALS --- */}
       
-      <div className="text-right text-xs text-gray-400 px-2">
-        Showing {filteredUsers.length} result(s)
-      </div>
+      {/* 1. Fund Modal */}
+      {modalType === 'FUND' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Fund Wallet</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (₦)</label>
+                <input 
+                  type="number" 
+                  className="w-full border-2 border-gray-200 rounded-lg p-3 text-lg font-bold focus:border-green-500 focus:ring-green-500"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Admin Note</label>
+                <input 
+                  type="text" 
+                  className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                  placeholder="Reason for funding..."
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg">Cancel</button>
+                <button onClick={handleFund} disabled={isProcessing} className="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 disabled:opacity-50">
+                  {isProcessing ? 'Processing...' : 'Confirm Fund'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Block Modal */}
+      {modalType === 'BLOCK' && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95">
+            <div className="mx-auto h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600">
+              <NoSymbolIcon className="h-7 w-7" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center">
+              {selectedUser.isBlocked ? 'Unblock' : 'Suspend'} User?
+            </h3>
+            <p className="text-center text-gray-500 text-sm mt-2 mb-6">
+              {selectedUser.isBlocked 
+                ? "This will restore their access to the dashboard immediately." 
+                : "This will prevent them from logging in or performing any transactions."}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg">Cancel</button>
+              <button onClick={handleBlock} disabled={isProcessing} className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 disabled:opacity-50">
+                {isProcessing ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. DELETE Modal (New) */}
+      {modalType === 'DELETE' && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 border-2 border-red-500">
+            <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600">
+              <TrashIcon className="h-8 w-8" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 text-center">
+              DELETE USER?
+            </h3>
+            <div className="bg-red-50 p-3 rounded-lg mt-4 mb-6">
+              <p className="text-center text-red-800 text-sm font-medium">
+                Warning: This action is permanent and cannot be undone.
+              </p>
+              <ul className="mt-2 text-xs text-red-700 list-disc list-inside">
+                <li>Deletes Wallet & History</li>
+                <li>Deletes All Transactions</li>
+                <li>Deletes All Application Data</li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-3">
+              <button onClick={() => setModalType(null)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl">Cancel</button>
+              <button onClick={handleDelete} disabled={isProcessing} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 shadow-lg shadow-red-200">
+                {isProcessing ? 'Deleting...' : 'DELETE FOREVER'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
