@@ -23,7 +23,18 @@ export default function LoginPage() {
   useEffect(() => {
     const urlError = searchParams.get('error');
     if (urlError) {
-      setError(urlError.replace(/\+/g, ' ')); 
+      let message = urlError.replace(/\+/g, ' ');
+
+      // Map backend error codes to friendly messages
+      if (urlError === 'expired_link') {
+        message = 'Your verification link has expired. Please log in and request a new one.';
+      } else if (urlError === 'invalid_link') {
+        message = 'This verification link is invalid or has already been used.';
+      } else if (urlError === 'config_error') {
+        message = 'System configuration error. Please contact support.';
+      }
+
+      setError(message);
     }
   }, [searchParams]);
 
@@ -75,7 +86,7 @@ export default function LoginPage() {
 
           {/* --- Error Message Display --- */}
           {error && (
-            <div className="rounded-lg bg-red-50 p-4">
+            <div className="rounded-lg bg-red-50 p-4 border border-red-200">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <InformationCircleIcon className="h-5 w-5 text-red-500" />
