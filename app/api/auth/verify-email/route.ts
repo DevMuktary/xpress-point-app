@@ -26,9 +26,13 @@ export async function GET(request: Request) {
     const payload = jwt.verify(token, JWT_SECRET) as { userId: string, email: string };
     
     // 2. Update the user in the database
+    // We now set BOTH isEmailVerified AND isIdentityVerified to true
     await prisma.user.update({
       where: { id: payload.userId },
-      data: { isEmailVerified: true },
+      data: { 
+        isEmailVerified: true,
+        isIdentityVerified: true 
+      },
     });
 
     // 3. Redirect to a success page
