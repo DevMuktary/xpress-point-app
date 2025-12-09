@@ -99,17 +99,14 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- ACTION: DELETE USER (SAFE MODE) ---
+    // --- ACTION: DELETE USER (SAFE INDIVIDUAL DELETE) ---
     if (action === 'DELETE_USER') {
       if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
 
-      // Try to find the user to get agentCode, but don't fail if they are missing
       const userToDelete = await prisma.user.findUnique({
         where: { id: userId },
         select: { agentCode: true }
       });
-
-      console.log(`[DELETE] Starting cleanup for User ID: ${userId}`);
 
       await prisma.$transaction(async (tx) => {
         // 1. Unlink Agents (if this user was an Aggregator)
@@ -122,8 +119,7 @@ export async function POST(request: Request) {
 
         const whereUser = { userId: userId };
 
-        // 3. Delete ALL Related Records (Order matters!)
-        // Financials
+        // 3. Delete Financials & Logs (The usual blockers)
         await tx.transaction.deleteMany({ where: whereUser });
         await tx.wallet.deleteMany({ where: whereUser });
         await tx.virtualAccount.deleteMany({ where: whereUser });
@@ -131,13 +127,7 @@ export async function POST(request: Request) {
         await tx.pendingAccountChange.deleteMany({ where: whereUser });
         await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); 
         
-        // Security & Logs
-        await tx.ninVerification.deleteMany({ where: whereUser });
-        await tx.otp.deleteMany({ where: whereUser });
-        await tx.passwordResetToken.deleteMany({ where: whereUser });
-        await tx.chatMessage.deleteMany({ where: whereUser });
-        
-        // Service Requests (Delete all types)
+        // 4. Delete Service Requests (All of them)
         await tx.personalizationRequest.deleteMany({ where: whereUser });
         await tx.ipeRequest.deleteMany({ where: whereUser });
         await tx.validationRequest.deleteMany({ where: whereUser });
@@ -154,56 +144,60 @@ export async function POST(request: Request) {
         await tx.vninRequest.deleteMany({ where: whereUser });
         await tx.npcRequest.deleteMany({ where: whereUser });
 
-        // 4. Finally, try to delete the User
-        // Use deleteMany to avoid error if user is already gone
-        await tx.user.deleteMany({ where: { id: userId } });
+        // 5. Delete Security & Chat
+        await tx.ninVerification.deleteMany({ where: whereUser });
+        await tx.otp.deleteMany({ where: whereUser });
+        await tx.passwordResetToken.deleteMany({ where: whereUser });
+        await tx.chatMessage.deleteMany({ where: whereUser });
+
+        // 6. Finally, Delete the User
+        await tx.user.delete({ where: { id: userId } });
       });
 
-      return NextResponse.json({ success: true, message: 'User and all related traces wiped successfully.' });
+      return NextResponse.json({ success: true, message: 'User deleted successfully.' });
     }
 
-    // --- ACTION: RESET SYSTEM (NUCLEAR OPTION) ---
+    // --- ACTION: RESET SYSTEM (NUCLEAR OPTION - RAW SQL) ---
     if (action === 'RESET_SYSTEM') {
-      console.log(`[SYSTEM RESET] Initiated by Admin: ${admin.email}`);
+      console.log(`[SYSTEM RESET] FORCE WIPE Initiated by Admin: ${admin.email}`);
 
-      await prisma.$transaction(async (tx) => {
-        // 1. Delete Transactions (Highest priority dependency)
-        await tx.transaction.deleteMany({});
-        
-        // 2. Delete Wallets & Financials
-        await tx.wallet.deleteMany({});
-        await tx.virtualAccount.deleteMany({});
-        await tx.aggregatorPrice.deleteMany({});
-        await tx.withdrawalRequest.deleteMany({});
-        await tx.pendingAccountChange.deleteMany({});
-
-        // 3. Delete Standalone Data
-        await tx.bvnEnrollmentResult.deleteMany({});
-        await tx.ninVerification.deleteMany({});
-        await tx.otp.deleteMany({});
-        await tx.passwordResetToken.deleteMany({});
-        await tx.chatMessage.deleteMany({});
-
-        // 4. Delete All Service Requests
-        await tx.personalizationRequest.deleteMany({});
-        await tx.ipeRequest.deleteMany({});
-        await tx.validationRequest.deleteMany({});
-        await tx.modificationRequest.deleteMany({});
-        await tx.delinkRequest.deleteMany({});
-        await tx.newspaperRequest.deleteMany({});
-        await tx.cacRequest.deleteMany({});
-        await tx.tinRequest.deleteMany({});
-        await tx.jambRequest.deleteMany({});
-        await tx.examPinRequest.deleteMany({});
-        await tx.resultRequest.deleteMany({});
-        await tx.vtuRequest.deleteMany({});
-        await tx.bvnRequest.deleteMany({});
-        await tx.vninRequest.deleteMany({});
-        await tx.npcRequest.deleteMany({});
-      });
+      // We use Raw SQL TRUNCATE with CASCADE. This ignores standard checks and wipes everything instantly.
+      // This matches the table names in your schema map ("@@map").
+      await prisma.$executeRawUnsafe(`
+        TRUNCATE TABLE 
+          "transactions", 
+          "wallets", 
+          "virtual_accounts", 
+          "bvn_enrollment_results", 
+          "nin_verifications", 
+          "otps", 
+          "password_reset_tokens", 
+          "chat_messages",
+          "aggregator_prices", 
+          "withdrawal_requests", 
+          "pending_account_changes",
+          
+          -- Service Requests
+          "personalization_requests", 
+          "ipe_requests", 
+          "validation_requests", 
+          "modification_requests", 
+          "delink_requests", 
+          "newspaper_requests", 
+          "cac_requests", 
+          "tin_requests", 
+          "jamb_requests", 
+          "exam_pin_requests", 
+          "result_requests", 
+          "vtu_requests", 
+          "bvn_requests", 
+          "vnin_requests", 
+          "npc_requests"
+        RESTART IDENTITY CASCADE;
+      `);
 
       console.log(`[SYSTEM RESET] Completed Successfully.`);
-      return NextResponse.json({ success: true, message: 'System reset complete. Database cleaned.' });
+      return NextResponse.json({ success: true, message: 'System reset complete. All data tables have been truncated.' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
