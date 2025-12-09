@@ -50,11 +50,19 @@ export default function AdminJambClientPage({ initialRequests }: { initialReques
   const [profileCodeInput, setProfileCodeInput] = useState(''); // For text result
   const [isUploading, setIsUploading] = useState(false);
 
+  // --- HELPER: Get the main ID from formData safely ---
+  const getRequestIdentifier = (formData: any) => {
+    return formData.regNumber || formData.identifier || 'N/A';
+  };
+
   // Filter
   const filteredRequests = requests.filter(req => {
     const d = req.formData;
-    // Enhanced search to include NIN and Phone from formData
-    const searchStr = `${req.user.firstName} ${req.user.lastName} ${d.regNumber || ''} ${d.nin || ''} ${d.phone || ''} ${req.service.name}`.toLowerCase();
+    const identifier = getRequestIdentifier(d);
+    
+    // Search by Agent Name, Request ID (Reg/Phone), or Service Name
+    const searchStr = `${req.user.firstName} ${req.user.lastName} ${identifier} ${req.service.name}`.toLowerCase();
+    
     return searchStr.includes(searchTerm.toLowerCase()) && (filterStatus === 'ALL' || req.status === filterStatus);
   });
 
@@ -150,42 +158,27 @@ export default function AdminJambClientPage({ initialRequests }: { initialReques
     }
   };
 
-  // --- UPDATED RENDER DETAILS ---
   const renderDetails = (req: AdminRequest) => {
     const d = req.formData;
     return (
       <div className="space-y-4 text-sm text-gray-700">
         <div className="bg-orange-50 p-3 rounded border border-orange-200">
-           <p className="font-bold text-orange-900 mb-2 border-b border-orange-200 pb-1">Submission Data</p>
+           <p className="font-bold text-orange-900 mb-2 border-b border-orange-200 pb-1">Candidate Info</p>
            
-           {/* Generic Full Name (Available in both) */}
+           {/* Show Full Name only if it exists (Slips) */}
            {d.fullName && <p><strong>Full Name:</strong> {d.fullName}</p>}
            
-           {/* For Slip Printing */}
+           {/* Show Reg Number if it exists (Slips) */}
            {d.regNumber && <p><strong>Reg Number:</strong> {d.regNumber}</p>}
            
-           {/* --- ADDED: For Profile Code (This was missing) --- */}
-           {d.nin && <p><strong>NIN:</strong> {d.nin}</p>}
-           {d.phone && <p><strong>Phone (Linked):</strong> {d.phone}</p>}
+           {/* Show Identifier if it exists (Profile Code) */}
+           {d.identifier && <p><strong>Identifier (Reg/Phone/Email):</strong> {d.identifier}</p>}
            
-           {/* Other Fields */}
            {d.year && <p><strong>Year:</strong> {d.year}</p>}
-           {d.profileCode && <p><strong>Profile Code:</strong> {d.profileCode}</p>}
         </div>
-        
-        {/* If Completed, Show Result */}
-        {req.status === 'COMPLETED' && req.profileCodeResult && (
-           <div className="bg-green-50 p-3 rounded border border-green-200">
-             <p className="font-bold text-green-900 mb-1">Retrieval Result</p>
-             <p className="text-xl font-mono font-bold tracking-widest">{req.profileCodeResult}</p>
-           </div>
-        )}
-
         <div className="p-3 border rounded">
-           <p className="font-bold text-gray-900 mb-2 border-b pb-1">Agent Details</p>
-           <p><strong>Name:</strong> {req.user.firstName} {req.user.lastName}</p>
-           <p><strong>Phone:</strong> {req.user.phoneNumber}</p>
-           <p><strong>Email:</strong> {req.user.email}</p>
+           <p><strong>User Phone:</strong> {req.user.phoneNumber}</p>
+           <p><strong>User Email:</strong> {req.user.email}</p>
         </div>
       </div>
     );
@@ -198,7 +191,7 @@ export default function AdminJambClientPage({ initialRequests }: { initialReques
         <div className="relative flex-1 max-w-md">
            <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
            <input 
-             type="text" placeholder="Search Name, Reg No, NIN..." 
+             type="text" placeholder="Search Name, Reg No, Phone..." 
              className="pl-10 w-full rounded-lg border-gray-300 p-2.5 text-sm"
              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
            />
@@ -219,7 +212,7 @@ export default function AdminJambClientPage({ initialRequests }: { initialReques
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Agent</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Details</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Reg/Profile No</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
               </tr>
@@ -232,11 +225,12 @@ export default function AdminJambClientPage({ initialRequests }: { initialReques
                     <div className="text-sm font-bold text-gray-900">{req.user.firstName} {req.user.lastName}</div>
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-600">{req.service.name}</td>
+                  
+                  {/* --- FIXED: SHOW EITHER REG NUMBER OR IDENTIFIER --- */}
                   <td className="px-6 py-4 text-xs font-medium text-gray-800">
-                    {/* Smart display based on what data is available */}
-                    {req.formData.regNumber ? `Reg: ${req.formData.regNumber}` : 
-                     req.formData.nin ? `NIN: ${req.formData.nin}` : 'No ID'}
+                    {getRequestIdentifier(req.formData)}
                   </td>
+                  
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(req.status)}`}>{req.status}</span>
                   </td>
@@ -264,7 +258,7 @@ export default function AdminJambClientPage({ initialRequests }: { initialReques
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
              <div className="flex justify-between items-center border-b border-gray-200 p-5">
-               <h3 className="text-xl font-bold text-gray-900">JAMB Request Details</h3>
+               <h3 className="text-xl font-bold text-gray-900">JAMB Details</h3>
                <button onClick={() => setViewReq(null)} className="p-1 rounded-full hover:bg-gray-100"><XMarkIcon className="h-6 w-6 text-gray-600"/></button>
              </div>
              <div className="p-6">
@@ -285,14 +279,6 @@ export default function AdminJambClientPage({ initialRequests }: { initialReques
               <h3 className="text-lg font-bold text-gray-900">Mark as {actionType}</h3>
               <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-full"><XMarkIcon className="h-6 w-6 text-gray-500"/></button>
             </div>
-            
-            {/* Show Request Data Summary in Action Modal too */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-               {selectedReq.formData.nin && <p><strong>NIN:</strong> {selectedReq.formData.nin}</p>}
-               {selectedReq.formData.regNumber && <p><strong>Reg No:</strong> {selectedReq.formData.regNumber}</p>}
-               {selectedReq.formData.profileCode && <p><strong>Profile Code:</strong> {selectedReq.formData.profileCode}</p>}
-            </div>
-
             <div className="space-y-4">
               {actionType === 'COMPLETED' && (
                 <>
