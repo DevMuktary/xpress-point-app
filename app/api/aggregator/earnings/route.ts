@@ -12,69 +12,6 @@ type CommissionEarning = {
   commission: Decimal;
 };
 
-// Helper function to get earnings
-async function getCommissionEarnings(aggregatorId: string): Promise<CommissionEarning[]> {
-  // 1. Get all agents for this aggregator
-  const agents = await prisma.user.findMany({
-    where: { aggregatorId: aggregatorId },
-    select: { id: true, firstName: true, lastName: true }
-  });
-  
-  const agentIds = agents.map(a => a.id);
-  if (agentIds.length === 0) {
-    return []; 
-  }
-  
-  // 2. Get specific overrides (AggregatorPrice)
-  const commissionPrices = await prisma.aggregatorPrice.findMany({
-    where: { aggregatorId: aggregatorId }, 
-    select: { serviceId: true, commission: true }
-  });
-  
-  const commissionMap = new Map(commissionPrices.map(c => [c.serviceId, c.commission]));
-
-  // 3. Get transactions (Fetch defaultCommission from Service too!)
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      userId: { in: agentIds },
-      status: 'COMPLETED',
-      serviceId: { not: null }
-    },
-    include: {
-      user: {
-        select: { firstName: true, lastName: true }
-      },
-      service: {
-        select: { name: true, defaultCommission: true } // <--- CRITICAL ADDITION
-      }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 50 
-  });
-
-  // 4. Calculate Earnings (Matching the Wallet Logic)
-  const earnings: CommissionEarning[] = transactions.map(t => {
-    let commission = new Decimal(0);
-
-    // Logic: Check Override -> Then Check Global Default
-    if (t.serviceId && commissionMap.has(t.serviceId)) {
-      commission = commissionMap.get(t.serviceId)!;
-    } else if (t.service?.defaultCommission) {
-      commission = t.service.defaultCommission;
-    }
-
-    return {
-      id: t.id,
-      createdAt: t.createdAt,
-      agentName: `${t.user.firstName} ${t.user.lastName}`,
-      serviceName: t.service?.name || 'Unknown Service',
-      commission: commission
-    };
-  }).filter(e => e.commission.greaterThan(0)); 
-  
-  return earnings;
-}
-
 export async function GET(request: Request) {
   const user = await getUserFromSession();
   if (!user || user.role !== 'AGGREGATOR') {
@@ -82,7 +19,38 @@ export async function GET(request: Request) {
   }
 
   try {
-    const earnings = await getCommissionEarnings(user.id);
+    // 1. Fetch "COMMISSION" type transactions for this Aggregator
+    // These are only created when processCommission() successfully runs.
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId: user.id, // <--- Fetch AGGREGATOR'S transactions
+        type: 'COMMISSION', // <--- Only Commission receipts
+        status: 'COMPLETED'
+      },
+      include: {
+        service: {
+          select: { name: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50 
+    });
+
+    // 2. Format the data for the frontend
+    const earnings: CommissionEarning[] = transactions.map(t => {
+      // We stored "Commission from [Agent Name]" in the description
+      // Let's clean it up to just show the name if possible, or show the full description
+      let displayAgent = t.description.replace('Commission from ', '');
+
+      return {
+        id: t.id,
+        createdAt: t.createdAt,
+        agentName: displayAgent, // Shows: "John Doe"
+        serviceName: t.service?.name || 'Service Commission',
+        commission: t.amount // This is the actual amount added to wallet
+      };
+    });
+  
     return NextResponse.json({ earnings });
 
   } catch (error: any) {
