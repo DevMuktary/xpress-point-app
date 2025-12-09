@@ -12,7 +12,7 @@ export async function processCommission(
   // 1. Get Agent details
   const user = await tx.user.findUnique({
     where: { id: userId },
-    select: { role: true, aggregatorId: true, email: true }
+    select: { role: true, aggregatorId: true, email: true, firstName: true, lastName: true }
   });
 
   if (!user) {
@@ -20,15 +20,8 @@ export async function processCommission(
     return;
   }
 
-  console.log(`[COMMISSION DEBUG] User Found: ${user.email}, Role: ${user.role}, Upline: ${user.aggregatorId}`);
-
-  if (user.role !== 'AGENT') {
-    console.log(`[COMMISSION DEBUG] ❌ User is not an AGENT. No commission.`);
-    return; 
-  }
-
-  if (!user.aggregatorId) {
-    console.log(`[COMMISSION DEBUG] ❌ User has no Aggregator (Upline). No commission.`);
+  if (user.role !== 'AGENT' || !user.aggregatorId) {
+    console.log(`[COMMISSION DEBUG] ❌ User is not an AGENT or has no Upline. Skipping.`);
     return;
   }
 
@@ -45,54 +38,60 @@ export async function processCommission(
     }
   });
 
+  // 3. Fallback to Global Default (Get service name for description)
+  const service = await tx.service.findUnique({
+    where: { id: serviceId },
+    select: { defaultCommission: true, name: true }
+  });
+
   if (aggPrice) {
     commissionAmount = aggPrice.commission;
     source = "AggregatorPrice Override (Specific)";
-  } else {
-    // 3. Fallback to Global Default
-    const service = await tx.service.findUnique({
-      where: { id: serviceId },
-      select: { defaultCommission: true }
-    });
-    
-    if (service) {
-      commissionAmount = service.defaultCommission;
-      source = "Service Default (Global)";
-    } else {
-      console.log(`[COMMISSION DEBUG] ❌ Service ID ${serviceId} not found in DB.`);
-    }
+  } else if (service) {
+    commissionAmount = service.defaultCommission;
+    source = "Service Default (Global)";
   }
 
-  console.log(`[COMMISSION DEBUG] 💰 Determined Commission: ₦${commissionAmount}, Source: ${source}`);
+  console.log(`[COMMISSION DEBUG] 💰 Commission: ₦${commissionAmount}, Source: ${source}`);
 
-  // 4. Credit the Vault
+  // 4. Credit the Vault & Log Transaction
   if (commissionAmount.greaterThan(0)) {
     const amountString = commissionAmount.toString();
     
     try {
-      // --- FIX START ---
-      // We use 'upsert' instead of 'update'. 
-      // This creates the wallet if the Aggregator has never logged in/created one.
-      const updatedWallet = await tx.wallet.upsert({
+      // A. Credit Wallet
+      await tx.wallet.upsert({
         where: { userId: user.aggregatorId },
         create: {
           userId: user.aggregatorId,
-          balance: 0, // Main balance starts at 0
-          commissionBalance: amountString // Initialize commission with this first earning
+          balance: 0, 
+          commissionBalance: amountString 
         },
         update: { 
           commissionBalance: { increment: amountString } 
-        },
-        select: { commissionBalance: true } 
+        }
       });
-      // --- FIX END ---
+
+      // B. Create "Receipt" Transaction for Aggregator History
+      // This is what the Earnings page will now read.
+      await tx.transaction.create({
+        data: {
+          userId: user.aggregatorId, // <--- Aggregator gets the record
+          serviceId: serviceId,
+          type: 'COMMISSION',        // <--- Special Type
+          amount: commissionAmount,  // <--- Positive Value
+          description: `Commission from ${user.firstName} ${user.lastName}`, // <--- Store Agent Name here
+          reference: `COMM-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          status: 'COMPLETED'
+        }
+      });
       
-      console.log(`[COMMISSION DEBUG] ✅ SUCCESS! Credited ₦${amountString} to Aggregator. New Balance: ₦${updatedWallet.commissionBalance}`);
+      console.log(`[COMMISSION DEBUG] ✅ Credited and Logged for Aggregator.`);
     } catch (error: any) {
-      console.error(`[COMMISSION DEBUG] ❌ CRITICAL DB ERROR updating wallet:`, error.message);
+      console.error(`[COMMISSION DEBUG] ❌ ERROR:`, error.message);
     }
   } else {
-      console.log(`[COMMISSION DEBUG] ⚠️ Commission is 0. Skipping wallet update.`);
+      console.log(`[COMMISSION DEBUG] ⚠️ Commission is 0. Skipping.`);
   }
   console.log(`[COMMISSION DEBUG] ------------------------------------------------`);
 }
