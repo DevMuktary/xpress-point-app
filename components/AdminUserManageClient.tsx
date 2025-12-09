@@ -10,7 +10,8 @@ import {
   ArrowPathIcon,
   ShieldCheckIcon,
   WalletIcon,
-  TrashIcon // <--- MAKE SURE THIS IS IMPORTED
+  TrashIcon,
+  ExclamationTriangleIcon // <--- Import this
 } from '@heroicons/react/24/outline';
 
 type UserResult = {
@@ -32,8 +33,8 @@ export default function AdminUserManageClient() {
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
 
   // Modal States
-  // Added 'DELETE' to the type
-  const [modalType, setModalType] = useState<'FUND' | 'BLOCK' | 'DELETE' | null>(null);
+  // Added 'RESET_SYSTEM'
+  const [modalType, setModalType] = useState<'FUND' | 'BLOCK' | 'DELETE' | 'RESET_SYSTEM' | null>(null);
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -81,7 +82,6 @@ export default function AdminUserManageClient() {
       if (!res.ok) throw new Error("Failed");
 
       alert(`Successfully funded ₦${amount}`);
-      // Refresh user data locally
       const newBalance = (parseFloat(selectedUser.walletBalance) + parseFloat(amount)).toFixed(2);
       setSelectedUser({ ...selectedUser, walletBalance: newBalance });
       setModalType(null);
@@ -123,7 +123,7 @@ export default function AdminUserManageClient() {
     }
   };
 
-  // --- DELETE USER (NEW) ---
+  // --- DELETE USER ---
   const handleDelete = async () => {
     if (!selectedUser) return;
     setIsProcessing(true);
@@ -142,7 +142,6 @@ export default function AdminUserManageClient() {
       if (!res.ok) throw new Error(data.error || "Failed");
 
       alert(data.message);
-      // Remove user from the list
       setUsers(users.filter(u => u.id !== selectedUser.id));
       setSelectedUser(null);
       setModalType(null);
@@ -154,9 +153,47 @@ export default function AdminUserManageClient() {
     }
   };
 
+  // --- SYSTEM RESET (NEW) ---
+  const handleResetSystem = async () => {
+    const confirmText = prompt("Type 'RESET' to confirm. This will delete ALL transactions and jobs for ALL users.");
+    if (confirmText !== 'RESET') return;
+
+    setIsProcessing(true);
+    try {
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'RESET_SYSTEM' })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      alert(data.message);
+      window.location.reload(); // Refresh to clear stale data
+
+    } catch (e: any) {
+      alert("Reset failed: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       
+      {/* 0. DANGER ZONE - SYSTEM RESET */}
+      <div className="flex justify-end">
+        <button 
+          onClick={handleResetSystem}
+          disabled={isProcessing}
+          className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 text-xs font-bold rounded-lg hover:bg-red-200 border border-red-200 transition-all"
+        >
+          <ExclamationTriangleIcon className="h-4 w-4" />
+          {isProcessing ? 'Resetting...' : 'WIPE ALL SYSTEM DATA'}
+        </button>
+      </div>
+
       {/* 1. Search Bar */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
         <form onSubmit={handleSearch} className="flex gap-4">
@@ -272,7 +309,7 @@ export default function AdminUserManageClient() {
               )}
             </button>
             
-            {/* DELETE BUTTON - ADDED HERE */}
+            {/* DELETE USER BUTTON */}
             <button 
               onClick={() => setModalType('DELETE')}
               className="flex-none w-full md:w-auto px-6 py-4 rounded-xl bg-white border border-red-200 text-red-600 font-bold hover:bg-red-50 transition-all flex items-center justify-center"
@@ -348,7 +385,7 @@ export default function AdminUserManageClient() {
         </div>
       )}
 
-      {/* 3. DELETE Modal (ADDED HERE) */}
+      {/* 3. DELETE Modal */}
       {modalType === 'DELETE' && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 border-2 border-red-500">
