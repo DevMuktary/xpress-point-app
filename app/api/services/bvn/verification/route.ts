@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
-import { Decimal } from '@prisma/client/runtime/library';
+import { processCommission } from '@/lib/commission'; // <--- 1. IMPORT THIS
 
 // --- Configuration ---
 const DATAVERIFY_API_KEY = process.env.DATAVERIFY_API_KEY;
 
 // Endpoints
 const URL_PREMIUM = 'https://dataverify.com.ng/developers/bvn_slip/bvn_premium.php';
-const URL_STANDARD = 'https://dataverify.com.ng/developers/bvn_slip/bvn_standard.php'; // Standard endpoint pattern
+const URL_STANDARD = 'https://dataverify.com.ng/developers/bvn_slip/bvn_standard.php'; 
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -20,6 +20,11 @@ export async function POST(request: Request) {
   if (!DATAVERIFY_API_KEY) {
     return NextResponse.json({ error: 'Server configuration error (API Key).' }, { status: 500 });
   }
+
+  // Define variables outside try/catch so they are available for refunds
+  let bvnRequest: any = null;
+  let amount: any = null;
+  let transactionRef: string | null = null;
 
   try {
     const { bvn, type } = await request.json(); // type = 'PREMIUM' | 'STANDARD'
@@ -46,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Service is currently unavailable' }, { status: 503 });
     }
 
-    const amount = service.defaultAgentPrice;
+    amount = service.defaultAgentPrice;
 
     // 3. Check Wallet Balance
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -55,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Deduct Funds & Initialize Request (Atomic)
-    const { bvnRequest, transaction } = await prisma.$transaction(async (tx) => {
+    const initResult = await prisma.$transaction(async (tx) => {
       // Deduct
       await tx.wallet.update({
         where: { userId: user.id },
@@ -82,12 +87,16 @@ export async function POST(request: Request) {
           serviceId: serviceId,
           status: 'PROCESSING',
           statusMessage: 'Initiated',
-          formData: { bvn, type } // Store input details
+          formData: { bvn, type } 
         }
       });
 
       return { bvnRequest: newReq, transaction: newTx };
     });
+
+    // Capture values for potential refund
+    bvnRequest = initResult.bvnRequest;
+    transactionRef = initResult.transaction.reference;
 
     // 5. Call External API
     const externalResponse = await axios.post(apiUrl, {
@@ -100,62 +109,81 @@ export async function POST(request: Request) {
     const apiData = externalResponse.data;
 
     // 6. Handle Success
-    // The API returns status: 'success' and pdf_base64 on success
     if (apiData.status === 'success' && apiData.pdf_base64) {
       
-      // Update DB to Completed
-      await prisma.bvnRequest.update({
-        where: { id: bvnRequest.id },
-        data: {
-          status: 'COMPLETED',
-          statusMessage: 'Slip Generated Successfully',
-          // We don't store base64 in DB to save space, but we could store 'success'
-        }
+      // Update DB to Completed AND Pay Commission
+      await prisma.$transaction(async (tx) => {
+        await tx.bvnRequest.update({
+          where: { id: bvnRequest.id },
+          data: {
+            status: 'COMPLETED',
+            statusMessage: 'Slip Generated Successfully',
+          }
+        });
+
+        // <--- 2. COMMISSION ADDED HERE
+        await processCommission(tx, user.id, serviceId);
       });
 
       return NextResponse.json({ 
         success: true, 
         message: 'Slip Generated',
         pdfBase64: apiData.pdf_base64,
-        userData: apiData.user_data // Optional: Send back preview data if needed
+        userData: apiData.user_data 
       });
     } 
     
-    // 7. Handle Failure & Refund
+    // 7. Handle Failure
     else {
       const errorMsg = apiData.message || 'External API Failed';
-
-      await prisma.$transaction(async (tx) => {
-        // Mark Failed
-        await tx.bvnRequest.update({
-          where: { id: bvnRequest.id },
-          data: { status: 'FAILED', statusMessage: errorMsg }
-        });
-
-        // Refund
-        await tx.wallet.update({
-          where: { userId: user.id },
-          data: { balance: { increment: amount } }
-        });
-
-        // Log Refund
-        await tx.transaction.create({
-          data: {
-            userId: user.id,
-            type: 'REFUND',
-            amount: amount,
-            description: `Refund: BVN Verify Failed (${bvn})`,
-            reference: `REF-${transaction.reference}`,
-            status: 'COMPLETED'
-          }
-        });
-      });
-
-      return NextResponse.json({ error: errorMsg }, { status: 400 });
+      // Throw error to trigger the catch block refund logic
+      throw new Error(errorMsg);
     }
 
   } catch (error: any) {
-    console.error("BVN Verify API Error:", error);
-    return NextResponse.json({ error: "No Record Found, Please check and try again." }, { status: 500 });
+    console.error("BVN Verify API Error:", error.message);
+
+    // <--- 3. ROBUST REFUND LOGIC
+    // If money was deducted (we have a request ID), we MUST refund it.
+    if (bvnRequest && amount) {
+       try {
+         await prisma.$transaction(async (tx) => {
+            // Mark Failed
+            await tx.bvnRequest.update({
+              where: { id: bvnRequest.id },
+              data: { status: 'FAILED', statusMessage: error.message || "Failed" }
+            });
+
+            // Refund Wallet
+            await tx.wallet.update({
+              where: { userId: user.id },
+              data: { balance: { increment: amount } }
+            });
+
+            // Log Refund
+            await tx.transaction.create({
+              data: {
+                userId: user.id,
+                type: 'REFUND',
+                amount: amount,
+                description: `Refund: BVN Verify Failed (${error.message})`,
+                reference: `REF-${transactionRef || Date.now()}`,
+                status: 'COMPLETED'
+              }
+            });
+         });
+         console.log("Auto-refund processed successfully.");
+       } catch (refundError) {
+         console.error("CRITICAL: Failed to process refund!", refundError);
+       }
+    }
+
+    // Determine error message for user
+    const isNoRecord = error.message?.toLowerCase().includes('no record') || error.message?.toLowerCase().includes('not found');
+    const clientError = isNoRecord 
+      ? "No Record Found. Your wallet has been refunded." 
+      : (error.message || "An internal server error occurred");
+
+    return NextResponse.json({ error: clientError }, { status: isNoRecord ? 404 : 500 });
   }
 }
