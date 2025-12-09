@@ -172,7 +172,7 @@ export default function SignupClientPage({ aggregatorId, aggregatorName }: Props
           <div className="ml-3 text-sm leading-6">
             <label htmlFor="terms" className="font-medium text-gray-900">
               I agree to the{' '}
-              <Link href="/terms/page.tsx" className="text-blue-600 hover:underline">
+              <Link href="/terms" className="text-blue-600 hover:underline">
                 Terms of Service
               </Link>
               .
