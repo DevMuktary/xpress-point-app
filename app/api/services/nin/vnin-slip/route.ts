@@ -165,7 +165,7 @@ export async function POST(request: Request) {
     // If it's a "No Record" error, tell the user explicitly that they were refunded
     const isNoRecord = error.message?.toLowerCase().includes('no record') || error.message?.toLowerCase().includes('not found');
     const clientError = isNoRecord 
-      ? "No Record Found. Your wallet has been refunded." 
+      ? "No Record Found. Please, Check and Try Again." 
       : (error.message || "An internal server error occurred");
 
     return NextResponse.json({ error: clientError }, { status: isNoRecord ? 404 : 500 });
