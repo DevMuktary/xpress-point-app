@@ -56,9 +56,10 @@ export async function POST(request: Request) {
       const amountString = amountDecimal.toString();
 
       await prisma.$transaction(async (tx) => {
-        await tx.wallet.update({
+        await tx.wallet.upsert({
           where: { userId },
-          data: { balance: { increment: amountString } }
+          create: { userId, balance: amountString },
+          update: { balance: { increment: amountString } }
         });
 
         await tx.transaction.create({
@@ -98,40 +99,45 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- ACTION: DELETE USER (INDIVIDUAL) ---
+    // --- ACTION: DELETE USER (SAFE MODE) ---
     if (action === 'DELETE_USER') {
       if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
 
+      // Try to find the user to get agentCode, but don't fail if they are missing
       const userToDelete = await prisma.user.findUnique({
         where: { id: userId },
-        select: { agentCode: true, email: true }
+        select: { agentCode: true }
       });
 
-      if (!userToDelete) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      console.log(`[DELETE] Starting cleanup for User ID: ${userId}`);
 
       await prisma.$transaction(async (tx) => {
-        // Unlink Agents
+        // 1. Unlink Agents (if this user was an Aggregator)
         await tx.user.updateMany({ where: { aggregatorId: userId }, data: { aggregatorId: null } });
         
-        // Delete BVN Results
-        if (userToDelete.agentCode) {
+        // 2. Delete BVN Results (Linked by Agent Code)
+        if (userToDelete?.agentCode) {
            await tx.bvnEnrollmentResult.deleteMany({ where: { agentCode: userToDelete.agentCode } });
         }
 
         const whereUser = { userId: userId };
-        // Delete Dependencies
+
+        // 3. Delete ALL Related Records (Order matters!)
+        // Financials
         await tx.transaction.deleteMany({ where: whereUser });
         await tx.wallet.deleteMany({ where: whereUser });
         await tx.virtualAccount.deleteMany({ where: whereUser });
         await tx.withdrawalRequest.deleteMany({ where: whereUser });
         await tx.pendingAccountChange.deleteMany({ where: whereUser });
         await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); 
+        
+        // Security & Logs
         await tx.ninVerification.deleteMany({ where: whereUser });
         await tx.otp.deleteMany({ where: whereUser });
         await tx.passwordResetToken.deleteMany({ where: whereUser });
         await tx.chatMessage.deleteMany({ where: whereUser });
         
-        // Delete Requests
+        // Service Requests (Delete all types)
         await tx.personalizationRequest.deleteMany({ where: whereUser });
         await tx.ipeRequest.deleteMany({ where: whereUser });
         await tx.validationRequest.deleteMany({ where: whereUser });
@@ -148,22 +154,23 @@ export async function POST(request: Request) {
         await tx.vninRequest.deleteMany({ where: whereUser });
         await tx.npcRequest.deleteMany({ where: whereUser });
 
-        // Delete User
-        await tx.user.delete({ where: { id: userId } });
+        // 4. Finally, try to delete the User
+        // Use deleteMany to avoid error if user is already gone
+        await tx.user.deleteMany({ where: { id: userId } });
       });
 
-      return NextResponse.json({ success: true, message: 'User deleted successfully.' });
+      return NextResponse.json({ success: true, message: 'User and all related traces wiped successfully.' });
     }
 
-    // --- ACTION: RESET SYSTEM (WIPE ALL DATA) ---
+    // --- ACTION: RESET SYSTEM (NUCLEAR OPTION) ---
     if (action === 'RESET_SYSTEM') {
       console.log(`[SYSTEM RESET] Initiated by Admin: ${admin.email}`);
 
       await prisma.$transaction(async (tx) => {
-        // 1. Delete Transactions (Must go first)
+        // 1. Delete Transactions (Highest priority dependency)
         await tx.transaction.deleteMany({});
         
-        // 2. Delete Wallets (Balances will reset to 0 upon next login/recreation)
+        // 2. Delete Wallets & Financials
         await tx.wallet.deleteMany({});
         await tx.virtualAccount.deleteMany({});
         await tx.aggregatorPrice.deleteMany({});
@@ -196,7 +203,7 @@ export async function POST(request: Request) {
       });
 
       console.log(`[SYSTEM RESET] Completed Successfully.`);
-      return NextResponse.json({ success: true, message: 'System reset complete. All transactions and jobs have been wiped.' });
+      return NextResponse.json({ success: true, message: 'System reset complete. Database cleaned.' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
