@@ -98,63 +98,45 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- ACTION: DELETE USER (COMPLETE CLEANUP) ---
+    // --- ACTION: DELETE USER (INDIVIDUAL) ---
     if (action === 'DELETE_USER') {
       if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
 
-      // 1. Fetch User First to get AgentCode (Needed for BVN Results)
       const userToDelete = await prisma.user.findUnique({
         where: { id: userId },
         select: { agentCode: true, email: true }
       });
 
-      if (!userToDelete) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
+      if (!userToDelete) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-      console.log(`[DELETE] Starting cleanup for user: ${userToDelete.email} (${userId})`);
-
-      // Run as a transaction to ensure everything is wiped or nothing is
       await prisma.$transaction(async (tx) => {
+        // Unlink Agents
+        await tx.user.updateMany({ where: { aggregatorId: userId }, data: { aggregatorId: null } });
         
-        // A. Unlink Agents (if this user was an Aggregator)
-        // We set their aggregatorId to null so they don't point to a ghost
-        await tx.user.updateMany({
-          where: { aggregatorId: userId },
-          data: { aggregatorId: null }
-        });
-
-        // B. Delete BVN Enrollment Results (Linked by Agent Code, not ID)
+        // Delete BVN Results
         if (userToDelete.agentCode) {
-           await tx.bvnEnrollmentResult.deleteMany({
-             where: { agentCode: userToDelete.agentCode }
-           });
+           await tx.bvnEnrollmentResult.deleteMany({ where: { agentCode: userToDelete.agentCode } });
         }
 
-        // C. Delete ALL Related Records by User ID
-        // We must delete these first to remove foreign key locks
         const whereUser = { userId: userId };
-
-        // 1. Financials & Logs
+        // Delete Dependencies
         await tx.transaction.deleteMany({ where: whereUser });
         await tx.wallet.deleteMany({ where: whereUser });
         await tx.virtualAccount.deleteMany({ where: whereUser });
         await tx.withdrawalRequest.deleteMany({ where: whereUser });
         await tx.pendingAccountChange.deleteMany({ where: whereUser });
-        await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); // Special Field
-
-        // 2. Identity & Security
+        await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); 
         await tx.ninVerification.deleteMany({ where: whereUser });
         await tx.otp.deleteMany({ where: whereUser });
         await tx.passwordResetToken.deleteMany({ where: whereUser });
         await tx.chatMessage.deleteMany({ where: whereUser });
-
-        // 3. Service Requests (The common blockers)
+        
+        // Delete Requests
         await tx.personalizationRequest.deleteMany({ where: whereUser });
         await tx.ipeRequest.deleteMany({ where: whereUser });
         await tx.validationRequest.deleteMany({ where: whereUser });
         await tx.modificationRequest.deleteMany({ where: whereUser });
-        await tx.delinkRequest.deleteMany({ where: whereUser }); // <--- Checked
+        await tx.delinkRequest.deleteMany({ where: whereUser });
         await tx.newspaperRequest.deleteMany({ where: whereUser });
         await tx.cacRequest.deleteMany({ where: whereUser });
         await tx.tinRequest.deleteMany({ where: whereUser });
@@ -166,22 +148,61 @@ export async function POST(request: Request) {
         await tx.vninRequest.deleteMany({ where: whereUser });
         await tx.npcRequest.deleteMany({ where: whereUser });
 
-        // D. Finally, Delete the User
-        await tx.user.delete({
-          where: { id: userId }
-        });
-        
-        console.log(`[DELETE] Successfully deleted user: ${userId}`);
+        // Delete User
+        await tx.user.delete({ where: { id: userId } });
       });
 
-      return NextResponse.json({ success: true, message: 'User and all related data deleted successfully.' });
+      return NextResponse.json({ success: true, message: 'User deleted successfully.' });
+    }
+
+    // --- ACTION: RESET SYSTEM (WIPE ALL DATA) ---
+    if (action === 'RESET_SYSTEM') {
+      console.log(`[SYSTEM RESET] Initiated by Admin: ${admin.email}`);
+
+      await prisma.$transaction(async (tx) => {
+        // 1. Delete Transactions (Must go first)
+        await tx.transaction.deleteMany({});
+        
+        // 2. Delete Wallets (Balances will reset to 0 upon next login/recreation)
+        await tx.wallet.deleteMany({});
+        await tx.virtualAccount.deleteMany({});
+        await tx.aggregatorPrice.deleteMany({});
+        await tx.withdrawalRequest.deleteMany({});
+        await tx.pendingAccountChange.deleteMany({});
+
+        // 3. Delete Standalone Data
+        await tx.bvnEnrollmentResult.deleteMany({});
+        await tx.ninVerification.deleteMany({});
+        await tx.otp.deleteMany({});
+        await tx.passwordResetToken.deleteMany({});
+        await tx.chatMessage.deleteMany({});
+
+        // 4. Delete All Service Requests
+        await tx.personalizationRequest.deleteMany({});
+        await tx.ipeRequest.deleteMany({});
+        await tx.validationRequest.deleteMany({});
+        await tx.modificationRequest.deleteMany({});
+        await tx.delinkRequest.deleteMany({});
+        await tx.newspaperRequest.deleteMany({});
+        await tx.cacRequest.deleteMany({});
+        await tx.tinRequest.deleteMany({});
+        await tx.jambRequest.deleteMany({});
+        await tx.examPinRequest.deleteMany({});
+        await tx.resultRequest.deleteMany({});
+        await tx.vtuRequest.deleteMany({});
+        await tx.bvnRequest.deleteMany({});
+        await tx.vninRequest.deleteMany({});
+        await tx.npcRequest.deleteMany({});
+      });
+
+      console.log(`[SYSTEM RESET] Completed Successfully.`);
+      return NextResponse.json({ success: true, message: 'System reset complete. All transactions and jobs have been wiped.' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (error: any) {
-    console.error("Admin Manage User Error:", error);
-    // Return the specific error message to help debug if it fails again
+    console.error("Admin Manage Error:", error);
     return NextResponse.json({ error: error.message || "Operation failed" }, { status: 500 });
   }
 }
