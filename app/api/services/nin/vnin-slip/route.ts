@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import axios from 'axios';
+import { processCommission } from '@/lib/commission'; // <--- 1. IMPORT THIS
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // We declare these outside the try block so they are accessible in catch for refunds
+  let vninRequest: any = null;
+  let amount: any = null;
+  let transactionRef: string | null = null;
 
   try {
     const { nin } = await request.json();
@@ -23,7 +29,7 @@ export async function POST(request: Request) {
     if (!service) return NextResponse.json({ error: 'Service not found' }, { status: 404 });
     if (!service.isActive) return NextResponse.json({ error: 'Service is currently unavailable' }, { status: 503 });
 
-    const amount = service.defaultAgentPrice;
+    amount = service.defaultAgentPrice;
 
     // 2. Check Wallet Balance
     const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
@@ -32,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Deduct Funds & Initialize Request (Atomic Transaction)
-    const { vninRequest, transaction } = await prisma.$transaction(async (tx) => {
+    const initResult = await prisma.$transaction(async (tx) => {
       // Deduct
       await tx.wallet.update({
         where: { userId: user.id },
@@ -66,6 +72,10 @@ export async function POST(request: Request) {
       return { vninRequest: newReq, transaction: newTx };
     });
 
+    // Capture these for the error handler
+    vninRequest = initResult.vninRequest;
+    transactionRef = initResult.transaction.reference;
+
     // 4. Call External API (DataVerify)
     const apiKey = process.env.DATAVERIFY_API_KEY;
     if (!apiKey) {
@@ -84,13 +94,19 @@ export async function POST(request: Request) {
     // 5. Handle Success
     if (apiData.status === 'success' && apiData.pdf_base64) {
       
-      // Update DB to Completed
-      await prisma.vninRequest.update({
-        where: { id: vninRequest.id },
-        data: {
-          status: 'COMPLETED',
-          statusMessage: 'Slip Generated Successfully'
-        }
+      // Update DB to Completed AND Process Commission
+      await prisma.$transaction(async (tx) => {
+        await tx.vninRequest.update({
+          where: { id: vninRequest.id },
+          data: {
+            status: 'COMPLETED',
+            statusMessage: 'Slip Generated Successfully'
+          }
+        });
+
+        // <--- 2. COMMISSION ADDED HERE
+        // This ensures the aggregator gets paid only on success
+        await processCommission(tx, user.id, SERVICE_ID);
       });
 
       return NextResponse.json({ 
@@ -100,41 +116,58 @@ export async function POST(request: Request) {
       });
     } 
     
-    // 6. Handle Failure & Refund
+    // 6. Handle Known API Failure
     else {
       const errorMsg = apiData.message || 'External API Failed';
-
-      await prisma.$transaction(async (tx) => {
-        // Mark Request Failed
-        await tx.vninRequest.update({
-          where: { id: vninRequest.id },
-          data: { status: 'FAILED', statusMessage: errorMsg }
-        });
-
-        // Refund Wallet
-        await tx.wallet.update({
-          where: { userId: user.id },
-          data: { balance: { increment: amount } }
-        });
-
-        // Log Refund
-        await tx.transaction.create({
-          data: {
-            userId: user.id,
-            type: 'REFUND',
-            amount: amount,
-            description: `Refund: VNIN Slip Failed (${nin})`,
-            reference: `REF-${transaction.reference}`,
-            status: 'COMPLETED'
-          }
-        });
-      });
-
-      return NextResponse.json({ error: errorMsg }, { status: 400 });
+      // Throwing an error here sends us to the catch block, which now handles ALL refunds
+      throw new Error(errorMsg); 
     }
 
   } catch (error: any) {
-    console.error("VNIN Slip API Error:", error);
-    return NextResponse.json({ error: "No Record Found. Please check and try again." }, { status: 500 });
+    console.error("VNIN Slip API Error:", error.message);
+
+    // <--- 3. ROBUST REFUND LOGIC
+    // If we have a request ID and amount, it means money was deducted. We MUST refund.
+    if (vninRequest && amount) {
+       try {
+         await prisma.$transaction(async (tx) => {
+            // Mark Request Failed
+            await tx.vninRequest.update({
+              where: { id: vninRequest.id },
+              data: { status: 'FAILED', statusMessage: error.message || "Failed" }
+            });
+
+            // Refund Wallet
+            await tx.wallet.update({
+              where: { userId: user.id },
+              data: { balance: { increment: amount } }
+            });
+
+            // Log Refund
+            await tx.transaction.create({
+              data: {
+                userId: user.id,
+                type: 'REFUND',
+                amount: amount,
+                description: `Refund: VNIN Slip Failed (${error.message})`,
+                reference: `REF-${transactionRef || Date.now()}`,
+                status: 'COMPLETED'
+              }
+            });
+         });
+         console.log("Auto-refund processed successfully.");
+       } catch (refundError) {
+         console.error("CRITICAL: Failed to process refund!", refundError);
+       }
+    }
+
+    // Return a friendly error message
+    // If it's a "No Record" error, tell the user explicitly that they were refunded
+    const isNoRecord = error.message?.toLowerCase().includes('no record') || error.message?.toLowerCase().includes('not found');
+    const clientError = isNoRecord 
+      ? "No Record Found. Your wallet has been refunded." 
+      : (error.message || "An internal server error occurred");
+
+    return NextResponse.json({ error: clientError }, { status: isNoRecord ? 404 : 500 });
   }
 }
