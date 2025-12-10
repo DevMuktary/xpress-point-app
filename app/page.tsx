@@ -297,7 +297,7 @@ export default function HomePage() {
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2">
                   <PhoneIcon className="h-4 w-4" />
-                  <span>+234 800 XPRESS</span>
+                  <span>+1 XPRESSPOINT</span>
                 </li>
                 <li>contact@xpresspoint</li>
                 <li>United Nations</li>
