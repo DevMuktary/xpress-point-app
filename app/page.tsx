@@ -299,8 +299,8 @@ export default function HomePage() {
                   <PhoneIcon className="h-4 w-4" />
                   <span>+234 800 XPRESS</span>
                 </li>
-                <li>support@xpresspoint.net</li>
-                <li>Yobe, Nigeria</li>
+                <li>contact@xpresspoint</li>
+                <li>United Nations</li>
               </ul>
             </div>
           </div>
