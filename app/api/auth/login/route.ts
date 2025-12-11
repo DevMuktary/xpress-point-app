@@ -11,8 +11,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     // --- ROBUST INPUT CHECK ---
-    // We look for 'email', 'phone', or 'identifier' in the request body
-    // This fixes the "missing field" error if frontend sends { phone: "..." }
     const loginId = body.email || body.phone || body.identifier || body.phoneNumber;
     const { password } = body;
 
@@ -21,7 +19,6 @@ export async function POST(request: Request) {
     }
 
     // 1. Find User by Email OR Phone Number
-    // We search for the loginId in both fields
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -50,7 +47,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // 4. Generate Token
+    // --- 4. SECURITY FIX: ENFORCE PHONE VERIFICATION ---
+    if (!user.isPhoneVerified) {
+      // We return a specific status code (403) and a flag so the frontend knows what to do
+      return NextResponse.json(
+        { 
+          error: 'Phone number not verified.', 
+          requiresOtp: true,
+          phone: user.phoneNumber 
+        }, 
+        { status: 403 } 
+      );
+    }
+
+    // 5. Generate Token
     if (!JWT_SECRET) {
       throw new Error('JWT_SECRET is not defined');
     }
@@ -61,7 +71,7 @@ export async function POST(request: Request) {
       { expiresIn: '7d' }
     );
 
-    // 5. Set Cookie
+    // 6. Set Cookie
     cookies().set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
