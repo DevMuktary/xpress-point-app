@@ -54,7 +54,6 @@ export async function POST(request: Request) {
     }
 
     // 6. Send via Email (Always)
-    // We ONLY use sendHtmlEmail here to avoid triggering the Welcome/Verification email
     try {
       console.log("4b. Attempting Email to:", user.email);
       
@@ -73,8 +72,24 @@ export async function POST(request: Request) {
           <p style="color: #999; font-size: 12px; text-align: center;">If you did not request this, please ignore this email.</p>
         </div>
       `;
+
+      // --- PLAIN TEXT VERSION (Required for Spam Prevention) ---
+      const textContent = `
+Password Reset Request
+
+Hello ${user.firstName},
+
+Use the code below to reset your Xpress Point password:
+
+${otpCode}
+
+This code expires in 10 minutes.
+
+If you did not request this, please ignore this email.
+      `.trim();
       
-      await sendHtmlEmail(user.email, user.firstName, "Reset Your Password", htmlContent);
+      // Now passing 5 arguments
+      await sendHtmlEmail(user.email, user.firstName, "Reset Your Password", htmlContent, textContent);
       sentVia.push('Email');
 
     } catch (emailError) {
