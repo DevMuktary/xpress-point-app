@@ -1,8 +1,8 @@
 // 1. Get the API Key from Railway/Env
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
-const SENDER_EMAIL = 'no-reply@xpresspoint.net'; // Ensure this sender is authenticated in Brevo
-const SENDER_NAME = 'Xpress Point';
+const SENDER_EMAIL = 'otp@xpresspoint.net'; // Ensure this sender is authenticated in Brevo
+const SENDER_NAME = 'XPRESSPOINT CUSTOMER SUCCESS';
 
 // --- Generic Function to Send Any HTML Email ---
 // This is what you use for Admin Broadcasts, OTPs, etc.
