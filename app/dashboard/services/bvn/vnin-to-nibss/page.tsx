@@ -29,7 +29,7 @@ export default async function VninToNibssPage() {
   return (
     <div className="w-full max-w-3xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/services/bvn" className="text-gray-500 hover:text-gray-900">
+        <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <SafeImage
