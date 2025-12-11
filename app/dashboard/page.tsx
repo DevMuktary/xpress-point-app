@@ -1,4 +1,3 @@
-// This is a Server Component that fetches data.
 import React from "react";
 import { redirect } from "next/navigation";
 import { getUserFromSession } from "@/lib/auth"; 
@@ -12,64 +11,36 @@ import QuickActions from "@/components/QuickActions";
 import NotificationBanner from "@/components/NotificationBanner"; 
 import CommunityChat from "@/components/CommunityChat";         
 
-// --- Services List ---
+// --- FLATTENED SERVICE LIST ---
+// listing every tool individually
 const allServices = [
-  { 
-    title: "NIN Services", 
-    description: "Verify NIN, print slips, and manage modifications.", 
-    logo: "/logos/nin.png", 
-    href: "/dashboard/services/nin" 
-  },
-  { 
-    title: "BVN Services", 
-    description: "Verify BVN details, retrieve, and print verification.", 
-    logo: "/logos/bvn.png", 
-    href: "/dashboard/services/bvn" 
-  },
-  { 
-    title: "JAMB Services", 
-    description: "Print original results, admission letters, etc.", 
-    logo: "/logos/jamb.png", 
-    href: "/dashboard/services/jamb" 
-  },
-  { 
-    title: "JTB-TIN", 
-    description: "Register and retrieve JTB-TIN certificates.", 
-    logo: "/logos/tin.png", 
-    href: "/dashboard/services/tin" 
-  },
-  { 
-    title: "Result Checker", 
-    description: "Get WAEC, NECO, and NABTEB result pins.", 
-    logo: "/logos/waec.png", 
-    href: "/dashboard/services/exam-pins" 
-  },
-  { 
-    title: "CAC Services", 
-    description: "Register your business name with the CAC.", 
-    logo: "/logos/cac.png", 
-    href: "/dashboard/services/cac" 
-  },
-  { 
-    title: "VTU Services", 
-    description: "Buy airtime, data, and pay electricity bills.", 
-    logo: "/logos/vtu.png", 
-    href: "/dashboard/services/vtu" 
-  },
-  { 
-    title: "Newspaper", 
-    description: "Publish change of name and other notices.", 
-    logo: "/logos/news.png", 
-    href: "/dashboard/services/newspaper" 
-  },
-  { 
-    title: "NPC Attestation", 
-    description: "Get your NPC Birth Attestation certificate.", 
-    logo: "/logos/npc.png", 
-    href: "/dashboard/services/npc" 
-  },
+  // --- NIN ---
+  { title: "NIN Slip Print", href: "/dashboard/services/nin/vnin-slip", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "NIN Modification", href: "/dashboard/services/nin/modification", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "NIN Validation", href: "/dashboard/services/nin/validation", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "NIN Delink", href: "/dashboard/services/nin/delink", logo: "/logos/nin.png", color: "bg-green-50" },
+  
+  // --- BVN ---
+  { title: "BVN Verification", href: "/dashboard/services/bvn/verification", logo: "/logos/bvn.png", color: "bg-red-50" },
+  { title: "BVN Retrieval", href: "/dashboard/services/bvn/retrieval", logo: "/logos/bvn.png", color: "bg-red-50" },
+  { title: "BVN Modification", href: "/dashboard/services/bvn/modification", logo: "/logos/bvn.png", color: "bg-red-50" },
+  { title: "BVN Enrollment", href: "/dashboard/services/bvn/enrollment", logo: "/logos/bvn.png", color: "bg-red-50" },
+
+  // --- JAMB ---
+  { title: "JAMB Result/Slip", href: "/dashboard/services/jamb/slips", logo: "/logos/jamb.png", color: "bg-yellow-50" },
+  { title: "Profile Code", href: "/dashboard/services/jamb/profile-code", logo: "/logos/jamb.png", color: "bg-yellow-50" },
+
+  // --- OTHERS ---
+  { title: "CAC Registration", href: "/dashboard/services/cac", logo: "/logos/cac.png", color: "bg-emerald-50" },
+  { title: "Tin Certificate", href: "/dashboard/services/tin", logo: "/logos/tin.png", color: "bg-blue-50" },
+  { title: "Exam Pins", href: "/dashboard/services/exam-pins", logo: "/logos/waec.png", color: "bg-purple-50" },
+  { title: "Newspaper Pub", href: "/dashboard/services/newspaper", logo: "/logos/news.png", color: "bg-gray-50" },
+  { title: "NPC Attestation", href: "/dashboard/services/npc", logo: "/logos/npc.png", color: "bg-orange-50" },
+  
+  // --- UTILITIES ---
+  { title: "Buy Airtime", href: "/dashboard/services/vtu/airtime", logo: "/logos/mtn.png", color: "bg-indigo-50" },
+  { title: "Buy Data", href: "/dashboard/services/vtu/data", logo: "/logos/glo.png", color: "bg-indigo-50" },
 ];
-// -----------------------------------------
 
 export default async function DashboardPage() {
   const user = await getUserFromSession();
@@ -77,89 +48,70 @@ export default async function DashboardPage() {
     redirect("/login?error=Please+login+to+continue");
   }
 
-  // Get their *real* wallet balance
-  const wallet = await prisma.wallet.findUnique({
-    where: { userId: user.id },
-  });
+  const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
   
-  // Create wallet if it doesn't exist
   let finalWallet;
   if (!wallet) {
-    finalWallet = await prisma.wallet.create({
-      data: {
-        userId: user.id,
-        balance: 0.00
-      }
-    });
+    finalWallet = await prisma.wallet.create({ data: { userId: user.id, balance: 0.00 } });
   } else {
     finalWallet = wallet;
   }
   const walletBalance = finalWallet.balance;
 
-  // Fetch Banner Content
-  const bannerSetting = await prisma.systemSetting.findUnique({
-    where: { key: 'dashboard_banner' }
-  });
+  const bannerSetting = await prisma.systemSetting.findUnique({ where: { key: 'dashboard_banner' } });
   const bannerContent = bannerSetting?.value || null;
 
   return (
-    <div className="w-full max-w-5xl mx-auto relative">
+    <div className="w-full max-w-5xl mx-auto relative px-2 sm:px-4">
       
-      {/* --- Notification Banner (Admin Controlled) --- */}
       {bannerContent && <NotificationBanner content={bannerContent} />}
+      {!user.isEmailVerified && <EmailVerifyAlert />}
 
-      {/* --- Email Verification Alert --- */}
-      {!user.isEmailVerified && (
-        <EmailVerifyAlert />
-      )}
-
-      {/* --- "App-Like" Wallet Card --- */}
-      <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 p-6 text-white shadow-xl">
+      {/* --- Wallet Card --- */}
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-900 p-5 text-white shadow-lg">
         <div className="flex items-center justify-between">
-          <span className="text-base font-medium text-blue-100">
+          <span className="text-sm font-medium text-blue-100">
             {user.firstName} {user.lastName}
           </span>
-          <span className="text-sm font-medium uppercase text-blue-200">
-            Available Balance
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-200">
+            Wallet Balance
           </span>
         </div>
-        <p className="mt-2 text-3xl font-bold">
-          ₦{Number(walletBalance).toFixed(2)}
+        <p className="mt-1 text-2xl font-bold">
+          ₦{Number(walletBalance).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
         </p>
         <Link 
           href="/dashboard/fund-wallet" 
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg 
-                     bg-white/10 py-3 text-sm font-semibold text-white 
-                     backdrop-blur-sm transition-all hover:bg-white/20"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg 
+                     bg-white/10 py-2.5 text-xs font-bold text-white 
+                     backdrop-blur-sm transition-all hover:bg-white/20 border border-white/20"
         >
-          <PlusIcon className="h-5 w-5" />
+          <PlusIcon className="h-4 w-4" />
           Fund Wallet
         </Link>
       </div>
 
-      {/* --- Quick Actions --- */}
       <QuickActions userRole={user.role} />
 
-      {/* --- "Our Services" Grid --- */}
-      <div>
-        <h2 className="mb-4 text-xl font-bold text-gray-900">
-          All Services
+      {/* --- COMPACT SERVICE GRID --- */}
+      <div className="mt-6">
+        <h2 className="mb-3 text-lg font-bold text-gray-800 px-1">
+          Available Services
         </h2>
-        {/* "grid-cols-1" = 1 card per row on mobile (stable) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* grid-cols-2 ensures 2 per line on mobile. gap-3 makes it tight/app-like. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {allServices.map((service) => (
             <ServiceItemCard
               key={service.title}
               title={service.title}
-              description={service.description}
               logo={service.logo}
               href={service.href}
+              color={service.color}
             />
           ))}
         </div>
       </div>
 
-      {/* --- Community Chat Widget --- */}
       <CommunityChat currentUser={user} />
     </div>
   );
