@@ -27,7 +27,7 @@ const allServices = [
   { title: "BVN Verification", href: "/dashboard/services/bvn/verification", logo: "/logos/bvn.png", color: "bg-red-50" },
   { title: "BVN Retrieval", href: "/dashboard/services/bvn/retrieval", logo: "/logos/bvn.png", color: "bg-red-50" },
   { title: "BVN Modification", href: "/dashboard/services/bvn/modification", logo: "/logos/bvn.png", color: "bg-red-50" },
-  { title: "BVN Enrollment", href: "/dashboard/services/bvn/enrollment", logo: "/logos/bvn.png", color: "bg-red-50" },
+  { title: "BVN User Enrollment", href: "/dashboard/services/bvn/enrollment", logo: "/logos/bvn.png", color: "bg-red-50" },
   { title: "VNIN to NIBSS", href: "/dashboard/services/bvn/vnin-to-nibss", logo: "/logos/bvn.png", color: "bg-red-50" },
 
   // --- JAMB SERVICES ---
