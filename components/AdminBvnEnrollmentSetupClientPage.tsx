@@ -9,7 +9,8 @@ import {
   XCircleIcon,
   MapPinIcon,
   UserIcon,
-  BuildingLibraryIcon // Added for bank icon
+  BuildingLibraryIcon,
+  ArrowPathIcon // Added for Process icon
 } from '@heroicons/react/24/outline';
 
 type AdminRequest = {
@@ -33,9 +34,10 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
 
   // Modal States
   const [selectedReq, setSelectedReq] = useState<AdminRequest | null>(null);
-  const [actionType, setActionType] = useState<'APPROVED' | 'REJECTED' | null>(null);
+  // Added 'PROCESSING' to the action type
+  const [actionType, setActionType] = useState<'APPROVED' | 'REJECTED' | 'PROCESSING' | null>(null);
   const [adminNote, setAdminNote] = useState('');
-  const [agentCode, setAgentCode] = useState(''); // Only for approval
+  const [agentCode, setAgentCode] = useState(''); 
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Filter
@@ -45,7 +47,7 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
     return searchStr.includes(searchTerm.toLowerCase()) && (filterStatus === 'ALL' || req.status === filterStatus);
   });
 
-  const openActionModal = (req: AdminRequest, action: 'APPROVED' | 'REJECTED') => {
+  const openActionModal = (req: AdminRequest, action: 'APPROVED' | 'REJECTED' | 'PROCESSING') => {
     setSelectedReq(req);
     setActionType(action);
     setAdminNote('');
@@ -59,6 +61,8 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
 
   const handleSubmit = async () => {
     if (!selectedReq || !actionType) return;
+    
+    // Agent code is only required for APPROVAL
     if (actionType === 'APPROVED' && !agentCode) {
       alert("Please provide the Agent Code for approval.");
       return;
@@ -67,7 +71,6 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
     setIsProcessing(true);
 
     try {
-      // Assuming you have a process route for this (similar to other services)
       const res = await fetch('/api/admin/requests/process/bvn-enrollment-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,14 +84,19 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
 
       if (!res.ok) throw new Error("Failed to process request");
 
+      // Update local state based on action
+      let newStatus = 'PENDING';
+      if (actionType === 'APPROVED') newStatus = 'COMPLETED';
+      if (actionType === 'REJECTED') newStatus = 'FAILED';
+      if (actionType === 'PROCESSING') newStatus = 'PROCESSING';
+
       setRequests(prev => prev.map(r => r.id === selectedReq.id ? { 
         ...r, 
-        status: actionType === 'APPROVED' ? 'COMPLETED' : 'FAILED', 
-        // We might want to store the agent code in the request or user depending on your logic
+        status: newStatus
       } : r));
       
       closeModal();
-      alert("Request processed successfully.");
+      alert(`Request marked as ${actionType}.`);
 
     } catch (error: any) {
       alert(error.message);
@@ -101,13 +109,12 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
     switch(status) {
       case 'COMPLETED': return 'bg-green-100 text-green-800';
       case 'FAILED': return 'bg-red-100 text-red-800';
-      case 'PROCESSING': 
+      case 'PROCESSING': return 'bg-blue-100 text-blue-800';
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // --- RENDER DETAILS HELPER (Updated with Account Number) ---
   const renderDetails = (req: AdminRequest) => {
     const d = req.formData;
     return (
@@ -127,7 +134,7 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
            </div>
         </div>
 
-        {/* Banking Info - UPDATED */}
+        {/* Banking Info */}
         <div className="bg-blue-50 p-3 rounded border border-blue-200">
            <p className="font-bold text-blue-900 mb-2 border-b border-blue-200 pb-1 flex items-center gap-2">
              <BuildingLibraryIcon className="h-4 w-4"/> Banking Info
@@ -135,11 +142,10 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
            <p><strong>Bank Name:</strong> {d.bankName}</p>
            <p><strong>Account Name:</strong> {d.accountName}</p>
            
-           {/* --- NEW FIELD HERE --- */}
+           {/* Account Number Field */}
            <p className="mt-1 p-1 bg-white rounded border border-blue-100 inline-block">
              <strong>Account Number:</strong> <span className="font-mono text-lg font-bold">{d.bankAccountNumber || 'N/A'}</span>
            </p>
-           {/* ---------------------- */}
            
            <p className="mt-2"><strong>Agent BVN:</strong> {d.agentBvn}</p>
         </div>
@@ -168,7 +174,7 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
            />
         </div>
         <div className="flex bg-gray-100 p-1 rounded-lg">
-          {['ALL', 'PENDING', 'COMPLETED', 'FAILED'].map(s => (
+          {['ALL', 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'].map(s => (
             <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 text-xs font-bold rounded-md ${filterStatus === s ? 'bg-white shadow text-purple-600' : 'text-gray-500'}`}>{s}</button>
           ))}
         </div>
@@ -204,8 +210,16 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
                   <td className="px-6 py-4 text-right space-x-2">
                      <div className="flex justify-end items-center gap-2">
                        <button onClick={() => setSelectedReq(req)} className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-full"><EyeIcon className="h-5 w-5"/></button>
-                       {req.status === 'PENDING' && (
+                       
+                       {/* ACTIONS: Show if NOT Completed or Failed */}
+                       {req.status !== 'COMPLETED' && req.status !== 'FAILED' && (
                          <div className="flex gap-1">
+                           
+                           {/* PROCESS BUTTON - Added Back */}
+                           {req.status === 'PENDING' && (
+                             <button onClick={() => openActionModal(req, 'PROCESSING')} className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100">Process</button>
+                           )}
+
                            <button onClick={() => openActionModal(req, 'APPROVED')} className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded border border-green-200 hover:bg-green-100">Approve</button>
                            <button onClick={() => openActionModal(req, 'REJECTED')} className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded border border-red-200 hover:bg-red-100">Reject</button>
                          </div>
@@ -230,11 +244,13 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
              
              {renderDetails(selectedReq)}
 
-             {/* Action Section (Only if Pending & Action Selected) */}
+             {/* Action Section */}
              {actionType && (
                <div className="mt-6 pt-4 border-t border-gray-200 bg-gray-50 p-4 rounded-xl">
                  <h4 className="font-bold text-gray-900 mb-3">
-                   {actionType === 'APPROVED' ? 'Approve Request' : 'Reject Request'}
+                   {actionType === 'APPROVED' ? 'Approve Request' : 
+                    actionType === 'REJECTED' ? 'Reject Request' : 
+                    'Mark as Processing'}
                  </h4>
                  
                  {actionType === 'APPROVED' && (
@@ -264,7 +280,9 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
                    onClick={handleSubmit} 
                    disabled={isProcessing}
                    className={`w-full py-3 rounded-lg font-bold text-white shadow-lg transition-all ${
-                     actionType === 'APPROVED' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                     actionType === 'APPROVED' ? 'bg-green-600 hover:bg-green-700' : 
+                     actionType === 'REJECTED' ? 'bg-red-600 hover:bg-red-700' :
+                     'bg-blue-600 hover:bg-blue-700'
                    }`}
                  >
                    {isProcessing ? 'Processing...' : `Confirm ${actionType}`}
