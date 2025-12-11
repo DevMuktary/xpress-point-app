@@ -1,37 +1,34 @@
 import React from 'react';
 import Link from 'next/link';
-import { ChevronLeftIcon, PhoneIcon, WifiIcon, BoltIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import SafeImage from '@/components/SafeImage';
-import ServiceItemCard from '@/components/ServiceItemCard'; // We re-use our "world-class" card
+import ServiceItemCard from '@/components/ServiceItemCard';
 
-// This is a Server Component, so it's very fast.
 export default function VtuHubPage() {
   
-  // --- This is the 3-Card "Hub" you designed ---
   const vtuServices = [
     {
       title: 'Buy Airtime',
-      description: 'Instant top-up for MTN, Glo, Airtel, and 9mobile.',
       href: '/dashboard/services/vtu/airtime',
-      logo: PhoneIcon, // Use Icon
+      logo: '/logos/mtn.png', // Using MTN logo as generic representation
+      color: "bg-yellow-50"
     },
     {
       title: 'Buy Data',
-      description: 'Purchase data bundles (SME, Gifting, Awoof) for all networks.',
       href: '/dashboard/services/vtu/data',
-      logo: WifiIcon, // Use Icon
+      logo: '/logos/glo.png', // Using Glo logo as generic representation
+      color: "bg-green-50"
     },
     {
-      title: 'Pay Electricity',
-      description: 'Pay your Prepaid or Postpaid electricity bills easily.',
-      href: '/dashboard/services/vtu/electricity', // We will build this page
-      logo: BoltIcon, // Use Icon
+      title: 'Electricity',
+      href: '/dashboard/services/vtu/electricity',
+      logo: '/logos/vtu.png', 
+      color: "bg-orange-50"
     },
   ];
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
+    <div className="w-full max-w-5xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
@@ -44,35 +41,18 @@ export default function VtuHubPage() {
           fallbackSrc="/logos/default.png"
           className="rounded-full"
         />
-        <h1 className="text-2xl font-bold text-gray-900">
-          VTU Services
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">VTU Services</h1>
       </div>
 
-      {/* --- "Refurbished" Card List (1-column, stable on phone) --- */}
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {vtuServices.map((service) => (
-          // This is a "refurbished" ServiceItemCard, using the Icon
-          <Link
+          <ServiceItemCard
             key={service.title}
             href={service.href}
-            className="group flex flex-col justify-between rounded-2xl bg-white p-6 shadow-lg 
-                       transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-          >
-            <div>
-              <service.logo className="h-10 w-10 text-blue-600" />
-              <h3 className="mt-4 text-lg font-bold text-gray-900">{service.title}</h3>
-              <p className="mt-1 text-sm text-gray-600 line-clamp-2">{service.description}</p>
-            </div>
-            <div className="mt-6">
-              <span 
-                className="inline-block rounded-lg bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 
-                           transition-all group-hover:bg-blue-600 group-hover:text-white"
-              >
-                Use Service →
-              </span>
-            </div>
-          </Link>
+            title={service.title}
+            logo={service.logo}
+            color={service.color}
+          />
         ))}
       </div>
     </div>
