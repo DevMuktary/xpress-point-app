@@ -16,7 +16,7 @@ export default async function AdminRequestsPage() {
   const [
     ninModCount,
     ninDelinkCount,
-    ninValidationCount, // <--- Added
+    ninValidationCount,
     bvnRetrievalCount,
     bvnModCount,
     bvnEnrollmentSetupCount,
@@ -26,12 +26,13 @@ export default async function AdminRequestsPage() {
     jambCount,
     resultCount,
     newspaperCount,
-    npcCount
+    npcCount,
+    bvnUploadCount // <--- NEW: Count total uploaded results
   ] = await Promise.all([
     // NIN
     prisma.modificationRequest.count({ where: { status: 'PENDING' } }),
     prisma.delinkRequest.count({ where: { status: 'PENDING' } }),
-    prisma.validationRequest.count({ where: { status: 'PENDING' } }), // <--- Added
+    prisma.validationRequest.count({ where: { status: 'PENDING' } }),
     
     // BVN
     prisma.bvnRequest.count({ where: { status: 'PENDING', serviceId: { in: ['BVN_RETRIEVAL_PHONE', 'BVN_RETRIEVAL_CRM'] } } }),
@@ -45,13 +46,16 @@ export default async function AdminRequestsPage() {
     prisma.jambRequest.count({ where: { status: 'PENDING' } }),
     prisma.resultRequest.count({ where: { status: 'PENDING' } }),
     prisma.newspaperRequest.count({ where: { status: 'PENDING' } }),
-    prisma.npcRequest.count({ where: { status: 'PENDING' } })
+    prisma.npcRequest.count({ where: { status: 'PENDING' } }),
+    
+    // NEW: Count Enrollment Results
+    prisma.bvnEnrollmentResult.count() 
   ]);
 
   const stats = {
     ninMod: ninModCount,
     ninDelink: ninDelinkCount,
-    ninValidation: ninValidationCount, // <--- Added
+    ninValidation: ninValidationCount,
     bvnRetrieval: bvnRetrievalCount,
     bvnMod: bvnModCount,
     bvnEnrollmentSetup: bvnEnrollmentSetupCount,
@@ -61,7 +65,8 @@ export default async function AdminRequestsPage() {
     jamb: jambCount,
     result: resultCount,
     newspaper: newspaperCount,
-    npc: npcCount
+    npc: npcCount,
+    bvnUploads: bvnUploadCount // <--- Pass to client
   };
 
   return (
