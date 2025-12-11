@@ -14,14 +14,14 @@ import CommunityChat from "@/components/CommunityChat";
 // --- COMPLETE FLATTENED SERVICE LIST ---
 const allServices = [
   // --- NIN SERVICES ---
-  { title: "NIN Slip (Instant)", href: "/dashboard/services/nin/vnin-slip", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "VNIN Slip (Instant)", href: "/dashboard/services/nin/vnin-slip", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "Verify by NIN", href: "/dashboard/services/nin/verify-by-nin", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "Verify by Phone", href: "/dashboard/services/nin/verify-by-phone", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "NIN Modification", href: "/dashboard/services/nin/modification", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "NIN Validation", href: "/dashboard/services/nin/validation", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "IPE Clearance", href: "/dashboard/services/nin/ipe-clearance", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "Delink NIN", href: "/dashboard/services/nin/delink", logo: "/logos/nin.png", color: "bg-green-50" },
-  { title: "Personalize NIN", href: "/dashboard/services/nin/personalize", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "NIN Personalization", href: "/dashboard/services/nin/personalize", logo: "/logos/nin.png", color: "bg-green-50" },
   
   // --- BVN SERVICES ---
   { title: "BVN Verification", href: "/dashboard/services/bvn/verification", logo: "/logos/bvn.png", color: "bg-red-50" },
@@ -32,10 +32,10 @@ const allServices = [
 
   // --- JAMB SERVICES ---
   { title: "JAMB Result/Slip", href: "/dashboard/services/jamb/slips", logo: "/logos/jamb.png", color: "bg-yellow-50" },
-  { title: "Profile Code", href: "/dashboard/services/jamb/profile-code", logo: "/logos/jamb.png", color: "bg-yellow-50" },
+  { title: "Profile Code Retrieval", href: "/dashboard/services/jamb/profile-code", logo: "/logos/jamb.png", color: "bg-yellow-50" },
 
   // --- EXAM PINS / CARDS ---
-  { title: "Check Result", href: "/dashboard/services/exam-pins/request-result", logo: "/logos/waec.png", color: "bg-purple-50" },
+  { title: "Check Result of Exams", href: "/dashboard/services/exam-pins/request-result", logo: "/logos/waec.png", color: "bg-purple-50" },
   { title: "WAEC Pin", href: "/dashboard/services/exam-pins/waec", logo: "/logos/waec.png", color: "bg-purple-50" },
   { title: "NECO Pin", href: "/dashboard/services/exam-pins/neco", logo: "/logos/neco.png", color: "bg-purple-50" },
   { title: "NABTEB Pin", href: "/dashboard/services/exam-pins/nabteb", logo: "/logos/nabteb.png", color: "bg-purple-50" },
