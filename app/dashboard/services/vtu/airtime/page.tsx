@@ -55,7 +55,7 @@ export default async function AirtimePage() {
     <div className="w-full max-w-3xl mx-auto">
       {/* --- Page Header --- */}
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/services/vtu" className="text-gray-500 hover:text-gray-900">
+        <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <PhoneIcon className="h-8 w-8 text-gray-900" />
