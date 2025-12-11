@@ -11,14 +11,16 @@ import {
   AcademicCapIcon,
   NewspaperIcon,
   ShieldCheckIcon,
-  CheckBadgeIcon // For Validation
+  CheckBadgeIcon,
+  ArrowPathIcon,
+  CloudArrowUpIcon // <--- Import for Upload Icon
 } from '@heroicons/react/24/outline';
 
 type Props = {
   stats: {
     ninMod: number;
     ninDelink: number;
-    ninValidation: number; // <--- Added
+    ninValidation: number;
     bvnRetrieval: number;
     bvnMod: number;
     bvnEnrollmentSetup: number;
@@ -29,11 +31,12 @@ type Props = {
     result: number;
     newspaper: number;
     npc: number;
+    bvnUploads: number; // <--- New Prop
   };
 };
 
 // Reusable Card Component
-const RequestCard = ({ title, count, href, icon: Icon, color }: any) => (
+const RequestCard = ({ title, count, href, icon: Icon, color, label = "waiting" }: any) => (
   <Link href={href} className="block group">
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all h-full relative overflow-hidden">
       {/* Background Icon Faded */}
@@ -46,10 +49,10 @@ const RequestCard = ({ title, count, href, icon: Icon, color }: any) => (
           <Icon className="h-6 w-6" />
         </div>
         <h3 className="text-lg font-bold text-gray-900 mb-1">{title}</h3>
-        <p className="text-sm text-gray-500 mb-4">Pending Requests</p>
+        <p className="text-sm text-gray-500 mb-4">{label === 'uploaded' ? 'Total Records' : 'Pending Requests'}</p>
         <div className="flex items-baseline gap-1">
           <span className="text-3xl font-bold text-gray-900">{count}</span>
-          <span className="text-xs text-gray-400 font-medium">waiting</span>
+          <span className="text-xs text-gray-400 font-medium">{label}</span>
         </div>
       </div>
     </div>
@@ -105,11 +108,23 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
         icon={DevicePhoneMobileIcon} 
         color="text-cyan-600" 
       />
+      
+      {/* --- NEW UPLOAD CARD --- */}
+      <RequestCard 
+        title="Upload Enroll Results" 
+        count={stats.bvnUploads} 
+        href="/admin/requests/bvn/enrollment" 
+        icon={CloudArrowUpIcon} 
+        color="text-pink-600"
+        label="uploaded"
+      />
+      {/* ----------------------- */}
+
       <RequestCard 
         title="VNIN to NIBSS" 
         count={stats.bvnNibss} 
         href="/admin/requests/bvn/nibss" 
-        icon={ArrowPathIcon} // Using ArrowPathIcon (imported above but not in JSX?) let's ensure import
+        icon={ArrowPathIcon} 
         color="text-teal-600" 
       />
 
@@ -162,6 +177,3 @@ export default function AdminRequestsHubClientPage({ stats }: Props) {
     </div>
   );
 }
-
-// Small Icon import fix for ArrowPathIcon if needed locally
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
