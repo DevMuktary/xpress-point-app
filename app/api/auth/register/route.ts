@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendOtpMessage } from '@/lib/whatsapp'; 
-import { generateUniqueAgentCode } from '@/lib/agentCode'; // <--- IMPORT THIS
+import { generateUniqueAgentCode } from '@/lib/agentCode';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -42,12 +42,57 @@ export async function POST(request: Request) {
       }
     });
 
+    // --- SECURITY FIX: HANDLE UNVERIFIED ACCOUNTS ---
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'An account with this email or phone number already exists.' },
-        { status: 409 } 
-      );
+      // If the account exists BUT is NOT verified, we allow re-registration (Update)
+      if (!existingUser.isPhoneVerified) {
+        
+        // Update the existing unverified record with new details
+        const passwordHash = await bcrypt.hash(password, 10);
+        
+        const updatedUser = await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            firstName,
+            lastName,
+            passwordHash, // Update password
+            // We keep other fields or update them as needed
+          }
+        });
+
+        // Generate and Send NEW OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+
+        // Delete old OTPs for this user to be clean
+        await prisma.otp.deleteMany({ where: { userId: updatedUser.id } });
+
+        await prisma.otp.create({
+          data: {
+            code: otpCode,
+            userId: updatedUser.id,
+            expiresAt: expiresAt,
+          },
+        });
+
+        await sendOtpMessage(phone, otpCode);
+
+        return NextResponse.json(
+          { message: 'Account exists but unverified. New OTP sent.' },
+          { status: 201 }
+        );
+      } 
+      
+      // If account IS verified, block duplicate registration
+      else {
+        return NextResponse.json(
+          { error: 'An account with this email or phone number already exists.' },
+          { status: 409 } 
+        );
+      }
     }
+    
+    // ... (Rest of the standard creation logic for new users) ...
     
     if (aggregatorId) {
       const aggregatorExists = await prisma.user.findFirst({
@@ -60,13 +105,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Hash password
     const passwordHash = await bcrypt.hash(password, 10);
+    const agentCode = await generateUniqueAgentCode(); 
 
-    // 3. Generate Unique Agent Code
-    const agentCode = await generateUniqueAgentCode(); // <--- NEW LOGIC
-
-    // 4. Create user
     const user = await prisma.user.create({
       data: {
         firstName,
@@ -75,14 +116,14 @@ export async function POST(request: Request) {
         phoneNumber: phone,
         passwordHash,
         role: 'AGENT',
-        agentCode: agentCode, // <--- SAVE CODE
+        agentCode: agentCode, 
         aggregatorId: aggregatorId || null,
         businessName: businessName || null, 
-        address: address || null,         
+        address: address || null,
+        isPhoneVerified: false, // Explicitly false
       }
     });
     
-    // 5. Create and send OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
 
