@@ -23,7 +23,7 @@ export default async function BvnEnrollmentPage() {
     <div className="w-full max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/services/bvn" className="text-gray-500 hover:text-gray-900">
+        <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <div className="p-2 bg-purple-100 rounded-lg text-purple-700">
