@@ -11,35 +11,46 @@ import QuickActions from "@/components/QuickActions";
 import NotificationBanner from "@/components/NotificationBanner"; 
 import CommunityChat from "@/components/CommunityChat";         
 
-// --- FLATTENED SERVICE LIST ---
-// listing every tool individually
+// --- COMPLETE FLATTENED SERVICE LIST ---
 const allServices = [
-  // --- NIN ---
-  { title: "NIN Slip Print", href: "/dashboard/services/nin/vnin-slip", logo: "/logos/nin.png", color: "bg-green-50" },
+  // --- NIN SERVICES ---
+  { title: "NIN Slip (Instant)", href: "/dashboard/services/nin/vnin-slip", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "Verify by NIN", href: "/dashboard/services/nin/verify-by-nin", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "Verify by Phone", href: "/dashboard/services/nin/verify-by-phone", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "NIN Modification", href: "/dashboard/services/nin/modification", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "NIN Validation", href: "/dashboard/services/nin/validation", logo: "/logos/nin.png", color: "bg-green-50" },
-  { title: "NIN Delink", href: "/dashboard/services/nin/delink", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "IPE Clearance", href: "/dashboard/services/nin/ipe-clearance", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "Delink NIN", href: "/dashboard/services/nin/delink", logo: "/logos/nin.png", color: "bg-green-50" },
+  { title: "Personalize NIN", href: "/dashboard/services/nin/personalize", logo: "/logos/nin.png", color: "bg-green-50" },
   
-  // --- BVN ---
+  // --- BVN SERVICES ---
   { title: "BVN Verification", href: "/dashboard/services/bvn/verification", logo: "/logos/bvn.png", color: "bg-red-50" },
   { title: "BVN Retrieval", href: "/dashboard/services/bvn/retrieval", logo: "/logos/bvn.png", color: "bg-red-50" },
   { title: "BVN Modification", href: "/dashboard/services/bvn/modification", logo: "/logos/bvn.png", color: "bg-red-50" },
   { title: "BVN Enrollment", href: "/dashboard/services/bvn/enrollment", logo: "/logos/bvn.png", color: "bg-red-50" },
+  { title: "VNIN to NIBSS", href: "/dashboard/services/bvn/vnin-to-nibss", logo: "/logos/bvn.png", color: "bg-red-50" },
 
-  // --- JAMB ---
+  // --- JAMB SERVICES ---
   { title: "JAMB Result/Slip", href: "/dashboard/services/jamb/slips", logo: "/logos/jamb.png", color: "bg-yellow-50" },
   { title: "Profile Code", href: "/dashboard/services/jamb/profile-code", logo: "/logos/jamb.png", color: "bg-yellow-50" },
 
-  // --- OTHERS ---
-  { title: "CAC Registration", href: "/dashboard/services/cac", logo: "/logos/cac.png", color: "bg-emerald-50" },
-  { title: "Tin Certificate", href: "/dashboard/services/tin", logo: "/logos/tin.png", color: "bg-blue-50" },
-  { title: "Exam Pins", href: "/dashboard/services/exam-pins", logo: "/logos/waec.png", color: "bg-purple-50" },
+  // --- EXAM PINS / CARDS ---
+  { title: "Check Result", href: "/dashboard/services/exam-pins/request-result", logo: "/logos/waec.png", color: "bg-purple-50" },
+  { title: "WAEC Pin", href: "/dashboard/services/exam-pins/waec", logo: "/logos/waec.png", color: "bg-purple-50" },
+  { title: "NECO Pin", href: "/dashboard/services/exam-pins/neco", logo: "/logos/neco.png", color: "bg-purple-50" },
+  { title: "NABTEB Pin", href: "/dashboard/services/exam-pins/nabteb", logo: "/logos/nabteb.png", color: "bg-purple-50" },
+  { title: "JAMB Pin", href: "/dashboard/services/exam-pins/jamb", logo: "/logos/jamb.png", color: "bg-purple-50" },
+
+  // --- CORPORATE / OTHER ---
+  { title: "CAC Registration/Retrieval", href: "/dashboard/services/cac", logo: "/logos/cac.png", color: "bg-emerald-50" },
+  { title: "Tin Certificate/Retrieval", href: "/dashboard/services/tin", logo: "/logos/tin.png", color: "bg-blue-50" },
   { title: "Newspaper Pub", href: "/dashboard/services/newspaper", logo: "/logos/news.png", color: "bg-gray-50" },
   { title: "NPC Attestation", href: "/dashboard/services/npc", logo: "/logos/npc.png", color: "bg-orange-50" },
   
-  // --- UTILITIES ---
+  // --- UTILITIES (VTU) ---
   { title: "Buy Airtime", href: "/dashboard/services/vtu/airtime", logo: "/logos/mtn.png", color: "bg-indigo-50" },
   { title: "Buy Data", href: "/dashboard/services/vtu/data", logo: "/logos/glo.png", color: "bg-indigo-50" },
+  { title: "Pay Electricity (unavailable)", href: "/dashboard/services/vtu/electricity", logo: "/logos/vtu.png", color: "bg-indigo-50" },
 ];
 
 export default async function DashboardPage() {
@@ -94,7 +105,7 @@ export default async function DashboardPage() {
       <QuickActions userRole={user.role} />
 
       {/* --- COMPACT SERVICE GRID --- */}
-      <div className="mt-6">
+      <div className="mt-6 pb-20">
         <h2 className="mb-3 text-lg font-bold text-gray-800 px-1">
           Available Services
         </h2>
