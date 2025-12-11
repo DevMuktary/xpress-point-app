@@ -365,7 +365,7 @@ export default function VerifyByNinClientPage({ serviceFee, isActive }: { servic
       {/* ... (Search Header, Error/Success Messages) ... */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/services/nin" className="text-gray-500 hover:text-gray-900">
+          <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
             <ChevronLeftIcon className="h-6 w-6" />
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">Verify by NIN</h1>
