@@ -1,70 +1,61 @@
 import React from 'react';
 import Link from 'next/link';
-import { ChevronLeftIcon } from '@heroicons/react/24/outline';
-import SafeImage from '@/components/SafeImage';
-import ServiceItemCard from '@/components/ServiceItemCard'; // We re-use our "world-class" card
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import ServiceItemCard from '@/components/ServiceItemCard';
 
-// This is a Server Component, so it's very fast.
 export default function ExamPinsHubPage() {
   
-  // --- THIS IS THE "WORLD-CLASS" REFURBISHED LIST ---
   const examServices = [
-    // --- NEW "WORLD-CLASS" CARD (Your Design) ---
     {
-      title: 'Request Result',
-      description: 'We will check and get your result slip for you.',
+      title: 'Check Result',
       href: '/dashboard/services/exam-pins/request-result',
-      logo: '/logos/waec.png', // We can re-use the WAEC logo
+      logo: '/logos/waec.png', 
+      color: "bg-blue-50"
     },
     {
-      title: 'WAEC Result Pin',
-      description: 'Purchase PINs to check WAEC results.',
+      title: 'WAEC Pin',
       href: '/dashboard/services/exam-pins/waec',
       logo: '/logos/waec.png',
+      color: "bg-yellow-50"
     },
     {
-      title: 'NECO Result Pin',
-      description: 'Purchase PINs to check NECO results.',
+      title: 'NECO Pin',
       href: '/dashboard/services/exam-pins/neco',
       logo: '/logos/neco.png',
+      color: "bg-green-50"
     },
     {
-      title: 'NABTEB Result Pin',
-      description: 'Purchase PINs to check NABTEB results.',
+      title: 'NABTEB Pin',
       href: '/dashboard/services/exam-pins/nabteb',
       logo: '/logos/nabteb.png',
+      color: "bg-red-50"
     },
     {
-      title: 'JAMB Services',
-      description: 'Purchase UTME or Direct Entry (DE) PINs.',
+      title: 'JAMB Pin',
       href: '/dashboard/services/exam-pins/jamb',
       logo: '/logos/jamb.png',
+      color: "bg-purple-50"
     },
   ];
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      {/* --- Page Header --- */}
+    <div className="w-full max-w-5xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <DocumentTextIcon className="h-8 w-8 text-gray-900" />
-        <h1 className="text-2xl font-bold text-gray-900">
-          Exam Result Pins
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">Exam Pins</h1>
       </div>
 
-      {/* --- "Refurbished" Card List (stable on phone) --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {examServices.map((service) => (
           <ServiceItemCard
             key={service.title}
             href={service.href}
             title={service.title}
-            description={service.description}
             logo={service.logo}
+            color={service.color}
           />
         ))}
       </div>
