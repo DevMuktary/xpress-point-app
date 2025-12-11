@@ -16,19 +16,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Subject and Message are required' }, { status: 400 });
     }
 
-    // 1. Fetch all users (You might want to filter active users only)
+    // 1. Fetch all users
     const users = await prisma.user.findMany({
       select: { email: true, firstName: true, lastName: true }
     });
 
-    // 2. Send emails (In production, this should be a background job/queue)
-    // For now, we loop. Note: Vercel/Railway might timeout if list is huge.
+    // 2. Generate Plain Text Version (Strip HTML tags)
+    // This is required for the new spam-proof email sender
+    const textContent = htmlMessage.replace(/<[^>]+>/g, '');
+
+    // 3. Send emails
     let sentCount = 0;
     
-    // We process in chunks or just fire promises to speed it up
     const emailPromises = users.map(u => {
       const fullName = `${u.firstName} ${u.lastName}`;
-      return sendHtmlEmail(u.email, fullName, subject, htmlMessage)
+      
+      // We now pass 5 arguments: textContent is the last one
+      return sendHtmlEmail(u.email, fullName, subject, htmlMessage, textContent)
         .then(() => sentCount++)
         .catch(err => console.error(`Failed to send to ${u.email}`, err));
     });
