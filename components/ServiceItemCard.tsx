@@ -2,50 +2,36 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import SafeImage from '@/components/SafeImage'; // We'll use our safe image component
+import SafeImage from '@/components/SafeImage';
 
 type Props = {
   href: string;
   title: string;
-  description: string;
   logo: string;
+  color?: string; // Optional background color hint
 };
 
-export default function ServiceItemCard({ href, title, description, logo }: Props) {
+export default function ServiceItemCard({ href, title, logo, color = "bg-white" }: Props) {
   return (
     <Link
       href={href}
-      className="group flex flex-col justify-between rounded-2xl bg-white p-6 shadow-lg 
-                 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      className={`group flex flex-col items-center justify-center rounded-xl ${color} p-4 shadow-sm border border-gray-100
+                 transition-all duration-200 hover:shadow-md hover:-translate-y-1 active:scale-95`}
     >
-      <div>
-        {/* Logo */}
+      <div className="relative mb-2 h-10 w-10 sm:h-12 sm:w-12 overflow-hidden rounded-full bg-white shadow-sm p-1">
         <SafeImage
           src={logo}
-          alt={`${title} Logo`}
-          width={40}
-          height={40}
+          alt={title}
+          width={48}
+          height={48}
           fallbackSrc="/logos/default.png"
-          className="rounded-full"
+          className="h-full w-full object-contain"
         />
-        
-        {/* Title */}
-        <h3 className="mt-4 text-lg font-bold text-gray-900">{title}</h3>
-        
-        {/* Description */}
-        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{description}</p>
       </div>
       
-      {/* Action Button */}
-      <div className="mt-6">
-        <span 
-          className="inline-block rounded-lg bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 
-                     transition-all group-hover:bg-blue-600 group-hover:text-white"
-        >
-          Use Service →
-        </span>
-      </div>
+      <h3 className="text-center text-xs sm:text-sm font-bold text-gray-700 leading-tight">
+        {title}
+      </h3>
     </Link>
   );
 }
