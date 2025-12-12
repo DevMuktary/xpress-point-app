@@ -21,10 +21,11 @@ export default async function AdminPayoutsPage() {
     }
   });
 
-  // 2. Fetch Payout History (Completed/Failed) - Limit to 50 recent
+  // 2. Fetch Payout History (Completed/Failed)
   const payoutHistory = await prisma.withdrawalRequest.findMany({
     where: { status: { not: 'PENDING' } },
-    orderBy: { updatedAt: 'desc' },
+    // FIX: Used 'createdAt' because 'updatedAt' does not exist on this model
+    orderBy: { createdAt: 'desc' }, 
     take: 50,
     include: {
       user: { select: { id: true, firstName: true, lastName: true, email: true } }
@@ -49,7 +50,8 @@ export default async function AdminPayoutsPage() {
   const serializedHistory = payoutHistory.map(p => ({
     ...p,
     amount: p.amount.toString(),
-    updatedAt: p.updatedAt.toISOString() // Needed for sorting/display
+    // We use createdAt here too since we sorted by it
+    updatedAt: p.createdAt.toISOString() 
   }));
 
   const serializedChanges = accountChanges.map(c => ({
