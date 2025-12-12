@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ChevronLeftIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import AdminUsersClientPage, { SerializedUser } from '@/components/AdminUsersClientPage';
+import AdminUsersClientPage from '@/components/AdminUsersClientPage';
 
 export default async function AdminUsersPage() {
   const user = await getUserFromSession();
@@ -12,9 +12,14 @@ export default async function AdminUsersPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // 1. Fetch Users with Wallet and Aggregator info
+  // 1. Fetch Users SORTED BY BALANCE (Highest First)
+  // Also include the count of 'agents' (downlines)
   const users = await prisma.user.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: {
+      wallet: {
+        balance: 'desc' // <--- SORT BY BALANCE
+      }
+    },
     include: {
       wallet: true,
       aggregator: {
@@ -23,18 +28,21 @@ export default async function AdminUsersPage() {
           lastName: true,
           businessName: true
         }
+      },
+      _count: { // <--- COUNT AGENTS
+        select: { agents: true }
       }
     }
   });
 
-  // 2. Serialize Data (Convert Dates and Decimals to strings)
-  const serializedUsers: SerializedUser[] = users.map(u => ({
+  // 2. Serialize Data
+  const serializedUsers = users.map(u => ({
     id: u.id,
     firstName: u.firstName,
     lastName: u.lastName,
     email: u.email,
     phoneNumber: u.phoneNumber,
-    role: u.role as string, // <--- Cast Prisma Enum to string
+    role: u.role,
     isIdentityVerified: u.isIdentityVerified,
     createdAt: u.createdAt.toISOString(),
     walletBalance: u.wallet?.balance.toString() || "0.00",
@@ -42,7 +50,8 @@ export default async function AdminUsersPage() {
     aggregatorName: u.aggregator 
       ? `${u.aggregator.firstName} ${u.aggregator.lastName}` 
       : null,
-    businessName: u.businessName
+    businessName: u.businessName,
+    agentCount: u._count.agents // <--- PASS COUNT TO CLIENT
   }));
 
   return (
