@@ -12,35 +12,53 @@ export default async function AdminPayoutsPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // 1. Fetch Pending Payouts (Include User info for Bank Details)
+  // 1. Fetch Pending Payouts
   const pendingPayouts = await prisma.withdrawalRequest.findMany({
     where: { status: 'PENDING' },
-    orderBy: { createdAt: 'asc' }, // Oldest first
+    orderBy: { createdAt: 'asc' },
     include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          bankName: true,
-          accountNumber: true,
-          accountName: true
-        }
-      }
+      user: { select: { id: true, firstName: true, lastName: true, email: true, bankName: true, accountNumber: true, accountName: true } }
     }
   });
 
-  // 2. Serialize Decimals
-  const serializedPayouts = pendingPayouts.map(p => ({
+  // 2. Fetch Payout History (Completed/Failed) - Limit to 50 recent
+  const payoutHistory = await prisma.withdrawalRequest.findMany({
+    where: { status: { not: 'PENDING' } },
+    orderBy: { updatedAt: 'desc' },
+    take: 50,
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true, email: true } }
+    }
+  });
+
+  // 3. Fetch Account Change Requests
+  const accountChanges = await prisma.pendingAccountChange.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true, email: true } }
+    }
+  });
+
+  // Serialize
+  const serializedPending = pendingPayouts.map(p => ({
     ...p,
     amount: p.amount.toString(),
-    user: p.user
+    createdAt: p.createdAt.toISOString()
+  }));
+
+  const serializedHistory = payoutHistory.map(p => ({
+    ...p,
+    amount: p.amount.toString(),
+    updatedAt: p.updatedAt.toISOString() // Needed for sorting/display
+  }));
+
+  const serializedChanges = accountChanges.map(c => ({
+    ...c,
+    createdAt: c.createdAt.toISOString()
   }));
 
   return (
     <div className="w-full max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link href="/admin/dashboard" className="text-gray-500 hover:text-gray-900">
           <ChevronLeftIcon className="h-6 w-6" />
@@ -49,13 +67,16 @@ export default async function AdminPayoutsPage() {
           <BanknotesIcon className="h-8 w-8" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payout Requests</h1>
-          <p className="text-sm text-gray-500">Manage and process aggregator withdrawals.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Financial Requests</h1>
+          <p className="text-sm text-gray-500">Manage payouts and account updates.</p>
         </div>
       </div>
 
-      {/* Client Component */}
-      <AdminPayoutsClientPage initialPayouts={serializedPayouts} />
+      <AdminPayoutsClientPage 
+        initialPayouts={serializedPending} 
+        payoutHistory={serializedHistory}
+        accountChanges={serializedChanges}
+      />
     </div>
   );
 }
