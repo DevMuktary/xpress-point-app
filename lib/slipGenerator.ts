@@ -26,12 +26,14 @@ const formatNin = (nin: string) => {
   return `${nin.slice(0, 4)}   ${nin.slice(4, 7)}   ${nin.slice(7)}`;
 };
 
+// --- FIX: RETURN EMPTY STRING INSTEAD OF ASTERISKS ---
 const displayField = (value: any): string => {
   if (value === null || value === undefined || value === "") {
-    return '****';
+    return ''; // <--- Changed from '****' to ''
   }
   return value.toString();
 };
+// -----------------------------------------------------
 
 const getIssueDate = (): string => {
   const today = new Date();
@@ -180,12 +182,9 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
     });
     
     // --- THIS IS THE FIX (Issue Date) ---
-    // Moved down 25 (y: height - 895 -> height - 920)
-    // Moved right 70 (x: 864 -> 934)
     page.drawText(getIssueDate(), {
       x: 955, y: height - 935, size: 32, font: helvetica, color: rgb(0.2, 0.2, 0.2)
     });
-    // ------------------------------------
     
     // Photo (Perfected position)
     page.drawImage(userPhoto, { 
@@ -202,9 +201,6 @@ export async function generateNinSlipPdf(slipType: string, data: any): Promise<B
       width: 344, 
       height: 326 
     });
-
-    // Text under QR (REMOVED)
-    // -----------------------
   }
 
   // 7. Save the PDF to a buffer and return it
