@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { generateNinSlipPdf } from '@/lib/slipGenerator';
 import { Decimal } from '@prisma/client/runtime/library';
-import { processCommission } from '@/lib/commission'; // <--- THE FIX
+import { processCommission } from '@/lib/commission';
 
 const serviceIdMap: { [key: string]: string } = {
   Regular: 'NIN_SLIP_REGULAR',
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid slipType.' }, { status: 400 });
     }
 
-    // --- 1. Get Price & Verification Data ---
+    // --- 1. Get Data ---
     const [service, verification] = await Promise.all([
       prisma.service.findUnique({ where: { id: serviceId } }),
       prisma.ninVerification.findUnique({
@@ -45,54 +45,66 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid or expired verification ID.' }, { status: 404 });
     }
 
-    // --- 2. Set Price (Standardized to Default Agent Price) ---
-    const price = new Decimal(service.defaultAgentPrice);
-    
-    // --- 3. Check Wallet ---
-    const wallet = await prisma.wallet.findUnique({
-      where: { userId: user.id },
+    // --- 2. CHECK FOR PREVIOUS PAYMENT (REPRINT LOGIC) ---
+    // We check if a COMPLETED transaction already exists for this exact verification & service type.
+    const existingTransaction = await prisma.transaction.findFirst({
+      where: {
+        userId: user.id,
+        serviceId: serviceId,
+        verificationId: verificationId,
+        status: 'COMPLETED',
+        type: 'SERVICE_CHARGE' // Ensure it was a charge, not a refund
+      }
     });
 
-    if (!wallet || wallet.balance.lessThan(price)) {
-      return NextResponse.json({ error: 'Insufficient funds for this slip.' }, { status: 402 });
-    }
+    const isReprint = !!existingTransaction;
 
-    const priceAsString = price.toString();
+    // --- 3. Process Charge ONLY if NOT a reprint ---
+    if (!isReprint) {
+        
+        const price = new Decimal(service.defaultAgentPrice);
+        const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
 
-    // --- 4. Execute Transaction ---
-    await prisma.$transaction(async (tx) => {
-      // a) Charge User Wallet
-      await tx.wallet.update({
-        where: { userId: user.id },
-        data: { balance: { decrement: priceAsString } },
-      });
+        if (!wallet || wallet.balance.lessThan(price)) {
+          return NextResponse.json({ error: 'Insufficient funds.' }, { status: 402 });
+        }
 
-      // b) PROCESS COMMISSION (The Definite Fix)
-      // This calculates and credits the aggregator instantly
-      await processCommission(tx, user.id, service.id);
+        const priceAsString = price.toString();
 
-      // c) Log Transaction
-      await tx.transaction.create({
-        data: {
-          userId: user.id,
-          serviceId: service.id,
-          type: 'SERVICE_CHARGE',
-          amount: price.negated(),
-          description: `${service.name} (${(verification.data as any).nin})`,
-          reference: `NIN-SLIP-${Date.now()}`,
-          status: 'COMPLETED',
-          verificationId: verification.id, // Link the transaction
-        },
-      });
-    });
+        await prisma.$transaction(async (tx) => {
+          // a) Charge User
+          await tx.wallet.update({
+            where: { userId: user.id },
+            data: { balance: { decrement: priceAsString } },
+          });
 
-    // --- 5. Generate the PDF ---
+          // b) Pay Commission (ONLY ON FIRST PURCHASE)
+          await processCommission(tx, user.id, service.id);
+
+          // c) Log Transaction
+          await tx.transaction.create({
+            data: {
+              userId: user.id,
+              serviceId: service.id,
+              type: 'SERVICE_CHARGE',
+              amount: price.negated(),
+              description: `${service.name} (${(verification.data as any).nin})`,
+              reference: `NIN-SLIP-${Date.now()}`,
+              status: 'COMPLETED',
+              verificationId: verification.id, 
+            },
+          });
+        });
+    } 
+    // else { console.log("Reprint detected. Skipping charge & commission."); }
+
+    // --- 4. Generate the PDF (Always happens) ---
     const pdfBuffer = await generateNinSlipPdf(
       slipType,
       verification.data as any
     );
 
-    // --- 6. Send the PDF file back ---
+    // --- 5. Send PDF ---
     return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
@@ -103,21 +115,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("NIN Slip Generation Error:", error); 
-    
-    let errorMessage = "An internal server error occurred.";
-    if (error.message) {
-      errorMessage = error.message;
-    } else if (error.toString) {
-      errorMessage = error.toString();
-    }
-    
-    if (error.code === 'ENOENT') {
-      errorMessage = "Service configuration error: Missing required template files. Please contact support.";
-    }
-
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "An internal server error occurred." }, { status: 500 });
   }
 }
