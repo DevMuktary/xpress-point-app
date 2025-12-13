@@ -12,9 +12,9 @@ export default async function AdminTransactionsPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // 1. Fetch Last 100 Transactions (Global)
+  // 1. Fetch Transactions (Increased Limit)
   const transactions = await prisma.transaction.findMany({
-    take: 100,
+    take: 500, // <--- INCREASED FROM 100 TO 500
     orderBy: { createdAt: 'desc' },
     include: {
       user: {
@@ -56,7 +56,7 @@ export default async function AdminTransactionsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transaction Log</h1>
-          <p className="text-sm text-gray-500">View all financial activities across the platform.</p>
+          <p className="text-sm text-gray-500">View recent 500 financial activities across the platform.</p>
         </div>
       </div>
 
