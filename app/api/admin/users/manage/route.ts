@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- ACTION: DELETE USER (ROBUST FIX) ---
+    // --- ACTION: DELETE USER (ROBUST + 30s TIMEOUT) ---
     if (action === 'DELETE_USER') {
       if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
 
@@ -112,26 +112,24 @@ export async function POST(request: Request) {
         const whereUser = { userId: userId };
 
         // 1. Unlink Downlines (Important: Do this before deleting the aggregator)
-        // If this user is an Aggregator, set their agents' aggregatorId to null
         await tx.user.updateMany({ 
           where: { aggregatorId: userId }, 
           data: { aggregatorId: null } 
         });
         
-        // 2. Delete BVN Results (Linked by Agent Code, not User ID)
+        // 2. Delete BVN Results (Linked by Agent Code)
         if (userToDelete?.agentCode) {
            await tx.bvnEnrollmentResult.deleteMany({ where: { agentCode: userToDelete.agentCode } });
         }
 
         // 3. Delete NextAuth / Auth Tables 
-        // (CRITICAL: These often cause the foreign key error. Wrapping in try/catch in case tables are named differently or unused)
         try {
           // @ts-ignore
           await tx.account.deleteMany({ where: whereUser });
           // @ts-ignore
           await tx.session.deleteMany({ where: whereUser });
         } catch (e) {
-          // Ignore if these tables don't exist in your schema
+          // Ignore if these tables don't exist
         }
 
         // 4. Delete Financials & Logs
@@ -142,7 +140,7 @@ export async function POST(request: Request) {
         await tx.pendingAccountChange.deleteMany({ where: whereUser });
         await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); 
         
-        // 5. Delete Service Requests (All types)
+        // 5. Delete Service Requests (The heavy data)
         await tx.personalizationRequest.deleteMany({ where: whereUser });
         await tx.ipeRequest.deleteMany({ where: whereUser });
         await tx.validationRequest.deleteMany({ where: whereUser });
@@ -164,23 +162,26 @@ export async function POST(request: Request) {
         await tx.otp.deleteMany({ where: whereUser });
         await tx.passwordResetToken.deleteMany({ where: whereUser });
         
-        // Handle Chat: Attempt to delete where user is sender OR receiver to be safe
         try {
           await tx.chatMessage.deleteMany({
             where: {
               OR: [
                 { userId: userId }, 
-                // { receiverId: userId } // Uncomment if your schema has receiverId
+                // { receiverId: userId } // Uncomment if needed
               ]
             }
           });
         } catch (e) {
-          // Fallback if OR syntax fails due to schema strictness
           await tx.chatMessage.deleteMany({ where: { userId: userId } });
         }
 
         // 7. Finally, Delete the User
         await tx.user.delete({ where: { id: userId } });
+      }, 
+      // --- TIMEOUT CONFIGURATION ---
+      {
+        maxWait: 10000, // Max wait to connect (10s)
+        timeout: 30000  // Max time for transaction to finish (30s)
       });
 
       return NextResponse.json({ success: true, message: 'User deleted successfully.' });
@@ -230,14 +231,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (error: any) {
-    // Enhanced Error Logging to help identify specific table blockers
     console.error("Admin Manage Error:", error);
     
-    // Check for Prisma foreign key error code
     if (error.code === 'P2003') {
       return NextResponse.json({ 
         error: `Delete Failed: Data still exists in a linked table. (Field: ${error.meta?.field_name || 'unknown'})` 
       }, { status: 500 });
+    }
+    
+    // Handle Timeout Error specifically
+    if (error.code === 'P2028') {
+      return NextResponse.json({
+        error: "Delete Failed: Operation timed out. The user has too much data. Try deleting their requests manually first."
+      }, { status: 504 });
     }
 
     return NextResponse.json({ error: error.message || "Operation failed" }, { status: 500 });
