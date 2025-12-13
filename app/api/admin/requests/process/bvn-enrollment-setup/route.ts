@@ -28,50 +28,55 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     }
 
-    // We use a transaction to ensure DB consistency
+    // Run in a transaction
     await prisma.$transaction(async (tx) => {
       
-      let newStatus = 'PENDING'; // Default fallback
+      let newStatus = 'PENDING';
       let newStatusMessage = note;
 
+      // --- DETERMINE NEW STATUS ---
       if (action === 'PROCESSING') {
         newStatus = 'PROCESSING';
         newStatusMessage = 'Processing... ' + (note || '');
-      } else if (action === 'COMPLETED') { // <--- APPROVED maps to COMPLETED here
+      } 
+      else if (action === 'COMPLETED' || action === 'APPROVED') { // Handle both
         newStatus = 'COMPLETED';
         newStatusMessage = note || 'Setup Successful. Check email for credentials.';
         
         // Save Agent Code if provided
-        if (agentCode) {
-           // We might want to save this to the User's profile or the Request
-           // For now, let's assume we update the User's agentCode if it's empty
-           if (!requestItem.user.agentCode) {
-             await tx.user.update({
-               where: { id: requestItem.userId },
-               data: { agentCode: agentCode }
-             });
-           }
+        if (agentCode && !requestItem.user.agentCode) {
+           await tx.user.update({
+             where: { id: requestItem.userId },
+             data: { agentCode: agentCode }
+           });
         }
-      } else if (action === 'FAILED') { // <--- REJECTED maps to FAILED
+      } 
+      else if (action === 'FAILED' || action === 'REJECTED') { // Handle both
         newStatus = 'FAILED';
         newStatusMessage = note || 'Setup Failed';
       }
 
-      // 1. Update Request Status
+      // --- 1. UPDATE REQUEST STATUS (CRITICAL) ---
       await tx.bvnRequest.update({
         where: { id: requestId },
         data: {
-          status: newStatus as any, // Cast to match Enum
+          status: newStatus as any, 
           statusMessage: newStatusMessage
         }
       });
 
-      // 2. Handle Commission (Only on Success)
+      // --- 2. HANDLE COMMISSION (SAFE MODE) ---
+      // We wrap this in try/catch so commission errors DO NOT rollback the status update
       if (newStatus === 'COMPLETED') {
-        await processCommission(tx, requestItem.userId, requestItem.serviceId);
+        try {
+          await processCommission(tx, requestItem.userId, requestItem.serviceId);
+        } catch (commError) {
+          console.error("Commission Error (Non-blocking):", commError);
+          // We intentionally do NOT throw error here, so the transaction succeeds
+        }
       }
 
-      // 3. Handle Refund (Only on Failure)
+      // --- 3. HANDLE REFUND ---
       if (newStatus === 'FAILED' && refund) {
           const transaction = await tx.transaction.findFirst({
             where: {
@@ -104,13 +109,12 @@ export async function POST(request: Request) {
       }
     });
 
-    // --- SEND WHATSAPP NOTIFICATION (Non-blocking) ---
+    // --- SEND WHATSAPP NOTIFICATION ---
     if (requestItem?.user?.phoneNumber) {
         let statusText = action;
-        if (action === 'COMPLETED') statusText = 'COMPLETED (Successful)';
-        if (action === 'FAILED') statusText = 'FAILED (Please check dashboard)';
+        if (action === 'COMPLETED' || action === 'APPROVED') statusText = 'COMPLETED (Successful)';
+        if (action === 'FAILED' || action === 'REJECTED') statusText = 'FAILED (Please check dashboard)';
         
-        // We don't await this so it doesn't block the UI response
         sendStatusNotification(
             requestItem.user.phoneNumber, 
             "BVN Enrollment Setup", 
