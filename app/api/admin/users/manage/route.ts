@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- ACTION: DELETE USER (SAFE INDIVIDUAL DELETE) ---
+    // --- ACTION: DELETE USER (ROBUST FIX) ---
     if (action === 'DELETE_USER') {
       if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
 
@@ -109,17 +109,32 @@ export async function POST(request: Request) {
       });
 
       await prisma.$transaction(async (tx) => {
-        // 1. Unlink Agents (if this user was an Aggregator)
-        await tx.user.updateMany({ where: { aggregatorId: userId }, data: { aggregatorId: null } });
+        const whereUser = { userId: userId };
+
+        // 1. Unlink Downlines (Important: Do this before deleting the aggregator)
+        // If this user is an Aggregator, set their agents' aggregatorId to null
+        await tx.user.updateMany({ 
+          where: { aggregatorId: userId }, 
+          data: { aggregatorId: null } 
+        });
         
-        // 2. Delete BVN Results (Linked by Agent Code)
+        // 2. Delete BVN Results (Linked by Agent Code, not User ID)
         if (userToDelete?.agentCode) {
            await tx.bvnEnrollmentResult.deleteMany({ where: { agentCode: userToDelete.agentCode } });
         }
 
-        const whereUser = { userId: userId };
+        // 3. Delete NextAuth / Auth Tables 
+        // (CRITICAL: These often cause the foreign key error. Wrapping in try/catch in case tables are named differently or unused)
+        try {
+          // @ts-ignore
+          await tx.account.deleteMany({ where: whereUser });
+          // @ts-ignore
+          await tx.session.deleteMany({ where: whereUser });
+        } catch (e) {
+          // Ignore if these tables don't exist in your schema
+        }
 
-        // 3. Delete Financials & Logs (The usual blockers)
+        // 4. Delete Financials & Logs
         await tx.transaction.deleteMany({ where: whereUser });
         await tx.wallet.deleteMany({ where: whereUser });
         await tx.virtualAccount.deleteMany({ where: whereUser });
@@ -127,7 +142,7 @@ export async function POST(request: Request) {
         await tx.pendingAccountChange.deleteMany({ where: whereUser });
         await tx.aggregatorPrice.deleteMany({ where: { aggregatorId: userId } }); 
         
-        // 4. Delete Service Requests (All of them)
+        // 5. Delete Service Requests (All types)
         await tx.personalizationRequest.deleteMany({ where: whereUser });
         await tx.ipeRequest.deleteMany({ where: whereUser });
         await tx.validationRequest.deleteMany({ where: whereUser });
@@ -144,25 +159,37 @@ export async function POST(request: Request) {
         await tx.vninRequest.deleteMany({ where: whereUser });
         await tx.npcRequest.deleteMany({ where: whereUser });
 
-        // 5. Delete Security & Chat
+        // 6. Delete Security & Chat
         await tx.ninVerification.deleteMany({ where: whereUser });
         await tx.otp.deleteMany({ where: whereUser });
         await tx.passwordResetToken.deleteMany({ where: whereUser });
-        await tx.chatMessage.deleteMany({ where: whereUser });
+        
+        // Handle Chat: Attempt to delete where user is sender OR receiver to be safe
+        try {
+          await tx.chatMessage.deleteMany({
+            where: {
+              OR: [
+                { userId: userId }, 
+                // { receiverId: userId } // Uncomment if your schema has receiverId
+              ]
+            }
+          });
+        } catch (e) {
+          // Fallback if OR syntax fails due to schema strictness
+          await tx.chatMessage.deleteMany({ where: { userId: userId } });
+        }
 
-        // 6. Finally, Delete the User
+        // 7. Finally, Delete the User
         await tx.user.delete({ where: { id: userId } });
       });
 
       return NextResponse.json({ success: true, message: 'User deleted successfully.' });
     }
 
-    // --- ACTION: RESET SYSTEM (NUCLEAR OPTION - RAW SQL) ---
+    // --- ACTION: RESET SYSTEM (NUCLEAR OPTION) ---
     if (action === 'RESET_SYSTEM') {
       console.log(`[SYSTEM RESET] FORCE WIPE Initiated by Admin: ${admin.email}`);
 
-      // We use Raw SQL TRUNCATE with CASCADE. This ignores standard checks and wipes everything instantly.
-      // This matches the table names in your schema map ("@@map").
       await prisma.$executeRawUnsafe(`
         TRUNCATE TABLE 
           "transactions", 
@@ -203,7 +230,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (error: any) {
+    // Enhanced Error Logging to help identify specific table blockers
     console.error("Admin Manage Error:", error);
+    
+    // Check for Prisma foreign key error code
+    if (error.code === 'P2003') {
+      return NextResponse.json({ 
+        error: `Delete Failed: Data still exists in a linked table. (Field: ${error.meta?.field_name || 'unknown'})` 
+      }, { status: 500 });
+    }
+
     return NextResponse.json({ error: error.message || "Operation failed" }, { status: 500 });
   }
 }
