@@ -13,11 +13,11 @@ export default async function AdminUsersPage() {
   }
 
   // 1. Fetch Users SORTED BY BALANCE (Highest First)
-  // Also include the count of 'agents' (downlines)
+  // Also include the count of 'agents' (downlines) for Aggregators
   const users = await prisma.user.findMany({
     orderBy: {
       wallet: {
-        balance: 'desc' // <--- SORT BY BALANCE
+        balance: 'desc' // <--- PRIORITIZE BY BALANCE
       }
     },
     include: {
@@ -29,7 +29,7 @@ export default async function AdminUsersPage() {
           businessName: true
         }
       },
-      _count: { // <--- COUNT AGENTS
+      _count: { // <--- Count their downline agents
         select: { agents: true }
       }
     }
@@ -45,13 +45,14 @@ export default async function AdminUsersPage() {
     role: u.role,
     isIdentityVerified: u.isIdentityVerified,
     createdAt: u.createdAt.toISOString(),
+    // Handle cases where wallet might be missing (though unlikely)
     walletBalance: u.wallet?.balance.toString() || "0.00",
     commissionBalance: u.wallet?.commissionBalance.toString() || "0.00",
     aggregatorName: u.aggregator 
       ? `${u.aggregator.firstName} ${u.aggregator.lastName}` 
       : null,
     businessName: u.businessName,
-    agentCount: u._count.agents // <--- PASS COUNT TO CLIENT
+    agentCount: u._count.agents // <--- Pass the count
   }));
 
   return (
@@ -66,7 +67,7 @@ export default async function AdminUsersPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-sm text-gray-500">View and manage Agents and Aggregators.</p>
+          <p className="text-sm text-gray-500">View and manage Agents and Aggregators (Sorted by Balance).</p>
         </div>
       </div>
 
