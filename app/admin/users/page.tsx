@@ -12,16 +12,8 @@ export default async function AdminUsersPage() {
     redirect('/login-admin?error=Access+Denied');
   }
 
-  // 1. Fetch ONLY AGENTS and sort by their balance
+  // 1. Fetch Users (We will sort this manually in Step 2 to be safe)
   const users = await prisma.user.findMany({
-    where: {
-      role: 'AGENT' // <--- CRITICAL FIX: Only fetch Agents
-    },
-    orderBy: {
-      wallet: {
-        balance: 'desc' // Now this sorts the AGENTS by their balance
-      }
-    },
     include: {
       wallet: true,
       aggregator: {
@@ -37,24 +29,30 @@ export default async function AdminUsersPage() {
     }
   });
 
-  // 2. Serialize Data
-  const serializedUsers = users.map(u => ({
-    id: u.id,
-    firstName: u.firstName,
-    lastName: u.lastName,
-    email: u.email,
-    phoneNumber: u.phoneNumber,
-    role: u.role,
-    isIdentityVerified: u.isIdentityVerified,
-    createdAt: u.createdAt.toISOString(),
-    walletBalance: u.wallet?.balance.toString() || "0.00",
-    commissionBalance: u.wallet?.commissionBalance.toString() || "0.00",
-    aggregatorName: u.aggregator 
-      ? `${u.aggregator.firstName} ${u.aggregator.lastName}` 
-      : null,
-    businessName: u.businessName,
-    agentCount: u._count.agents
-  }));
+  // 2. Serialize AND Sort in JavaScript
+  // This guarantees accurate sorting even if the DB field is a String or if wallets are missing
+  const serializedUsers = users
+    .map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      phoneNumber: u.phoneNumber,
+      role: u.role,
+      isIdentityVerified: u.isIdentityVerified,
+      createdAt: u.createdAt.toISOString(),
+      // Safely get balance as a Number for sorting, String for display
+      _sortBalance: u.wallet?.balance ? Number(u.wallet.balance) : 0, 
+      walletBalance: u.wallet?.balance.toString() || "0.00",
+      commissionBalance: u.wallet?.commissionBalance.toString() || "0.00",
+      aggregatorName: u.aggregator 
+        ? `${u.aggregator.firstName} ${u.aggregator.lastName}` 
+        : null,
+      businessName: u.businessName,
+      agentCount: u._count.agents
+    }))
+    // Perform the sort here: Highest Balance First
+    .sort((a, b) => b._sortBalance - a._sortBalance);
 
   return (
     <div className="w-full max-w-7xl mx-auto">
@@ -67,8 +65,8 @@ export default async function AdminUsersPage() {
           <UserGroupIcon className="h-8 w-8" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Agent Management</h1>
-          <p className="text-sm text-gray-500">View and manage Agents (Sorted by Highest Balance).</p>
+          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <p className="text-sm text-gray-500">View and manage Agents and Aggregators (Sorted by Balance).</p>
         </div>
       </div>
 
