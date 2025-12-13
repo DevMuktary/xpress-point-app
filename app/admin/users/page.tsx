@@ -13,30 +13,38 @@ export default async function AdminUsersPage() {
   }
 
   // 1. Fetch Users SORTED BY BALANCE (Highest First)
-  // Also include the count of 'agents' (downlines) for Aggregators
   const users = await prisma.user.findMany({
-    orderBy: {
-      wallet: {
-        balance: 'desc' // <--- PRIORITIZE BY BALANCE
-      }
-    },
+    // Optional: If you only want to see Agents/Aggregators and hide other Admins:
+    // where: {
+    //   role: { in: ['AGENT', 'AGGREGATOR'] }
+    // },
+    orderBy: [
+      {
+        wallet: {
+          balance: 'desc', // Primary Sort: Highest Balance First
+        },
+      },
+      {
+        firstName: 'asc', // Secondary Sort: Alphabetical if balances match
+      },
+    ],
     include: {
       wallet: true,
       aggregator: {
         select: {
           firstName: true,
           lastName: true,
-          businessName: true
-        }
+          businessName: true,
+        },
       },
-      _count: { // <--- Count their downline agents
-        select: { agents: true }
-      }
-    }
+      _count: {
+        select: { agents: true },
+      },
+    },
   });
 
   // 2. Serialize Data
-  const serializedUsers = users.map(u => ({
+  const serializedUsers = users.map((u) => ({
     id: u.id,
     firstName: u.firstName,
     lastName: u.lastName,
@@ -45,21 +53,24 @@ export default async function AdminUsersPage() {
     role: u.role,
     isIdentityVerified: u.isIdentityVerified,
     createdAt: u.createdAt.toISOString(),
-    // Handle cases where wallet might be missing (though unlikely)
-    walletBalance: u.wallet?.balance.toString() || "0.00",
-    commissionBalance: u.wallet?.commissionBalance.toString() || "0.00",
-    aggregatorName: u.aggregator 
-      ? `${u.aggregator.firstName} ${u.aggregator.lastName}` 
+    // Handle cases where wallet might be missing (safeguard)
+    walletBalance: u.wallet?.balance.toString() || '0.00',
+    commissionBalance: u.wallet?.commissionBalance.toString() || '0.00',
+    aggregatorName: u.aggregator
+      ? `${u.aggregator.firstName} ${u.aggregator.lastName}`
       : null,
     businessName: u.businessName,
-    agentCount: u._count.agents // <--- Pass the count
+    agentCount: u._count.agents,
   }));
 
   return (
     <div className="w-full max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/admin/dashboard" className="text-gray-500 hover:text-gray-900">
+        <Link
+          href="/admin/dashboard"
+          className="text-gray-500 hover:text-gray-900"
+        >
           <ChevronLeftIcon className="h-6 w-6" />
         </Link>
         <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
@@ -67,7 +78,9 @@ export default async function AdminUsersPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-sm text-gray-500">View and manage Agents and Aggregators (Sorted by Balance).</p>
+          <p className="text-sm text-gray-500">
+            View and manage Agents and Aggregators (Sorted by Highest Balance).
+          </p>
         </div>
       </div>
 
