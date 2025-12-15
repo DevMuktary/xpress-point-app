@@ -2,26 +2,25 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Loading from '@/app/loading';
-import { BanknotesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import { VirtualAccount } from '@prisma/client';
+import SafeImage from '@/components/SafeImage'; // Using our safe image component
 
 type Props = {
   existingAccounts: VirtualAccount[];
 };
 
-// This component shows buttons for accounts that *don't* exist yet
 export default function GenerateAccountControls({ existingAccounts }: Props) {
   const router = useRouter(); 
-  const [isLoading, setIsLoading] = useState<string | null>(null); // 'palmpay' or 'opay'
+  const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Check which accounts already exist
   const hasPalmpay = existingAccounts.some(acc => acc.bankName === 'Palmpay');
-  const hasOpay = existingAccounts.some(acc => acc.bankName === 'Opay'); // Assuming 'Opay' is the name
+  // const hasOpay = existingAccounts.some(acc => acc.bankName === 'Opay'); // OPay Disabled
 
-  // If both accounts exist, show nothing.
-  if (hasPalmpay && hasOpay) {
+  // If PalmPay exists, we show nothing (since OPay is disabled for now)
+  if (hasPalmpay) {
     return null;
   }
 
@@ -30,11 +29,10 @@ export default function GenerateAccountControls({ existingAccounts }: Props) {
     setError(null);
 
     try {
-      // Call our new "create" API with the specific bank code
       const response = await fetch('/api/wallet/create-virtual-accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bankCode }) // Send the bank code
+        body: JSON.stringify({ bankCode })
       });
 
       const data = await response.json();
@@ -42,7 +40,6 @@ export default function GenerateAccountControls({ existingAccounts }: Props) {
         throw new Error(data.error || 'Account generation failed.');
       }
 
-      // Success! Refresh the page to show the new account
       router.refresh();
 
     } catch (err: any) {
@@ -53,55 +50,62 @@ export default function GenerateAccountControls({ existingAccounts }: Props) {
   };
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-lg">
-      <div className="flex items-center gap-4">
-        <BanknotesIcon className="h-10 w-10 text-blue-500" />
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            Generate Your Accounts
-          </h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Click a button to generate your personal account number for that bank.
-          </p>
-        </div>
+    <div className="bg-white rounded-2xl p-1 shadow-sm border border-gray-100 overflow-hidden">
+      <div className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <PlusCircleIcon className="h-6 w-6 text-purple-600" />
+          Create Account
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Generate a dedicated account number to fund your wallet.
+        </p>
       </div>
         
-      {error && <p className="mt-4 text-sm text-red-600 text-center">{error}</p>}
+      {error && (
+        <div className="p-4 bg-red-50 text-red-600 text-sm font-medium text-center border-b border-red-100">
+          {error}
+        </div>
+      )}
         
-      {/* This is your new 2-button layout */}
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        
-        {/* PalmPay Button */}
+      <div className="p-5">
+        {/* PalmPay Button (Hero Style) */}
         {!hasPalmpay && (
           <button
-            onClick={() => handleCreateAccount('20946', 'palmpay')} // Palmpay Code
+            onClick={() => handleCreateAccount('20946', 'palmpay')}
             disabled={isLoading !== null}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700 disabled:opacity-50"
+            className="group relative w-full overflow-hidden rounded-xl bg-[#673AB7] p-4 text-white shadow-lg transition-all hover:bg-[#5E35B1] hover:shadow-xl disabled:opacity-70"
           >
-            {isLoading === 'palmpay' ? (
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
-            ) : (
-              <img src="/logos/palmpay.png" alt="Palmpay" className="h-5 w-5" /> // Add logo
-            )}
-            {isLoading === 'palmpay' ? 'Generating...' : 'Generate PalmPay Account'}
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                   {/* Logo or Icon */}
+                   <SafeImage src="/logos/palmpay.png" alt="P" width={24} height={24} fallbackSrc="/logos/default.png" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-lg">PalmPay</p>
+                  <p className="text-xs text-purple-200">Instant Funding</p>
+                </div>
+              </div>
+              
+              {isLoading === 'palmpay' ? (
+                <ArrowPathIcon className="h-6 w-6 animate-spin text-white/80" />
+              ) : (
+                <span className="bg-white/20 px-3 py-1 rounded-lg text-xs font-bold backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                  Generate
+                </span>
+              )}
+            </div>
+            
+            {/* Decoration */}
+            <div className="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-white/10 blur-xl"></div>
           </button>
         )}
         
-        {/* OPay Button */}
-        {!hasOpay && (
-          <button
-            onClick={() => handleCreateAccount('20897', 'opay')} // OPay Code
-            disabled={isLoading !== null}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-800 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-900 disabled:opacity-50"
-          >
-            {isLoading === 'opay' ? (
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
-            ) : (
-              <img src="/logos/opay.png" alt="OPay" className="h-5 w-5" /> // Add logo
-            )}
-            {isLoading === 'opay' ? 'Generating...' : 'Generate OPay Account'}
-          </button>
-        )}
+        {/* OPay Button (DISABLED/HIDDEN) */}
+        {/* {!hasOpay && (
+           ... OPay button code ...
+        )} 
+        */}
       </div>
     </div>
   );
