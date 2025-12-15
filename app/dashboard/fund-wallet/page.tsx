@@ -2,7 +2,7 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { InformationCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon, ShieldCheckIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 import { VirtualAccount } from '@prisma/client';
 import AccountCard from '@/components/AccountCard';
 import GenerateAccountControls from '@/components/GenerateAccountControls';
@@ -78,12 +78,12 @@ export default async function FundWalletPage() {
             <h3 className="text-lg font-bold text-gray-900">No Account Generated Yet</h3>
             <p className="text-gray-500 text-sm mb-6">Create a dedicated virtual account to start funding your wallet.</p>
             
-            {/* The Generator Component */}
+            {/* The Generator Component - Passed Correctly */}
             <GenerateAccountControls existingAccounts={virtualAccounts} />
           </div>
         )}
 
-        {/* 5. Generator (Always visible if they can generate more, e.g. if they only have 1 but can have 2) */}
+        {/* 5. Generator (Always visible if they can generate more) */}
         {virtualAccounts.length > 0 && (
            <div className="mt-8 pt-8 border-t border-gray-100">
              <GenerateAccountControls existingAccounts={virtualAccounts} />
@@ -94,6 +94,3 @@ export default async function FundWalletPage() {
     </div>
   );
 }
-
-// Icon for empty state
-import { BuildingLibraryIcon } from '@heroicons/react/24/outline';
