@@ -2,7 +2,7 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { WalletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { VirtualAccount } from '@prisma/client';
 import AccountCard from '@/components/AccountCard';
 import GenerateAccountControls from '@/components/GenerateAccountControls';
@@ -25,62 +25,75 @@ export default async function FundWalletPage() {
   const virtualAccounts: VirtualAccount[] = await getVirtualAccounts(user.id);
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8">
+    <div className="w-full max-w-2xl mx-auto px-4 py-6">
       
-      {/* Header Section */}
-      <div className="flex flex-col items-center justify-center text-center mb-10">
-        <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-          <WalletIcon className="h-8 w-8 text-blue-600" />
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900">Fund Your Wallet</h1>
-        <p className="mt-2 text-gray-600 max-w-md">
-          Transfer money to your dedicated account number below and your wallet will be credited instantly.
-        </p>
+      {/* 1. Page Title */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Fund Wallet</h1>
+        <p className="text-gray-500 text-sm">Transfer to your dedicated account below to top up instantly.</p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
-        
-        {/* Left Column: Generator / Info */}
-        <div className="space-y-6">
-           {/* Component to Generate New Accounts */}
-           <GenerateAccountControls existingAccounts={virtualAccounts} />
-           
-           <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-             <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
-               <ArrowPathIcon className="h-5 w-5"/> Auto-Credit System
-             </h3>
-             <p className="text-sm text-blue-700 leading-relaxed">
-               This is an automated system. Any transfer made to the account number generated will reflect in your wallet immediately.
-             </p>
-           </div>
+      {/* 2. Important Notice (The "No Withdraw" Warning) */}
+      <div className="mb-8 flex items-start gap-4 rounded-xl bg-orange-50 p-4 border border-orange-100">
+        <InformationCircleIcon className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <h3 className="text-sm font-bold text-orange-900">Important Policy</h3>
+          <p className="mt-1 text-sm text-orange-800 leading-relaxed">
+            Funds deposited into this wallet are strictly for service payments. 
+            <span className="font-bold ml-1">Money cannot be withdrawn back to your bank account.</span> 
+            Please ensure you only fund what you plan to use.
+          </p>
         </div>
+      </div>
 
-        {/* Right Column: Active Accounts List */}
-        <div className="space-y-4">
-          {virtualAccounts.length > 0 ? (
-            <>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                Active Deposit Accounts
-              </h2>
-              {virtualAccounts.map((account) => (
+      <div className="space-y-8">
+        
+        {/* 3. The Account Card (Hero Section) */}
+        {virtualAccounts.length > 0 ? (
+          <div>
+            {virtualAccounts.map((account) => (
+              <div key={account.id} className="mb-6">
                 <AccountCard
-                  key={account.id}
                   bankName={account.bankName}
                   accountNumber={account.accountNumber}
                   accountName={account.accountName}
                 />
-              ))}
-            </>
-          ) : (
-            // Empty State (if no accounts yet)
-            <div className="h-full flex flex-col items-center justify-center p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-center">
-              <p className="text-gray-500 font-medium">No accounts generated yet.</p>
-              <p className="text-sm text-gray-400">Click the button to create one.</p>
+              </div>
+            ))}
+            
+            {/* Trust Badges */}
+            <div className="flex items-center justify-center gap-6 text-xs text-gray-400 mt-4">
+              <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Secure Transfer</span>
+              <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Instant Credit</span>
+              <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Automated</span>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          
+          /* 4. Empty State / Generator */
+          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
+            <div className="mx-auto h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+              <BuildingLibraryIcon className="h-8 w-8 text-blue-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">No Account Generated Yet</h3>
+            <p className="text-gray-500 text-sm mb-6">Create a dedicated virtual account to start funding your wallet.</p>
+            
+            {/* The Generator Component */}
+            <GenerateAccountControls existingAccounts={virtualAccounts} />
+          </div>
+        )}
+
+        {/* 5. Generator (Always visible if they can generate more, e.g. if they only have 1 but can have 2) */}
+        {virtualAccounts.length > 0 && (
+           <div className="mt-8 pt-8 border-t border-gray-100">
+             <GenerateAccountControls existingAccounts={virtualAccounts} />
+           </div>
+        )}
 
       </div>
     </div>
   );
 }
+
+// Icon for empty state
+import { BuildingLibraryIcon } from '@heroicons/react/24/outline';
