@@ -2,12 +2,12 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { BanknotesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { WalletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { VirtualAccount } from '@prisma/client';
 import AccountCard from '@/components/AccountCard';
 import GenerateAccountControls from '@/components/GenerateAccountControls';
 
-// Helper function to get user's virtual accounts
+// Helper to get user's virtual accounts
 async function getVirtualAccounts(userId: string) {
   const accounts = await prisma.virtualAccount.findMany({
     where: { userId: userId },
@@ -22,50 +22,46 @@ export default async function FundWalletPage() {
     redirect('/login');
   }
 
-  // Always fetch accounts, regardless of verification status
   const virtualAccounts: VirtualAccount[] = await getVirtualAccounts(user.id);
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Fund Wallet</h1>
-
-      <div className="space-y-6">
-        <div className="rounded-lg bg-red-50 p-4 border border-red-200">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-bold text-red-800">
-                Important Notice
-              </h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>
-                  A <span className="font-bold">₦30 fee</span> will be deducted from each deposit.
-                  Money deposited into your wallet cannot be withdrawn to your bank account.
-                </p>
-              </div>
-            </div>
-          </div>
+    <div className="w-full max-w-4xl mx-auto px-4 py-8">
+      
+      {/* Header Section */}
+      <div className="flex flex-col items-center justify-center text-center mb-10">
+        <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+          <WalletIcon className="h-8 w-8 text-blue-600" />
         </div>
-        
-        {/* Component to Generate New Accounts */}
-        <GenerateAccountControls 
-          existingAccounts={virtualAccounts} 
-        />
+        <h1 className="text-3xl font-bold text-gray-900">Fund Your Wallet</h1>
+        <p className="mt-2 text-gray-600 max-w-md">
+          Transfer money to your dedicated account number below and your wallet will be credited instantly.
+        </p>
+      </div>
 
-        {/* List Existing Accounts */}
-        {virtualAccounts.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Your Personal Account Numbers
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Transfer to any of these accounts. Your wallet will be credited
-              automatically.
-            </p>
-            
-            <div className="space-y-4 mt-4">
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
+        
+        {/* Left Column: Generator / Info */}
+        <div className="space-y-6">
+           {/* Component to Generate New Accounts */}
+           <GenerateAccountControls existingAccounts={virtualAccounts} />
+           
+           <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+             <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+               <ArrowPathIcon className="h-5 w-5"/> Auto-Credit System
+             </h3>
+             <p className="text-sm text-blue-700 leading-relaxed">
+               This is an automated system. Any transfer made to the account number generated will reflect in your wallet immediately.
+             </p>
+           </div>
+        </div>
+
+        {/* Right Column: Active Accounts List */}
+        <div className="space-y-4">
+          {virtualAccounts.length > 0 ? (
+            <>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Active Deposit Accounts
+              </h2>
               {virtualAccounts.map((account) => (
                 <AccountCard
                   key={account.id}
@@ -74,9 +70,16 @@ export default async function FundWalletPage() {
                   accountName={account.accountName}
                 />
               ))}
+            </>
+          ) : (
+            // Empty State (if no accounts yet)
+            <div className="h-full flex flex-col items-center justify-center p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-center">
+              <p className="text-gray-500 font-medium">No accounts generated yet.</p>
+              <p className="text-sm text-gray-400">Click the button to create one.</p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
       </div>
     </div>
   );
