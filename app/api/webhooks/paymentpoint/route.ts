@@ -2,17 +2,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
-const DEPOSIT_FEE = new Decimal(30); // The ₦30 charge
+// const DEPOSIT_FEE = new Decimal(30); // REMOVED
 
 export async function POST(request: Request) {
   try {
     // 1. Get Raw Body
     const rawBody = await request.text();
     
-    // --- FIX: SKIPPING SIGNATURE VERIFICATION ---
-    // Since we don't have a webhook secret, we proceed directly.
-    // --------------------------------------------
-
     // 2. Parse the JSON
     let payload;
     try {
@@ -24,9 +20,7 @@ export async function POST(request: Request) {
     console.log("Webhook received:", JSON.stringify(payload));
 
     // 3. Check Transaction Status
-    // Documentation says: "notification_status": "payment_successful"
     if (payload.notification_status !== 'payment_successful') {
-      // We only care about successful payments. Return 200 to acknowledge.
       return NextResponse.json({ message: 'Ignored: Not a success notification' }, { status: 200 });
     }
 
@@ -54,21 +48,19 @@ export async function POST(request: Request) {
 
     if (!user) {
       console.error(`Webhook Error: User with email ${customerEmail} not found.`);
-      // Return 200 so Payment Point stops retrying for an invalid user
       return NextResponse.json({ message: 'User not found' }, { status: 200 });
     }
 
-    // 6. Calculate Amount to Credit (Amount Paid - ₦30 Fee)
+    // 6. Calculate Amount to Credit
+    // --- FIX: NO DEDUCTION ---
     const amountPaid = new Decimal(amountPaidVal);
-    const amountToCredit = amountPaid.minus(DEPOSIT_FEE);
+    const amountToCredit = amountPaid; // Direct credit, no fees
 
     if (amountToCredit.isNegative() || amountToCredit.isZero()) {
-      console.error(`Webhook Error: Amount too small after fee deduction. Paid: ${amountPaid}, Fee: ${DEPOSIT_FEE}`);
-      return NextResponse.json({ message: 'Amount too small' }, { status: 200 });
+      return NextResponse.json({ message: 'Amount invalid' }, { status: 200 });
     }
 
     // 7. Process Transaction (Fund Wallet)
-    // Use string for Decimal inputs in Prisma
     const creditAmountString = amountToCredit.toString();
 
     await prisma.$transaction([
@@ -83,8 +75,8 @@ export async function POST(request: Request) {
         data: {
           userId: user.id,
           type: 'WALLET_FUNDING',
-          amount: creditAmountString, // Positive amount for funding
-          description: `Wallet funding via Payment Point (₦${amountPaid} - ₦30 Fee)`,
+          amount: creditAmountString, 
+          description: `Wallet funding via Payment Point`, // Removed fee text
           reference: transactionId,
           status: 'COMPLETED'
         }
