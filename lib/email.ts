@@ -1,19 +1,19 @@
 import nodemailer from 'nodemailer';
 
 // --- Configuration ---
-// You will need to add these to your .env file
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.zoho.com';
+// These are pulled from your .env file
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.zeptomail.com'; // ZeptoMail Host
 const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
-const SMTP_USER = process.env.SMTP_USER; // Your Zoho Email Address
-const SMTP_PASS = process.env.SMTP_PASS; // Your Zoho App Password (NOT login password)
-const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
+const SMTP_USER = process.env.SMTP_USER; // This will be 'emailapikey'
+const SMTP_PASS = process.env.SMTP_PASS; // Your long API key
+const SENDER_EMAIL = process.env.SENDER_EMAIL || 'no-reply@xpresspoint.net'; // Must be a verified sender in ZeptoMail
 const SENDER_NAME = 'Xpress Point Security';
 
 // --- Create Transporter ---
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: SMTP_PORT,
-  secure: SMTP_PORT === 465, // true for 465, false for other ports
+  secure: SMTP_PORT === 465, // True for 465 (SSL), False for 587 (TLS)
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
@@ -35,11 +35,11 @@ export async function sendHtmlEmail(
 
   try {
     const info = await transporter.sendMail({
-      from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`, // Sender address
-      to: `"${toName}" <${toEmail}>`,             // List of receivers
-      subject: subject,                           // Subject line
-      text: textContent,                          // Plain text body (Important for spam prevention)
-      html: htmlContent,                          // HTML body
+      from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`, 
+      to: `"${toName}" <${toEmail}>`,             
+      subject: subject,                           
+      text: textContent,                          
+      html: htmlContent,                          
     });
 
     console.log(`Email sent successfully to ${toEmail}. Message ID: ${info.messageId}`);
