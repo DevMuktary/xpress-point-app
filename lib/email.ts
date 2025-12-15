@@ -1,31 +1,11 @@
-import nodemailer from 'nodemailer';
-
 // --- Configuration ---
-// Updated to prioritize Port 587 (TLS)
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.zeptomail.com';
-const SMTP_PORT = Number(process.env.SMTP_PORT) || 587; // Changed default to 587
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
-const SENDER_EMAIL = process.env.SENDER_EMAIL || 'no-reply@xpresspoint.net';
-const SENDER_NAME = 'Xpress Point Security';
+// Your Send Mail Token (The long password you provided)
+const ZEPTO_TOKEN = process.env.SMTP_PASS; 
+const ZEPTO_URL = "https://api.zeptomail.com/v1.1/email";
+const SENDER_EMAIL = "otp@xpresspoint.net"; 
+const SENDER_NAME = "Xpress Point Security";
 
-// --- Create Transporter (Optimized for ZeptoMail) ---
-const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: false, // Must be false for Port 587 (STARTTLS)
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS,
-  },
-  // Add these options to prevent handshake issues
-  tls: {
-    ciphers: 'SSLv3',
-    rejectUnauthorized: true, 
-  },
-});
-
-// --- Generic Function to Send Any Email (HTML + Text) ---
+// --- Generic Function to Send Any Email (Using ZeptoMail API) ---
 export async function sendHtmlEmail(
   toEmail: string,
   toName: string,
@@ -33,28 +13,55 @@ export async function sendHtmlEmail(
   htmlContent: string,
   textContent: string
 ) {
-  if (!SMTP_USER || !SMTP_PASS) {
-    console.error('CRITICAL: SMTP credentials are not set in environment variables.');
+  if (!ZEPTO_TOKEN) {
+    console.error('CRITICAL: SMTP_PASS (Zepto Token) is not set.');
     return;
   }
 
+  const payload = {
+    from: {
+      address: SENDER_EMAIL,
+      name: SENDER_NAME,
+    },
+    to: [
+      {
+        email_address: {
+          address: toEmail,
+          name: toName,
+        },
+      },
+    ],
+    subject: subject,
+    htmlbody: htmlContent,
+    textbody: textContent,
+  };
+
   try {
-    const info = await transporter.sendMail({
-      from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`, 
-      to: `"${toName}" <${toEmail}>`,             
-      subject: subject,                           
-      text: textContent,                          
-      html: htmlContent,                          
+    const response = await fetch(ZEPTO_URL, {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": `Zoho-enczapikey ${ZEPTO_TOKEN}`, // ZeptoMail Auth Format
+      },
+      body: JSON.stringify(payload),
     });
 
-    console.log(`Email sent successfully to ${toEmail}. Message ID: ${info.messageId}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Log detailed error from ZeptoMail
+      console.error("ZeptoMail API Error:", JSON.stringify(data, null, 2));
+      throw new Error(data.message || "Failed to send email via ZeptoMail API");
+    }
+
+    console.log(`Email sent successfully to ${toEmail}`);
   } catch (error: any) {
-    console.error('Error sending email via Nodemailer:', error.message);
-    // Log less verbose errors to avoid flooding logs
+    console.error("Error sending email:", error.message);
   }
 }
 
-// --- Specific Function for Account Verification ---
+// --- Specific Function for Verification ---
 export async function sendVerificationEmail(
   toEmail: string, 
   toName: string, 
@@ -80,8 +87,7 @@ ${verificationLink}
 If you did not create this account, please ignore this message.
 
 Xpress Point Team
-Lagos, Nigeria
-  `.trim();
+  United, Nations  `.trim();
 
   // 2. Professional HTML Template
   const htmlContent = `
