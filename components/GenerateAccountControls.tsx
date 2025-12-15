@@ -1,85 +1,103 @@
 "use client";
 
-import React from 'react';
-import { ClipboardDocumentIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
-import { BuildingLibraryIcon } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowPathIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import { VirtualAccount } from '@prisma/client'; // Make sure this import works
 import SafeImage from '@/components/SafeImage';
 
+// --- THIS INTERFACE MUST MATCH WHAT IS PASSED ---
 type Props = {
-  bankName: string;
-  accountNumber: string;
-  accountName: string;
+  existingAccounts: VirtualAccount[]; // This was likely missing or renamed
 };
 
-export default function AccountCard({ bankName, accountNumber, accountName }: Props) {
-  const [copied, setCopied] = React.useState(false);
+export default function GenerateAccountControls({ existingAccounts }: Props) {
+  const router = useRouter(); 
+  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(accountNumber);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Check which accounts already exist
+  const hasPalmpay = existingAccounts.some(acc => acc.bankName === 'Palmpay');
+  
+  // If PalmPay exists, we show nothing (since OPay is disabled for now)
+  if (hasPalmpay) {
+    return null;
+  }
+
+  const handleCreateAccount = async (bankCode: string, networkName: string) => {
+    setIsLoading(networkName);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/wallet/create-virtual-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bankCode })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Account generation failed.');
+      }
+
+      router.refresh();
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(null);
+    }
   };
 
-  // Determine styling based on bank
-  const isPalmPay = bankName.toLowerCase().includes('palm');
-  const bgColor = isPalmPay ? 'bg-[#673AB7]' : 'bg-green-700'; // Purple for PalmPay, Green for others
-  const bgGradient = isPalmPay 
-    ? 'bg-gradient-to-br from-[#673AB7] to-[#512DA8]' 
-    : 'bg-gradient-to-br from-green-600 to-green-800';
-
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${bgGradient} p-6 text-white shadow-xl transition-transform hover:scale-[1.01]`}>
-      
-      {/* Background Decoration */}
-      <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
-      <div className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
-
-      <div className="relative z-10">
-        {/* Header: Bank Logo & Name */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2 rounded-lg bg-white/20 px-3 py-1.5 backdrop-blur-sm">
-            <BuildingLibraryIcon className="h-4 w-4 text-white/90" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white/90">{bankName}</span>
-          </div>
-          {/* Chip Icon (Decoration) */}
-          <div className="h-8 w-10 rounded bg-gradient-to-tr from-yellow-200 to-yellow-500 opacity-80"></div>
+    <div className="bg-white rounded-2xl p-1 shadow-sm border border-gray-100 overflow-hidden">
+      <div className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <PlusCircleIcon className="h-6 w-6 text-purple-600" />
+          Create Account
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Generate a dedicated account number to fund your wallet.
+        </p>
+      </div>
+        
+      {error && (
+        <div className="p-4 bg-red-50 text-red-600 text-sm font-medium text-center border-b border-red-100">
+          {error}
         </div>
-
-        {/* Account Number Section */}
-        <div className="text-center mb-6">
-          <p className="text-xs text-white/60 uppercase tracking-widest mb-1">Account Number</p>
-          <div className="flex items-center justify-center gap-3" onClick={handleCopy}>
-            <h2 className="text-4xl font-mono font-bold tracking-widest cursor-pointer select-all">
-              {accountNumber}
-            </h2>
-            <button 
-              className="rounded-full bg-white/20 p-2 hover:bg-white/30 transition-colors"
-              title="Copy Number"
-            >
-              {copied ? (
-                <CheckCircleIcon className="h-5 w-5 text-green-300" />
+      )}
+        
+      <div className="p-5">
+        {/* PalmPay Button (Hero Style) */}
+        {!hasPalmpay && (
+          <button
+            onClick={() => handleCreateAccount('20946', 'palmpay')}
+            disabled={isLoading !== null}
+            className="group relative w-full overflow-hidden rounded-xl bg-[#673AB7] p-4 text-white shadow-lg transition-all hover:bg-[#5E35B1] hover:shadow-xl disabled:opacity-70"
+          >
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                   <SafeImage src="/logos/palmpay.png" alt="P" width={24} height={24} fallbackSrc="/logos/default.png" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-lg">PalmPay</p>
+                  <p className="text-xs text-purple-200">Instant Funding</p>
+                </div>
+              </div>
+              
+              {isLoading === 'palmpay' ? (
+                <ArrowPathIcon className="h-6 w-6 animate-spin text-white/80" />
               ) : (
-                <ClipboardDocumentIcon className="h-5 w-5 text-white" />
+                <span className="bg-white/20 px-3 py-1 rounded-lg text-xs font-bold backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                  Generate
+                </span>
               )}
-            </button>
-          </div>
-          {copied && <p className="text-xs text-green-300 mt-1 font-bold animate-pulse">Copied to clipboard!</p>}
-        </div>
-
-        {/* Footer: Account Name */}
-        <div className="flex justify-between items-end border-t border-white/10 pt-4">
-          <div>
-            <p className="text-[10px] text-white/60 uppercase">Account Name</p>
-            <p className="font-medium text-lg tracking-wide truncate max-w-[250px]">{accountName}</p>
-          </div>
-          <div className="text-right">
-             <p className="text-[10px] text-white/60 uppercase">Status</p>
-             <div className="flex items-center gap-1">
-               <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse"></span>
-               <span className="text-sm font-bold text-green-300">Active</span>
-             </div>
-          </div>
-        </div>
+            </div>
+            
+            <div className="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-white/10 blur-xl"></div>
+          </button>
+        )}
       </div>
     </div>
   );
