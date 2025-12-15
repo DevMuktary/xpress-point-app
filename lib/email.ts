@@ -1,22 +1,27 @@
 import nodemailer from 'nodemailer';
 
 // --- Configuration ---
-// These are pulled from your .env file
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.zeptomail.com'; // ZeptoMail Host
-const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
-const SMTP_USER = process.env.SMTP_USER; // This will be 'emailapikey'
-const SMTP_PASS = process.env.SMTP_PASS; // Your long API key
-const SENDER_EMAIL = process.env.SENDER_EMAIL || 'no-reply@xpresspoint.net'; // Must be a verified sender in ZeptoMail
+// Updated to prioritize Port 587 (TLS)
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.zeptomail.com';
+const SMTP_PORT = Number(process.env.SMTP_PORT) || 587; // Changed default to 587
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const SENDER_EMAIL = process.env.SENDER_EMAIL || 'no-reply@xpresspoint.net';
 const SENDER_NAME = 'Xpress Point Security';
 
-// --- Create Transporter ---
+// --- Create Transporter (Optimized for ZeptoMail) ---
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: SMTP_PORT,
-  secure: SMTP_PORT === 465, // True for 465 (SSL), False for 587 (TLS)
+  secure: false, // Must be false for Port 587 (STARTTLS)
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
+  },
+  // Add these options to prevent handshake issues
+  tls: {
+    ciphers: 'SSLv3',
+    rejectUnauthorized: true, 
   },
 });
 
@@ -43,8 +48,9 @@ export async function sendHtmlEmail(
     });
 
     console.log(`Email sent successfully to ${toEmail}. Message ID: ${info.messageId}`);
-  } catch (error) {
-    console.error('Error sending email via Nodemailer:', error);
+  } catch (error: any) {
+    console.error('Error sending email via Nodemailer:', error.message);
+    // Log less verbose errors to avoid flooding logs
   }
 }
 
