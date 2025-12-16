@@ -2,7 +2,7 @@
 // Your Send Mail Token (The long password you provided)
 const ZEPTO_TOKEN = process.env.SMTP_PASS; 
 const ZEPTO_URL = "https://api.zeptomail.com/v1.1/email";
-const SENDER_EMAIL = "otp@xpresspoint.net"; 
+const SENDER_EMAIL = "no-reply@xpresspoint.net"; 
 const SENDER_NAME = "Xpress Point Security";
 
 // --- Generic Function to Send Any Email (Using ZeptoMail API) ---
