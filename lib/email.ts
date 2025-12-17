@@ -36,8 +36,8 @@ export async function sendHtmlEmail(
     subject: subject,
     htmlbody: htmlContent,
     textbody: textContent,
-    // [FIX 1] Added List-Unsubscribe header to improve reputation score
-    additional_headers: {
+    // [FIXED] "mime_headers" is the correct key for ZeptoMail custom headers
+    mime_headers: {
       "List-Unsubscribe": `<mailto:${SENDER_EMAIL}?subject=unsubscribe>`
     }
   };
@@ -83,7 +83,7 @@ export async function sendVerificationEmail(
   const currentYear = new Date().getFullYear();
 
   // 1. Plain Text Version
-  // [FIX 2] Cleaned up footer to look professional and avoid "United, Nations" trigger
+  // Cleaned up footer to look professional and avoid spam triggers
   const textContent = `
 Welcome to Xpress Point, ${toName}!
 
@@ -149,6 +149,6 @@ www.xpresspoint.net`.trim();
 </html>
   `;
 
-  // [FIX 3] Changed subject to be less spammy
+  // Sending with a clean, low-risk subject line
   await sendHtmlEmail(toEmail, toName, 'Verify your Xpress Point account', htmlContent, textContent);
 }
