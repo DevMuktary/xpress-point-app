@@ -1,3 +1,5 @@
+// lib/email.ts
+
 // --- Configuration ---
 // Your Send Mail Token (The long password you provided)
 const ZEPTO_TOKEN = process.env.SMTP_PASS; 
@@ -34,6 +36,10 @@ export async function sendHtmlEmail(
     subject: subject,
     htmlbody: htmlContent,
     textbody: textContent,
+    // [FIX 1] Added List-Unsubscribe header to improve reputation score
+    additional_headers: {
+      "List-Unsubscribe": `<mailto:${SENDER_EMAIL}?subject=unsubscribe>`
+    }
   };
 
   try {
@@ -77,6 +83,7 @@ export async function sendVerificationEmail(
   const currentYear = new Date().getFullYear();
 
   // 1. Plain Text Version
+  // [FIX 2] Cleaned up footer to look professional and avoid "United, Nations" trigger
   const textContent = `
 Welcome to Xpress Point, ${toName}!
 
@@ -87,7 +94,7 @@ ${verificationLink}
 If you did not create this account, please ignore this message.
 
 Xpress Point Team
-  United, Nations  `.trim();
+www.xpresspoint.net`.trim();
 
   // 2. Professional HTML Template
   const htmlContent = `
@@ -142,5 +149,6 @@ Xpress Point Team
 </html>
   `;
 
-  await sendHtmlEmail(toEmail, toName, 'Action Required: Verify your email', htmlContent, textContent);
+  // [FIX 3] Changed subject to be less spammy
+  await sendHtmlEmail(toEmail, toName, 'Verify your Xpress Point account', htmlContent, textContent);
 }
