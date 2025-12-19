@@ -10,7 +10,8 @@ import {
   MapPinIcon,
   UserIcon,
   BuildingLibraryIcon,
-  ArrowPathIcon // Added for Process icon
+  ArrowPathIcon,
+  DevicePhoneMobileIcon // <--- Added Icon
 } from '@heroicons/react/24/outline';
 
 type AdminRequest = {
@@ -34,7 +35,6 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
 
   // Modal States
   const [selectedReq, setSelectedReq] = useState<AdminRequest | null>(null);
-  // Added 'PROCESSING' to the action type
   const [actionType, setActionType] = useState<'APPROVED' | 'REJECTED' | 'PROCESSING' | null>(null);
   const [adminNote, setAdminNote] = useState('');
   const [agentCode, setAgentCode] = useState(''); 
@@ -142,12 +142,27 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
            <p><strong>Bank Name:</strong> {d.bankName}</p>
            <p><strong>Account Name:</strong> {d.accountName}</p>
            
-           {/* Account Number Field */}
-           <p className="mt-1 p-1 bg-white rounded border border-blue-100 inline-block">
-             <strong>Account Number:</strong> <span className="font-mono text-lg font-bold">{d.bankAccountNumber || 'N/A'}</span>
-           </p>
+           <div className="flex flex-wrap gap-4 mt-2">
+             {/* Account Number */}
+             <div>
+               <span className="block text-xs font-bold text-gray-500 uppercase">Account Number</span>
+               <span className="block p-1.5 bg-white rounded border border-blue-100 font-mono text-lg font-bold">
+                 {d.bankAccountNumber || 'N/A'}
+               </span>
+             </div>
+
+             {/* --- NEW: Parkway Wallet Number --- */}
+             <div>
+               <span className="block text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                 <DevicePhoneMobileIcon className="h-3 w-3" /> Parkway Wallet
+               </span>
+               <span className="block p-1.5 bg-white rounded border border-blue-100 font-mono text-lg font-bold text-purple-700">
+                 {d.parkwayWalletNumber || 'N/A'}
+               </span>
+             </div>
+           </div>
            
-           <p className="mt-2"><strong>Agent BVN:</strong> {d.agentBvn}</p>
+           <p className="mt-3 border-t border-blue-200 pt-2"><strong>Agent BVN:</strong> {d.agentBvn}</p>
         </div>
 
         {/* Location Info */}
@@ -215,7 +230,6 @@ export default function AdminBvnEnrollmentSetupClientPage({ initialRequests }: {
                        {req.status !== 'COMPLETED' && req.status !== 'FAILED' && (
                          <div className="flex gap-1">
                            
-                           {/* PROCESS BUTTON - Added Back */}
                            {req.status === 'PENDING' && (
                              <button onClick={() => openActionModal(req, 'PROCESSING')} className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100">Process</button>
                            )}
