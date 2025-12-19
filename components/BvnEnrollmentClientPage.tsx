@@ -12,7 +12,8 @@ import {
   MapPinIcon,
   BuildingOfficeIcon,
   CalendarDaysIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  DevicePhoneMobileIcon // Added for the wallet field icon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -156,6 +157,7 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
   const [bankName, setBankName] = useState('');
   // --- NEW FIELD ---
   const [bankAccountNumber, setBankAccountNumber] = useState(''); 
+  const [parkwayWalletNumber, setParkwayWalletNumber] = useState(''); // <--- ADDED STATE
   // -----------------
   const [accountName, setAccountName] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -197,10 +199,10 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
     
-    // --- Added bankAccountNumber to formData ---
+    // --- Added parkwayWalletNumber to formData ---
     const formData = {
-      agentLocation, agentBvn, bankName, bankAccountNumber, accountName,
-      firstName, lastName, dob, email, altEmail,
+      agentLocation, agentBvn, bankName, bankAccountNumber, parkwayWalletNumber, // <--- ADDED TO FORM DATA
+      accountName, firstName, lastName, dob, email, altEmail,
       phone, altPhone, address, state, lga, zone
     };
 
@@ -226,8 +228,8 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
       });
       
       // Reset the form
-      setAgentLocation(''); setAgentBvn(''); setBankName(''); setBankAccountNumber(''); setAccountName('');
-      setFirstName(''); setLastName(''); setDob(''); setEmail(''); setAltEmail('');
+      setAgentLocation(''); setAgentBvn(''); setBankName(''); setBankAccountNumber(''); setParkwayWalletNumber(''); // <--- RESET
+      setAccountName(''); setFirstName(''); setLastName(''); setDob(''); setEmail(''); setAltEmail('');
       setPhone(''); setAltPhone(''); setAddress(''); setState(''); setLga(''); setZone('');
       setAvailableLgas([]);
 
@@ -272,16 +274,30 @@ export default function BvnEnrollmentClientPage({ fee, isActive }: Props) {
             <DataInput label="Agent BVN*" id="agentBvn" value={agentBvn} onChange={setAgentBvn} Icon={IdentificationIcon} />
             <DataInput label="Bank Name*" id="bankName" value={bankName} onChange={setBankName} Icon={BuildingOfficeIcon} />
             
-            {/* --- NEW FIELD --- */}
             <DataInput 
               label="Bank Account Number*" 
               id="bankAccountNumber" 
               value={bankAccountNumber} 
               onChange={setBankAccountNumber} 
               Icon={BuildingOfficeIcon} 
-              type="tel" // Use tel for number keypad on mobile
+              type="tel" 
             />
-            {/* ----------------- */}
+
+            {/* --- NEW PARKWAY WALLET FIELD --- */}
+            <div>
+              <DataInput 
+                label="PARKWAY WALLET NUMBER" 
+                id="parkwayWalletNumber" 
+                value={parkwayWalletNumber} 
+                onChange={setParkwayWalletNumber} 
+                Icon={DevicePhoneMobileIcon} 
+                type="tel"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                if you don&apos;t have one You can download the app and register <a href="https://play.google.com/store/apps/details?id=com.parkway.yurwallet" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://play.google.com/store/apps/details?id=com.parkway.yurwallet</a>
+              </p>
+            </div>
+            {/* -------------------------------- */}
 
             <DataInput label="Account Name*" id="accountName" value={accountName} onChange={setAccountName} Icon={UserIcon} />
             <DataInput label="First Name*" id="firstName" value={firstName} onChange={setFirstName} Icon={UserIcon} />
