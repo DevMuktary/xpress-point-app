@@ -1,40 +1,69 @@
-import React from 'react';
-import { ExclamationTriangleIcon, EnvelopeOpenIcon } from "@heroicons/react/24/outline";
+"use client";
+
+import React, { useState } from 'react';
+import { ExclamationTriangleIcon, ArrowPathIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 
 export default function EmailVerifyAlert() {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleResend = async () => {
+    setLoading(true);
+    setMessage("");
+    
+    try {
+      const res = await fetch('/api/auth/resend-otp', { method: 'POST' });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setMessage("Sent! Check your Spam folder too.");
+      } else {
+        setMessage(data.error || "Failed to send.");
+      }
+    } catch (error) {
+      setMessage("Error sending email.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4 shadow-sm">
-      <div className="flex items-start gap-3">
-        {/* Icon */}
-        <div className="flex-shrink-0">
-          <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" aria-hidden="true" />
-        </div>
+    <div className="mb-6 rounded-lg border-l-4 border-yellow-500 bg-yellow-50 p-4 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         
-        {/* Content */}
-        <div className="flex-1">
-          <h3 className="text-sm font-bold text-yellow-800">
-            Verify your Email Address
-          </h3>
-          <div className="mt-1 text-sm text-yellow-700">
-            <p>
-              We have sent a verification code (OTP) to your email address.
+        {/* Message Area */}
+        <div className="flex items-start gap-3">
+          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-yellow-800">
+              Email Not Verified
+            </h3>
+            <p className="mt-1 text-sm text-yellow-700">
+              We sent a code to your email. If you don't see it, <span className="font-bold underline">check your Spam/Junk folder</span> and mark as "Not Spam".
             </p>
-            
-            {/* The Critical Spam Warning */}
-            <div className="mt-3 rounded-lg bg-yellow-100 p-3 border border-yellow-200">
-              <p className="font-bold text-yellow-900 flex items-center gap-2">
-                <EnvelopeOpenIcon className="h-4 w-4" />
-                Can't find the email?
+            {message && (
+              <p className="mt-2 text-xs font-bold text-green-700 flex items-center gap-1">
+                <CheckCircleIcon className="h-4 w-4" /> {message}
               </p>
-              <ul className="mt-1 list-disc list-inside text-yellow-800 space-y-1">
-                <li>Please check your <strong>SPAM</strong> or <strong>JUNK</strong> folder.</li>
-                <li>
-                  Click <strong>"Report Not Spam"</strong> (or "Move to Inbox") so you can receive future emails.
-                </li>
-              </ul>
-            </div>
+            )}
           </div>
         </div>
+
+        {/* Resend Button */}
+        <button
+          onClick={handleResend}
+          disabled={loading}
+          className="shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-medium text-yellow-800 bg-white border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? (
+            <>
+              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+              Sending...
+            </>
+          ) : (
+            "Resend Code"
+          )}
+        </button>
       </div>
     </div>
   );
