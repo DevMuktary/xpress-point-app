@@ -6,7 +6,7 @@ import { generateUniqueAgentCode } from '@/lib/agentCode';
 
 // --- CONFIG: KILL SWITCH ---
 // Set this to TRUE to disable registration
-const REGISTRATION_DISABLED = true;
+const REGISTRATION_DISABLED = false;
 
 export async function POST(request: Request) {
   // -------------------------------------------------------------------------
