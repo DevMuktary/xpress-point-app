@@ -127,7 +127,7 @@ const NoticeBox = () => (
       <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
       <div className="text-sm text-blue-800">
         <span className="font-bold block mb-1">Processing Time</span>
-        You will Receive your User Login Details via your Email within 48 to 72 working hours.
+        You will Receive your User Login Details via your Email within 5 working days.
       </div>
     </div>
     <div className="flex items-start gap-3 pt-2 border-t border-blue-200/60">
