@@ -1,46 +1,57 @@
 import React from 'react';
-import Link from 'next/link';
-import { WrenchScrewdriverIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import SignupClientPage from '@/components/SignupClientPage';
+import { ShieldCheckIcon } from '@heroicons/react/24/outline';
 
-export default function RegisterPage() {
+// This is a "world-class" Server Component
+export default async function SubdomainRegisterPage({ params }: { params: { subdomain: string } }) {
+  const { subdomain } = params;
+
+  if (!subdomain) {
+    redirect('/signup'); // No subdomain, go to normal signup
+  }
+
+  // 1. "Fetch" the Aggregator from the database
+  const aggregator = await prisma.user.findUnique({
+    where: { subdomain: subdomain },
+    select: {
+      id: true,
+      businessName: true
+    }
+  });
+
+  // 2. If "rubbish" subdomain, redirect to normal signup
+  if (!aggregator) {
+    redirect('/signup?error=Aggregator+not+found');
+  }
+
+  // 3. "World-class" success! Render the client page
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 text-center bg-white p-10 rounded-2xl shadow-xl border border-gray-100">
-        
-        {/* Icon */}
-        <div className="mx-auto h-20 w-20 bg-blue-50 rounded-full flex items-center justify-center">
-          <WrenchScrewdriverIcon className="h-10 w-10 text-blue-600" />
-        </div>
-
-        {/* Text */}
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
+      <div className="w-full max-w-md space-y-8">
+        {/* "Stunning" Header */}
         <div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Registration Paused
-          </h2>
-          <p className="mt-4 text-lg text-gray-600 leading-relaxed">
-            We are currently upgrading our systems to serve you better.
-            <br />
-            <span className="font-bold text-blue-600">We are working to bring back registration shortly.</span>
-          </p>
+          <h1 className="text-center text-3xl font-bold text-gray-900">
+            XPRESS POINT
+          </h1>
+          {/* "World-Class" Welcome Message */}
+          <div className="mt-4 text-center rounded-lg bg-blue-50 p-4 border border-blue-200">
+            <ShieldCheckIcon className="mx-auto h-8 w-8 text-blue-600" />
+            <p className="mt-2 text-sm text-gray-700">
+              You are registering as an agent under the Aggregator:
+            </p>
+            <p className="text-lg font-bold text-blue-700">
+              {aggregator.businessName}
+            </p>
+          </div>
         </div>
-
-        {/* Actions */}
-        <div className="mt-8 space-y-4">
-          <Link 
-            href="/login"
-            className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-200"
-          >
-            Login to Existing Account
-          </Link>
-          
-          <Link 
-            href="/"
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeftIcon className="h-4 w-4" /> Back to Home
-          </Link>
-        </div>
-
+        
+        {/* "Refurbish" the client page by passing the new props */}
+        <SignupClientPage 
+          aggregatorId={aggregator.id} 
+          aggregatorName={aggregator.businessName || 'Aggregator'}
+        />
       </div>
     </div>
   );
