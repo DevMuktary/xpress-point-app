@@ -7,7 +7,6 @@ import axios from 'axios';
 // 🔴 CONFIGURATION
 const WHATSAPP_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-// Updated Template Name and Language based on your input
 const TEMPLATE_NAME = "application__update"; 
 const BATCH_SIZE = 1000; 
 
@@ -21,7 +20,7 @@ function formatPhoneNumber(phone: any): string {
     return str;
 }
 
-// The Sender Function
+// The Sender Function (UPDATED)
 async function sendTemplateMessage(to: string) {
     const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
 
@@ -31,13 +30,10 @@ async function sendTemplateMessage(to: string) {
         type: "template",
         template: {
             name: TEMPLATE_NAME,
-            language: { code: "en" }, // Changed to generic 'en' as you requested
-            components: [
-                {
-                    type: "header",
-                    parameters: [] // Video is embedded in template, no params needed
-                }
-            ]
+            language: { code: "en" }, // or "en_US" depending on your setup
+            // 🔴 FIX: Removed 'components' array entirely.
+            // If the video is static (uploaded in Meta), we don't need to send it here.
+            // If the template has NO variables (like {{1}}), we send NO components.
         }
     };
 
@@ -58,8 +54,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'CSV file not found at root.' }, { status: 404 });
     }
 
-    // 1. Read CSV with FORCED HEADERS (Fix for "Success: 0")
-    // We pass ['phone'] so it treats the first column as 'phone' automatically
+    // 1. Read CSV with FORCED HEADERS
     const applicants = await new Promise<any[]>((resolve, reject) => {
         const results: any[] = [];
         fs.createReadStream(csvFilePath)
@@ -87,7 +82,6 @@ export async function GET(req: NextRequest) {
 
     // 3. Send Loop
     for (const applicant of batch) {
-        // Now we can be sure 'phone' exists because we forced it in the header options
         const rawPhone = applicant.phone; 
         const cleanPhone = formatPhoneNumber(rawPhone);
 
@@ -104,11 +98,10 @@ export async function GET(req: NextRequest) {
             failCount++;
         }
 
-        // Rate Limit Protection (50ms delay)
+        // Rate Limit Protection
         await new Promise(r => setTimeout(r, 50));
     }
 
-    // 4. Return Result with Next Link
     return NextResponse.json({
         message: "Batch Completed",
         processed: batch.length,
