@@ -7,7 +7,7 @@ import axios from 'axios';
 // 🔴 CONFIGURATION
 const WHATSAPP_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const TEMPLATE_NAME = "application_profile_migration"; 
+const TEMPLATE_NAME = "application_update"; 
 const BATCH_SIZE = 1000; 
 
 // Helper to clean phone numbers
