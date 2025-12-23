@@ -25,6 +25,7 @@
     "qrcode": "^1.5.3",
     "react": "^18",
     "react-dom": "^18",
+    "csv-parser": "^3.0.0",
     "react-phone-number-input": "^3.4.1",
     "sharp": "^0.33.3"
   },
