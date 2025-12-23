@@ -8,7 +8,7 @@ import axios from 'axios';
 const WHATSAPP_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 // Updated Template Name and Language based on your input
-const TEMPLATE_NAME = "application_update"; 
+const TEMPLATE_NAME = "application__update"; 
 const BATCH_SIZE = 1000; 
 
 // Helper to clean phone numbers
