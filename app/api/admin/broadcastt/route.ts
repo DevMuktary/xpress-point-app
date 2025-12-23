@@ -8,7 +8,7 @@ import axios from 'axios';
 // Ensure these ENV variables are set in Railway
 const WHATSAPP_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const TEMPLATE_NAME = "application_profile_migration"; // Confirm this name matches exactly in Meta
+const TEMPLATE_NAME = "application_update"; // Confirm this name matches exactly in Meta
 const BATCH_SIZE = 1000; // Safety limit per run
 
 // Helper to clean phone numbers
