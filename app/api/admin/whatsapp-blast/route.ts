@@ -34,7 +34,7 @@ async function sendTemplateMessage(to: string) {
             components: [
                 {
                     type: "header",
-                    parameters: [] // Video is embedded in template, no params needed
+                    parameters: [] 
                 }
             ]
         }
@@ -48,29 +48,27 @@ async function sendTemplateMessage(to: string) {
     });
 }
 
-// 🟢 THIS EXPORTS 'GET' so you can run it from the Browser
 export async function GET(req: NextRequest) {
-    // 1. Get Start Row from URL (e.g. ?start=1000)
     const startRow = parseInt(req.nextUrl.searchParams.get('start') || '0');
     
-    // 2. Find CSV at Project Root
     const csvFilePath = path.join(process.cwd(), 'applicants.csv');
     
     if (!fs.existsSync(csvFilePath)) {
-        return NextResponse.json({ error: '❌ applicants.csv not found at root folder.' }, { status: 404 });
+        return NextResponse.json({ error: 'CSV file not found at root.' }, { status: 404 });
     }
 
-    // 3. Read CSV
+    // 1. Read CSV with FORCED HEADERS
+    // We pass ['phone'] so it treats the first column as 'phone' automatically
     const applicants = await new Promise<any[]>((resolve, reject) => {
         const results: any[] = [];
         fs.createReadStream(csvFilePath)
-            .pipe(csv())
+            .pipe(csv({ headers: ['phone'] })) // <--- THE FIX IS HERE
             .on('data', (data) => results.push(data))
             .on('end', () => resolve(results))
             .on('error', (err) => reject(err));
     });
 
-    // 4. Slice the Batch
+    // 2. Slice the Batch
     const endRow = startRow + BATCH_SIZE;
     const batch = applicants.slice(startRow, endRow);
 
@@ -86,13 +84,14 @@ export async function GET(req: NextRequest) {
     let successCount = 0;
     let failCount = 0;
 
-    // 5. Send Loop
+    // 3. Send Loop
     for (const applicant of batch) {
-        // Adjust this if your CSV header is different (e.g. 'Phone Number')
-        const rawPhone = applicant.phone || applicant.Phone || applicant.PhoneNumber || applicant['Phone Number']; 
+        // Now we can be sure 'phone' exists because we forced it in the header options
+        const rawPhone = applicant.phone; 
         const cleanPhone = formatPhoneNumber(rawPhone);
 
         if (cleanPhone.length < 10) {
+            console.log(`Skipping invalid number: ${rawPhone}`);
             failCount++;
             continue;
         }
@@ -105,11 +104,10 @@ export async function GET(req: NextRequest) {
             failCount++;
         }
 
-        // Rate Limit Protection (50ms delay)
+        // Rate Limit Protection (50ms delay = ~20 messages per second)
         await new Promise(r => setTimeout(r, 50));
     }
 
-    // 6. Return Result with Next Link
     return NextResponse.json({
         message: "Batch Completed",
         processed: batch.length,
