@@ -1,0 +1,101 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma'; // Adjust path to your prisma client
+// import { sendEmail } from '@/lib/email'; // Your email sending function
+
+export async function GET(req: Request) {
+  try {
+    // 1. FETCH ALL USERS (Or filter for just agents if you have a role field)
+    const allUsers = await prisma.user.findMany({
+      where: {
+        // Optional: Only select those who aren't verified yet
+        // OR just select everyone to be safe
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true, // or firstName
+      }
+    });
+
+    console.log(`Found ${allUsers.length} users to process...`);
+
+    // 2. BULK UPDATE DATABASE (Instant Verification)
+    // This makes sure they can login RIGHT NOW even if emails take time
+    await prisma.user.updateMany({
+      data: {
+        emailVerified: new Date(), // Sets verification time to now
+        // phoneVerified: true,  // Uncomment if you have this boolean field
+        // status: 'ACTIVE'      // Uncomment if you have a status field
+      }
+    });
+
+    // 3. SEND APOLOGY EMAILS
+    // We use a loop. If you have 1000+ users, this might timeout on Vercel. 
+    // For < 500 users, this is usually fine.
+    let emailCount = 0;
+
+    for (const user of allUsers) {
+      if (user.email) {
+        // Replace this with your actual email sending function
+        await sendApologyEmail(user.email, user.name || 'Agent');
+        emailCount++;
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Updated DB for ${allUsers.length} users and sent ${emailCount} emails.`,
+    });
+
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// --- HELPER FUNCTION FOR THE EMAIL CONTENT ---
+async function sendApologyEmail(email: string, name: string) {
+  const subject = "Service Restored: Login Now Available";
+  
+  const htmlContent = `
+    <div style="font-family: sans-serif; color: #333; padding: 20px;">
+      <h2>Hello ${name},</h2>
+      
+      <p>We sincerely apologize for the recent technical glitch regarding our WhatsApp delivery verification system.</p>
+      
+      <p><strong>Good news: We have manually verified your account.</strong></p>
+      
+      <p>You can now log in immediately using your email and password to start accessing our services. No further verification is required.</p>
+      
+      <p>
+        <a href="https://agentlink.ng/login" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          Login to Dashboard
+        </a>
+      </p>
+      
+      <p>Thank you for your patience.</p>
+      <p>The AgentLink Team</p>
+    </div>
+  `;
+
+  // CALL YOUR EMAIL PROVIDER HERE
+  // Example using Resend:
+  /*
+  await resend.emails.send({
+    from: 'AgentLink <support@agentlink.ng>',
+    to: email,
+    subject: subject,
+    html: htmlContent
+  });
+  */
+  
+  // Example using Nodemailer:
+  /*
+  await transporter.sendMail({
+    to: email,
+    subject: subject,
+    html: htmlContent
+  });
+  */
+  
+  console.log(`Email sent to ${email}`);
+}
