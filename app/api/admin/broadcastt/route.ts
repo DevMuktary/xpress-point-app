@@ -7,11 +7,10 @@ import axios from 'axios';
 // 🔴 CONFIGURATION
 const WHATSAPP_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-// The template name must match exactly what you approved in Meta
-const TEMPLATE_NAME = "application_update"; 
+const TEMPLATE_NAME = "application_profile_migration"; 
 const BATCH_SIZE = 1000; 
 
-// Helper to clean phone numbers
+// Helper: Clean Phone Numbers
 function formatPhoneNumber(phone: any): string {
     if (!phone) return '';
     let str = String(phone).replace(/\D/g, ''); 
@@ -21,55 +20,32 @@ function formatPhoneNumber(phone: any): string {
     return str;
 }
 
-// 🔴 THE SENDER FUNCTION
-async function sendTemplateMessage(to: string) {
-    const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
-
-    const data = {
-        messaging_product: "whatsapp",
-        to: to,
-        type: "template",
-        template: {
-            name: TEMPLATE_NAME,
-            language: { code: "en_US" },
-            components: [
-                // Empty header component because video is already embedded in the template
-                {
-                    type: "header",
-                    parameters: [] 
-                }
-            ]
-        }
-    };
-
-    await axios.post(url, data, {
-        headers: {
-            'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-            'Content-Type': 'application/json'
-        }
-    });
-}
-
-export async function GET(req: NextRequest) {
-    const startRow = parseInt(req.nextUrl.searchParams.get('start') || '0');
-    
-    const csvFilePath = path.join(process.cwd(), 'applicants.csv');
-    
-    if (!fs.existsSync(csvFilePath)) {
-        return NextResponse.json({ error: 'CSV file not found at root.' }, { status: 404 });
-    }
-
-    // 1. Read the CSV first (Wait for it to finish)
-    const applicants = await new Promise<any[]>((resolve, reject) => {
+// Helper: Read CSV (Promisified to fix Build Error)
+async function readCsvFile(filePath: string): Promise<any[]> {
+    return new Promise((resolve, reject) => {
         const results: any[] = [];
-        fs.createReadStream(csvFilePath)
+        fs.createReadStream(filePath)
             .pipe(csv())
             .on('data', (data) => results.push(data))
             .on('end', () => resolve(results))
             .on('error', (error) => reject(error));
     });
+}
 
-    // 2. Slice the Batch
+// 🔴 MAIN ROUTE HANDLER
+export async function GET(req: NextRequest) {
+    const startRow = parseInt(req.nextUrl.searchParams.get('start') || '0');
+    
+    // Locate CSV
+    const csvFilePath = path.join(process.cwd(), 'applicants.csv');
+    if (!fs.existsSync(csvFilePath)) {
+        return NextResponse.json({ error: 'CSV file not found at project root.' }, { status: 404 });
+    }
+
+    // 1. Read CSV
+    const applicants = await readCsvFile(csvFilePath);
+
+    // 2. Slice Batch
     const endRow = startRow + BATCH_SIZE;
     const batch = applicants.slice(startRow, endRow);
 
@@ -85,9 +61,9 @@ export async function GET(req: NextRequest) {
     let successCount = 0;
     let failCount = 0;
 
-    // 3. Process the Batch
+    // 3. Send Loop
     for (const applicant of batch) {
-        // Handle different possible CSV header names
+        // Handle different CSV header names
         const rawPhone = applicant.phone || applicant.Phone || applicant.PhoneNumber || applicant['Phone Number']; 
         const cleanPhone = formatPhoneNumber(rawPhone);
 
@@ -97,24 +73,47 @@ export async function GET(req: NextRequest) {
         }
 
         try {
-            await sendTemplateMessage(cleanPhone);
+            const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
+            const data = {
+                messaging_product: "whatsapp",
+                to: cleanPhone,
+                type: "template",
+                template: {
+                    name: TEMPLATE_NAME,
+                    language: { code: "en_US" },
+                    components: [
+                        // Sending empty header parameters implies using the default static media
+                        // associated with the template in Meta Manager.
+                        {
+                            type: "header",
+                            parameters: [] 
+                        }
+                    ]
+                }
+            };
+
+            await axios.post(url, data, {
+                headers: {
+                    'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             successCount++;
-        } catch (error) {
-            console.error(`Failed ${cleanPhone}:`, error);
+        } catch (error: any) {
+            console.error(`Failed ${cleanPhone}:`, error.response?.data || error.message);
             failCount++;
         }
 
-        // Rate Limit Protection (50ms delay)
-        await new Promise(r => setTimeout(r, 50));
+        // Rate Limit Protection (20ms delay)
+        await new Promise(r => setTimeout(r, 20));
     }
 
-    // 4. Return the Response (This fixes the build error)
     return NextResponse.json({
         message: "Batch Completed",
         processed: batch.length,
         success: successCount,
         failed: failCount,
-        nextStartUrl: `/api/admin/broadcast?start=${endRow}`,
+        nextStartUrl: `${req.nextUrl.origin}/api/admin/broadcast?start=${endRow}`,
         nextStartRow: endRow
     });
 }
