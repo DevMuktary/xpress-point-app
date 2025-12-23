@@ -67,7 +67,7 @@ async function sendApologyEmail(email: string, name: string) {
       <p>You can now log in immediately using your email and password to start accessing our services. No further verification is required.</p>
       
       <p>
-        <a href="https://agentlink.ng/login" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+        <a href="https://xpresspoint.net/login" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
           Login to Dashboard
         </a>
       </p>
@@ -81,7 +81,7 @@ async function sendApologyEmail(email: string, name: string) {
   // Example using Resend:
   /*
   await resend.emails.send({
-    from: 'AgentLink <support@agentlink.ng>',
+    from: 'Xpresspoint <otp@xpresspoint.net>',
     to: email,
     subject: subject,
     html: htmlContent
