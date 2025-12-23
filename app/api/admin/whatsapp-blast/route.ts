@@ -10,6 +10,10 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const TEMPLATE_NAME = "application__update"; 
 const BATCH_SIZE = 1000; 
 
+// 🔴 RUGGED VIDEO LINK
+// Since you uploaded 'intro.mp4' to your 'public' folder, this link now works perfectly.
+const VIDEO_LINK = "https://xpresspoint.net/intro.mp4";
+
 // Helper to clean phone numbers
 function formatPhoneNumber(phone: any): string {
     if (!phone) return '';
@@ -20,7 +24,7 @@ function formatPhoneNumber(phone: any): string {
     return str;
 }
 
-// The Sender Function (UPDATED)
+// The Sender Function
 async function sendTemplateMessage(to: string) {
     const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
 
@@ -30,10 +34,20 @@ async function sendTemplateMessage(to: string) {
         type: "template",
         template: {
             name: TEMPLATE_NAME,
-            language: { code: "en" }, // or "en_US" depending on your setup
-            // 🔴 FIX: Removed 'components' array entirely.
-            // If the video is static (uploaded in Meta), we don't need to send it here.
-            // If the template has NO variables (like {{1}}), we send NO components.
+            language: { code: "en" }, 
+            components: [
+                {
+                    type: "header",
+                    parameters: [
+                        {
+                            type: "video",
+                            video: {
+                                link: VIDEO_LINK
+                            }
+                        }
+                    ]
+                }
+            ]
         }
     };
 
@@ -48,13 +62,13 @@ async function sendTemplateMessage(to: string) {
 export async function GET(req: NextRequest) {
     const startRow = parseInt(req.nextUrl.searchParams.get('start') || '0');
     
+    // Locate CSV
     const csvFilePath = path.join(process.cwd(), 'applicants.csv');
-    
     if (!fs.existsSync(csvFilePath)) {
         return NextResponse.json({ error: 'CSV file not found at root.' }, { status: 404 });
     }
 
-    // 1. Read CSV with FORCED HEADERS
+    // Read CSV with forced headers
     const applicants = await new Promise<any[]>((resolve, reject) => {
         const results: any[] = [];
         fs.createReadStream(csvFilePath)
@@ -64,7 +78,7 @@ export async function GET(req: NextRequest) {
             .on('error', (err) => reject(err));
     });
 
-    // 2. Slice the Batch
+    // Slice Batch
     const endRow = startRow + BATCH_SIZE;
     const batch = applicants.slice(startRow, endRow);
 
@@ -80,7 +94,7 @@ export async function GET(req: NextRequest) {
     let successCount = 0;
     let failCount = 0;
 
-    // 3. Send Loop
+    // Send Loop
     for (const applicant of batch) {
         const rawPhone = applicant.phone; 
         const cleanPhone = formatPhoneNumber(rawPhone);
@@ -94,11 +108,12 @@ export async function GET(req: NextRequest) {
             await sendTemplateMessage(cleanPhone);
             successCount++;
         } catch (error: any) {
-            console.error(`Failed ${cleanPhone}:`, error.response?.data || error.message);
+            // Detailed error logging
+            console.error(`Failed ${cleanPhone}:`, JSON.stringify(error.response?.data || error.message, null, 2));
             failCount++;
         }
 
-        // Rate Limit Protection
+        // Rate Limit Protection (50ms)
         await new Promise(r => setTimeout(r, 50));
     }
 
