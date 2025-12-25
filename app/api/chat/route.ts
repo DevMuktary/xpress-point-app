@@ -5,16 +5,14 @@ import { getUserFromSession } from '@/lib/auth';
 // GET: Fetch latest messages AND Lock Status
 export async function GET() {
   try {
-    // 1. Check if chat is locked
     const lockSetting = await prisma.systemSetting.findUnique({
       where: { key: 'CHAT_LOCKED' }
     });
     const isLocked = lockSetting?.value === 'true';
 
-    // 2. Fetch Messages
     const messages = await prisma.chatMessage.findMany({
       where: { isDeleted: false },
-      take: 50, // Last 50 messages
+      take: 500,
       orderBy: { createdAt: 'asc' },
       include: {
         user: {
@@ -26,7 +24,21 @@ export async function GET() {
             role: true,
             email: true, 
             agentCode: true,
-            isChatBlocked: true // <--- ADDED THIS so we know if they are blocked
+            isChatBlocked: true 
+          }
+        },
+        // --- INCLUDE REPLY DETAILS ---
+        replyTo: {
+          select: {
+            id: true,
+            message: true,
+            user: {
+              select: {
+                firstName: true,
+                businessName: true,
+                role: true
+              }
+            }
           }
         }
       }
@@ -43,44 +55,42 @@ export async function POST(request: Request) {
   const user = await getUserFromSession();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // 1. Check Global Lock (Admins bypass this)
   if (user.role !== 'ADMIN') {
-    const lockSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'CHAT_LOCKED' }
-    });
+    const lockSetting = await prisma.systemSetting.findUnique({ where: { key: 'CHAT_LOCKED' } });
     if (lockSetting?.value === 'true') {
-      return NextResponse.json({ error: 'Chat is currently locked by Admin.' }, { status: 403 });
+      return NextResponse.json({ error: 'Chat is currently locked.' }, { status: 403 });
     }
   }
 
-  // 2. Check if User is Individually Blocked
   const dbUser = await prisma.user.findUnique({ where: { id: user.id }});
   if (dbUser?.isChatBlocked) {
-    return NextResponse.json({ error: 'You are blocked from the community chat.' }, { status: 403 });
+    return NextResponse.json({ error: 'You are blocked.' }, { status: 403 });
   }
 
   try {
-    const { message } = await request.json();
+    // Extract replyToId from body
+    const { message, replyToId } = await request.json(); 
     if (!message) return NextResponse.json({ error: 'Message empty' }, { status: 400 });
 
     const newMessage = await prisma.chatMessage.create({
       data: {
         userId: user.id,
         message: message,
-        isAdmin: user.role === 'ADMIN'
+        isAdmin: user.role === 'ADMIN',
+        replyToId: replyToId || null // Save the link
       },
       include: {
         user: {
            select: { 
-             id: true, 
-             firstName: true, 
-             lastName: true, 
-             businessName: true, 
-             role: true, 
-             email: true, 
-             agentCode: true,
-             isChatBlocked: true 
+             id: true, firstName: true, lastName: true, businessName: true, 
+             role: true, email: true, agentCode: true, isChatBlocked: true 
             }
+        },
+        replyTo: {
+          select: {
+            id: true, message: true,
+            user: { select: { firstName: true, businessName: true, role: true } }
+          }
         }
       }
     });
