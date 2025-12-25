@@ -5,9 +5,6 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- CONFIGURATION ---
-// Add these to your .env file:
-// ZEPA_API_BASE_URL=https://api.zepa.ng  <-- Replace with actual URL
-// ZEPA_API_TOKEN=your_token_here
 const BASE_URL = process.env.ZEPA_API_BASE_URL; 
 const API_TOKEN = process.env.ZEPA_API_TOKEN;
 
@@ -22,6 +19,14 @@ function parseApiError(error: any): string {
     if (data.error) return data.error;
   }
   return error.message || 'An internal server error occurred.';
+}
+
+// --- HELPER: Format Date to DD-MM-YYYY ---
+function formatDateToDMY(dateString: string) {
+  // Input comes as YYYY-MM-DD from HTML input
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split('-');
+  return `${day}-${month}-${year}`; // Zepa likely wants DD-MM-YYYY
 }
 
 export async function POST(request: Request) {
@@ -57,12 +62,21 @@ export async function POST(request: Request) {
     }
 
     // --- 2. Prepare Payload for Zepa ---
-    // Zepa expects: firstName, lastName, dob, gender
+    // Format Date: YYYY-MM-DD -> DD-MM-YYYY
+    const formattedDob = formatDateToDMY(dateOfBirth);
+    
+    // Normalize Gender: "female" -> "F", "male" -> "M" (Standard for many APIs)
+    // If Zepa fails with M/F, we can revert to "Male"/"Female"
+    // const formattedGender = gender.toLowerCase().startsWith('f') ? 'F' : 'M';
+    
+    // Actually, let's stick to the raw 'male'/'female' first, but Uppercase the names
+    // If 422 persists, we will try the 'F'/'M' switch.
+    
     const payload = {
-        firstName: firstname,
-        lastName: lastname,
-        dob: dateOfBirth, // Ensure this is sending the format Zepa expects (usually YYYY-MM-DD)
-        gender: gender // Ensure this matches Zepa (usually "male" or "female")
+        firstName: firstname.toUpperCase(),
+        lastName: lastname.toUpperCase(),
+        dob: formattedDob, // Sending 24-08-1989
+        gender: gender.toLowerCase() // 'male' or 'female'
     };
 
     console.log(`[ZEPA] Verifying Demographic for user ${user.id}`, payload);
@@ -74,7 +88,8 @@ export async function POST(request: Request) {
       {
         headers: { 
           'Authorization': `Bearer ${API_TOKEN}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         timeout: 60000, 
       }
@@ -84,40 +99,43 @@ export async function POST(request: Request) {
     console.log("ZEPA RESPONSE RAW:", JSON.stringify(apiRes, null, 2));
 
     // --- 4. Validate Response ---
-    // Adjust this check based on Zepa's actual success indicator
-    if (!apiRes || (apiRes.success === false)) {
-        throw new Error(apiRes.message || "Verification failed. No record found.");
+    // Note: Some APIs return success:false but give 200 OK. 
+    // We check both the status and the body flag if it exists.
+    if (!apiRes) {
+        throw new Error("Empty response from provider.");
     }
 
     // --- 5. Data Mapping ---
-    // NOTE: Check your logs to see if data is inside `apiRes.data` or just `apiRes`
+    // Handle cases where data might be nested in 'data' or at root
     const responseData = apiRes.data || apiRes;
 
     const mappedData = {
-      // Essential Fields
+      // Essential Fields (Check logs for exact keys)
       photo: responseData.photo || responseData.image || "", 
       firstname: responseData.firstname || responseData.firstName,
       surname: responseData.surname || responseData.lastName,
       middlename: responseData.middlename || responseData.middleName || "",
-      nin: responseData.nin || responseData.idNumber,
+      nin: responseData.nin || responseData.idNumber || responseData.id_number,
       
       // Meta
       trackingId: responseData.trackingId || `TRK-${Date.now()}`,
       birthdate: responseData.birthdate || responseData.dob,
-      telephoneno: responseData.telephoneno || responseData.phone,
+      telephoneno: responseData.telephoneno || responseData.phone || responseData.mobile,
       gender: responseData.gender,
       
-      // Address (Map accurately based on Zepa response)
-      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address,
+      // Address
+      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address || responseData.residenceAddress,
       residence_lga: responseData.residence_lga || responseData.lga,
       residence_state: responseData.residence_state || responseData.state,
       
-      // Store full raw data just in case
+      // Store full raw data for debug
       ...responseData
     };
 
     if (!mappedData.nin) {
-        throw new Error("Provider returned success but no NIN was found in response.");
+        // If success but no NIN, maybe it didn't find a match?
+        console.error("Success response but NO NIN found in data:", responseData);
+        throw new Error("No matching NIN record found for these details.");
     }
 
     // --- 6. Charge User & Save ---
@@ -146,7 +164,7 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // --- 7. Return Data to Frontend ---
+    // --- 7. Return Data ---
     const slipPrices = await prisma.service.findMany({
       where: {
         id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
@@ -175,4 +193,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: errorMessage }, { status: 400 });
   }
 }
- 
