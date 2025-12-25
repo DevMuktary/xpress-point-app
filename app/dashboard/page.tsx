@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getUserFromSession } from "@/lib/auth"; 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { PlusIcon, SparklesIcon } from "@heroicons/react/24/outline"; // Added SparklesIcon for effect
+import { PlusIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 import EmailVerifyAlert from "@/components/EmailVerifyAlert";
 import ServiceItemCard from "@/components/ServiceItemCard";
@@ -14,6 +14,8 @@ import CommunityChat from "@/components/CommunityChat";
 // --- COMPLETE FLATTENED SERVICE LIST ---
 const allServices = [
   // --- NIN SERVICES ---
+  // Added "By Demographic" at the top as requested
+  { title: "By Demographic", href: "/dashboard/services/nin/verify-by-demographic", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "VNIN Slip (Instant)", href: "/dashboard/services/nin/vnin-slip", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "Verify by NIN", href: "/dashboard/services/nin/verify-by-nin", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "Verify by Phone", href: "/dashboard/services/nin/verify-by-phone", logo: "/logos/nin.png", color: "bg-green-50" },
@@ -78,7 +80,7 @@ export default async function DashboardPage() {
       {bannerContent && <NotificationBanner content={bannerContent} />}
       {!user.isEmailVerified && <EmailVerifyAlert />}
 
-      {/* --- NEW YEAR WIDGET (Animation & Design) --- */}
+      {/* --- NEW YEAR WIDGET --- */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-500 p-1 shadow-lg animate-fade-in-down">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
         <div className="relative flex items-center justify-between rounded-lg bg-white/10 backdrop-blur-md px-4 py-3 text-white">
@@ -96,9 +98,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* --- Wallet Card (Enhanced) --- */}
+      {/* --- Wallet Card --- */}
       <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-6 text-white shadow-xl transition-all hover:shadow-2xl hover:scale-[1.01] duration-300">
-        {/* Decorative Circles */}
         <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10 blur-2xl transition-all group-hover:bg-white/20"></div>
         <div className="absolute -bottom-10 -left-6 h-40 w-40 rounded-full bg-blue-500/20 blur-3xl"></div>
 
@@ -140,22 +141,35 @@ export default async function DashboardPage() {
           <h2 className="text-lg font-bold text-gray-800">Available Services</h2>
         </div>
         
-        {/* grid-cols-2 ensures 2 per line on mobile. gap-3 makes it tight/app-like. */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {allServices.map((service) => {
-            // --- PROMO LOGIC ---
-            // Exclude: Electricity, All Exams (WAEC, NECO, JAMB, NABTEB), and Personalization
             const titleLower = service.title.toLowerCase();
+            
+            // LOGIC FOR "NEW" TAG
+            const isNew = service.title === 'By Demographic';
+
+            // LOGIC FOR "PROMO" TAG
             const isElectricity = titleLower.includes('electricity');
             const isExam = titleLower.includes('exam') || titleLower.includes('waec') || titleLower.includes('neco') || titleLower.includes('nabteb') || titleLower.includes('jamb');
             const isPersonalization = titleLower.includes('personalization');
             
-            const showPromo = !isElectricity && !isExam && !isPersonalization;
+            // Only show promo if it's NOT New, NOT Electricity, NOT Exam, NOT Personalization
+            const showPromo = !isNew && !isElectricity && !isExam && !isPersonalization;
 
             return (
               <div key={service.title} className="relative group">
                 
-                {/* PROMO ANIME BADGE */}
+                {/* "NEW" BADGE (Specific for Demographic) */}
+                {isNew && (
+                  <div className="absolute -top-3 -right-2 z-20 flex animate-bounce">
+                    <span className="relative inline-flex h-6 items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-2 text-[10px] font-extrabold text-white shadow-lg ring-2 ring-white">
+                      <span className="animate-pulse absolute inline-flex h-full w-full rounded-lg bg-cyan-400 opacity-20"></span>
+                      NEW 🚀
+                    </span>
+                  </div>
+                )}
+
+                {/* "PROMO" BADGE (General) */}
                 {showPromo && (
                   <div className="absolute -top-2 -right-1 z-20 flex animate-bounce">
                     <span className="relative inline-flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-600 px-2 text-[10px] font-bold text-white shadow-sm ring-1 ring-white">
@@ -165,7 +179,7 @@ export default async function DashboardPage() {
                   </div>
                 )}
 
-                {/* Card Wrapper for Hover Effect */}
+                {/* Card Wrapper */}
                 <div className="transition-transform duration-200 hover:-translate-y-1">
                   <ServiceItemCard
                     title={service.title}
@@ -182,7 +196,6 @@ export default async function DashboardPage() {
 
       <CommunityChat currentUser={user} />
 
-      {/* Helper styles for specific animations not in standard Tailwind */}
       <style>{`
         @keyframes fade-in-down {
           0% { opacity: 0; transform: translateY(-10px); }
