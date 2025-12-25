@@ -16,7 +16,7 @@ export default async function WalletHistoryPage() {
   const transactions = await prisma.transaction.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
-    take: 500, // Limit to last 100 for performance
+    take: 5000, // Limit to last 100 for performance
   });
 
   // 2. Serialize
