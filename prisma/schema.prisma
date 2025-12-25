@@ -484,6 +484,14 @@ model ChatMessage {
   isDeleted Boolean  @default(false) @map("is_deleted")
   createdAt DateTime @default(now()) @map("created_at")
   user      User     @relation(fields: [userId], references: [id])
+
+// --- ADD THESE LINES FOR REPLIES ---
+  replyToId String?       @map("reply_to_id")
+  replyTo   ChatMessage?  @relation("ReplyRelation", fields: [replyToId], references: [id])
+  replies   ChatMessage[] @relation("ReplyRelation")
+  // -----------------------------------
+
+
   @@map("chat_messages")
 }
 
