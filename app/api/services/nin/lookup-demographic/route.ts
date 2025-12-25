@@ -5,17 +5,21 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- CONFIGURATION ---
-const API_KEY = process.env.ROBOSTTECH_API_KEY; 
-const ENDPOINT = "https://robosttech.com/api/nin_demo";
+// Add these to your .env file:
+// ZEPA_API_BASE_URL=https://api.zepa.ng  <-- Replace with actual URL
+// ZEPA_API_TOKEN=your_token_here
+const BASE_URL = process.env.ZEPA_API_BASE_URL; 
+const API_TOKEN = process.env.ZEPA_API_TOKEN;
 
 // --- HELPER: Error Parser ---
 function parseApiError(error: any): string {
   if (error.response) {
-    console.error("--- [ROBOST DEMO ERROR] ---");
+    console.error("--- [ZEPA API ERROR] ---");
     console.error("Status:", error.response.status);
     console.error("Body:", JSON.stringify(error.response.data, null, 2));
     const data = error.response.data;
     if (data.message) return typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+    if (data.error) return data.error;
   }
   return error.message || 'An internal server error occurred.';
 }
@@ -26,20 +30,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized or identity not verified.' }, { status: 401 });
   }
 
-  if (!API_KEY) {
-    return NextResponse.json({ error: 'Service configuration error (Missing API Key).' }, { status: 500 });
+  if (!BASE_URL || !API_TOKEN) {
+    return NextResponse.json({ error: 'Service configuration error (Missing Zepa Creds).' }, { status: 500 });
   }
 
   try {
     const body = await request.json();
     const { firstname, lastname, middlename, gender, dateOfBirth } = body; 
 
+    // Validate Input
     if (!firstname || !lastname || !gender || !dateOfBirth) {
       return NextResponse.json({ error: 'First Name, Last Name, Gender and DOB are required.' }, { status: 400 });
     }
 
     // --- 1. Get Service & Check Wallet ---
-    // We reuse 'NIN_LOOKUP' service ID for pricing as it is essentially a lookup
     const service = await prisma.service.findUnique({ where: { id: 'NIN_LOOKUP' } });
     if (!service || !service.isActive) {
       return NextResponse.json({ error: 'This service is currently unavailable.' }, { status: 503 });
@@ -52,24 +56,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient funds for lookup.' }, { status: 402 });
     }
 
-    // --- 2. Call RobostTech API ---
-    // Payload format: firstname, lastname, middlename, gender (female/male), dateOfBirth (YYYY-MM-DD)
+    // --- 2. Prepare Payload for Zepa ---
+    // Zepa expects: firstName, lastName, dob, gender
     const payload = {
-        firstname: firstname.toUpperCase(),
-        lastname: lastname.toUpperCase(),
-        middlename: middlename ? middlename.toUpperCase() : "",
-        gender: gender.toLowerCase(), // API expects 'female' or 'male'
-        dateOfBirth: dateOfBirth // YYYY-MM-DD
+        firstName: firstname,
+        lastName: lastname,
+        dob: dateOfBirth, // Ensure this is sending the format Zepa expects (usually YYYY-MM-DD)
+        gender: gender // Ensure this matches Zepa (usually "male" or "female")
     };
 
-    console.log(`[ROBOST] Verifying Demographic for user ${user.id}`, payload);
+    console.log(`[ZEPA] Verifying Demographic for user ${user.id}`, payload);
 
+    // --- 3. Call Zepa API ---
     const response = await axios.post(
-      ENDPOINT,
+      `${BASE_URL}/api/v1/verify-demo`,
       payload,
       {
         headers: { 
-          'api-key': API_KEY,
+          'Authorization': `Bearer ${API_TOKEN}`,
           'Content-Type': 'application/json'
         },
         timeout: 60000, 
@@ -77,58 +81,46 @@ export async function POST(request: Request) {
     );
 
     const apiRes = response.data;
-    console.log("ROBOST DEMO RAW RESPONSE:", JSON.stringify(apiRes, null, 2));
+    console.log("ZEPA RESPONSE RAW:", JSON.stringify(apiRes, null, 2));
 
-    if (!apiRes.success || !apiRes.data) {
+    // --- 4. Validate Response ---
+    // Adjust this check based on Zepa's actual success indicator
+    if (!apiRes || (apiRes.success === false)) {
         throw new Error(apiRes.message || "Verification failed. No record found.");
     }
 
-    const responseData = apiRes.data;
+    // --- 5. Data Mapping ---
+    // NOTE: Check your logs to see if data is inside `apiRes.data` or just `apiRes`
+    const responseData = apiRes.data || apiRes;
 
-    // --- 4. Data Mapping ---
-    // Map the demographic response to our standard internal NinData structure
     const mappedData = {
-      // Photo
-      photo: responseData.photo || "",
+      // Essential Fields
+      photo: responseData.photo || responseData.image || "", 
+      firstname: responseData.firstname || responseData.firstName,
+      surname: responseData.surname || responseData.lastName,
+      middlename: responseData.middlename || responseData.middleName || "",
+      nin: responseData.nin || responseData.idNumber,
       
-      // Names
-      firstname: responseData.firstname,
-      surname: responseData.surname, // API returns 'surname' instead of lastname
-      middlename: responseData.middlename || "",
-      
-      // Dates
-      birthdate: responseData.birthdate,
-      
-      // NIN
-      nin: responseData.nin,
-      
+      // Meta
       trackingId: responseData.trackingId || `TRK-${Date.now()}`,
-      
-      // Address
-      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.residence_Town,
-      
-      // LGA & State
-      residence_lga: responseData.residence_lga,
-      residence_state: responseData.residence_state,
-      
-      // Phone
-      telephoneno: responseData.telephoneno,
-      
-      // Gender (API returns 'f' or 'm', we might need to normalize for display if needed)
+      birthdate: responseData.birthdate || responseData.dob,
+      telephoneno: responseData.telephoneno || responseData.phone,
       gender: responseData.gender,
       
-      // Birth Details
-      birthlga: responseData.birthlga,
-      birthstate: responseData.birthstate,
+      // Address (Map accurately based on Zepa response)
+      residence_AdressLine1: responseData.residence_AdressLine1 || responseData.address,
+      residence_lga: responseData.residence_lga || responseData.lga,
+      residence_state: responseData.residence_state || responseData.state,
       
-      // Other
-      maritalstatus: responseData.maritalstatus,
-      profession: responseData.profession,
-      religion: responseData.religion,
-      signature: responseData.signature,
+      // Store full raw data just in case
+      ...responseData
     };
 
-    // --- 5. Charge User & Save Transaction ---
+    if (!mappedData.nin) {
+        throw new Error("Provider returned success but no NIN was found in response.");
+    }
+
+    // --- 6. Charge User & Save ---
     const [_, verificationRecord] = await prisma.$transaction([
       prisma.wallet.update({
         where: { userId: user.id },
@@ -154,7 +146,7 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // --- 6. Return Data ---
+    // --- 7. Return Data to Frontend ---
     const slipPrices = await prisma.service.findMany({
       where: {
         id: { in: ['NIN_SLIP_REGULAR', 'NIN_SLIP_STANDARD', 'NIN_SLIP_PREMIUM'] }
