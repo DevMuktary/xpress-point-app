@@ -5,9 +5,9 @@ import {
   CheckCircleIcon,
   XMarkIcon,
   IdentificationIcon,
-  ArrowPathIcon,
   ExclamationTriangleIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -37,29 +37,6 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
         required={isRequired} placeholder={placeholder}
       />
     </div>
-  </div>
-);
-
-// --- Reusable File Upload Component ---
-const FileUpload = ({ label, id, file, onChange, fileUrl, isUploading, error }: {
-  label: string, id: string, file: File | null, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, fileUrl: string | null, isUploading: boolean, error: string | null
-}) => (
-  <div>
-    <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
-    <div className="mt-1 flex items-center gap-4">
-      <input
-        id={id}
-        type="file"
-        onChange={onChange}
-        className="flex-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        accept="image/png, image/jpeg, application/pdf"
-        required
-      />
-      {isUploading && <ArrowPathIcon className="h-5 w-5 animate-spin text-blue-600" />}
-      {fileUrl && <CheckCircleIcon className="h-6 w-6 text-green-600" />}
-    </div>
-    {file && <p className="text-xs text-gray-500 mt-1">{file.name}</p>}
-    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
   </div>
 );
 
@@ -126,44 +103,10 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(true); 
 
   // --- Form Data State ---
+  const [fullName, setFullName] = useState('');
   const [ticketId, setTicketId] = useState('');
-   
-  // --- File Upload State ---
-  const [vninSlipFile, setVninSlipFile] = useState<File | null>(null);
-  const [vninSlipUrl, setVninSlipUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  // --- File Upload Handler ---
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    setVninSlipFile(file);
-    setIsUploading(true);
-    setUploadError(null);
-    setVninSlipUrl(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('attestation', file); 
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'File upload failed.');
-      }
-      setVninSlipUrl(data.url);
-    } catch (err: any) {
-      setUploadError(err.message);
-      setVninSlipFile(null);
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  const [ninNumber, setNinNumber] = useState('');
+  const [bvnNumber, setBvnNumber] = useState('');
 
   // --- Handle Open Confirmation Modal ---
   const handleOpenConfirmModal = (e: React.FormEvent) => {
@@ -172,13 +115,20 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
     setReceipt(null); 
 
     // --- Validation Checks ---
+    if (!fullName.trim()) {
+      setSubmitError("Full Name is required.");
+      return;
+    }
     if (!ticketId.trim()) {
       setSubmitError("Ticket ID is required.");
       return;
     }
-
-    if (!vninSlipUrl) {
-      setSubmitError("Please wait for the VNIN slip to finish uploading.");
+    if (!ninNumber.trim()) {
+      setSubmitError("NIN Number is required.");
+      return;
+    }
+    if (!bvnNumber.trim()) {
+      setSubmitError("BVN Number is required.");
       return;
     }
     
@@ -190,7 +140,13 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
     setIsConfirmModalOpen(false);
     setIsLoading(true);
     
-    const formData = { ticketId };
+    // Construct the form data object with the new fields
+    const formData = { 
+      fullName,
+      ticketId,
+      ninNumber,
+      bvnNumber
+    };
 
     try {
       const response = await fetch('/api/services/bvn/submit', {
@@ -199,7 +155,7 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
         body: JSON.stringify({ 
           serviceId: serviceId, 
           formData, 
-          vninSlipUrl: vninSlipUrl 
+          vninSlipUrl: null // No file upload, sending null
         }),
       });
       
@@ -215,9 +171,10 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
       });
       
       // Reset the form
+      setFullName('');
       setTicketId('');
-      setVninSlipFile(null); 
-      setVninSlipUrl(null);
+      setNinNumber('');
+      setBvnNumber('');
 
     } catch (err: any) {
       setSubmitError(err.message);
@@ -257,6 +214,16 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
 
           <div className="space-y-4">
             <DataInput 
+              label="Full Name*" 
+              id="fullName" 
+              value={fullName} 
+              onChange={setFullName} 
+              Icon={UserIcon} 
+              isRequired={true} 
+              placeholder="Enter Full Name"
+            />
+            
+            <DataInput 
               label="Ticket ID*" 
               id="ticketId" 
               value={ticketId} 
@@ -265,15 +232,25 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
               isRequired={true} 
               placeholder="Enter Ticket ID"
             />
-            
-            <FileUpload 
-              label="Upload VNIN Slip*" 
-              id="vnin-upload" 
-              file={vninSlipFile} 
-              fileUrl={vninSlipUrl} 
-              isUploading={isUploading} 
-              error={uploadError}
-              onChange={handleFileUpload} 
+
+            <DataInput 
+              label="NIN Number*" 
+              id="ninNumber" 
+              value={ninNumber} 
+              onChange={setNinNumber} 
+              Icon={IdentificationIcon} 
+              isRequired={true} 
+              placeholder="Enter NIN Number"
+            />
+
+            <DataInput 
+              label="BVN Number*" 
+              id="bvnNumber" 
+              value={bvnNumber} 
+              onChange={setBvnNumber} 
+              Icon={IdentificationIcon} 
+              isRequired={true} 
+              placeholder="Enter BVN Number"
             />
           </div>
           
@@ -284,7 +261,7 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
             )}
             <button
               type="submit"
-              disabled={isLoading || isUploading}
+              disabled={isLoading}
               className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50 hover:-translate-y-0.5"
             >
               {isLoading ? 'Submitting...' : `Submit Request (Fee: ₦${fee})`}
@@ -314,6 +291,14 @@ export default function VninToNibssClientPage({ fee, isActive }: Props) {
               <p className="text-center text-gray-600 text-sm leading-relaxed">
                 Please confirm you have filled in the right details. This action is irreversible.
               </p>
+              
+              <div className="mt-4 space-y-2 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p><strong>Name:</strong> {fullName}</p>
+                <p><strong>Ticket ID:</strong> {ticketId}</p>
+                <p><strong>NIN:</strong> {ninNumber}</p>
+                <p><strong>BVN:</strong> {bvnNumber}</p>
+              </div>
+
               <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-center text-sm text-blue-600 font-medium">Total Charge</p>
                 <p className="text-center text-2xl font-bold text-blue-700">₦{fee}</p>
