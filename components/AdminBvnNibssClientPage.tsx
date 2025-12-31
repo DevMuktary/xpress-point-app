@@ -4,16 +4,13 @@ import React, { useState } from 'react';
 import { 
   MagnifyingGlassIcon, 
   XCircleIcon, 
-  CheckCircleIcon, 
-  ArrowPathIcon, 
-  PaperClipIcon,
-  IdentificationIcon
+  PaperClipIcon
 } from '@heroicons/react/24/outline';
 
 type AdminRequest = {
   id: string;
   status: string;
-  formData: any; // Contains ticketId
+  formData: any; // Contains ticketId, fullName, ninNumber, bvnNumber
   vninSlipUrl: string | null;
   createdAt: string;
   user: {
@@ -42,7 +39,8 @@ export default function AdminBvnNibssClientPage({ initialRequests }: { initialRe
 
   const filteredRequests = requests.filter(req => {
     const d = req.formData;
-    const searchStr = `${req.user.firstName} ${req.user.lastName} ${d.ticketId || ''}`.toLowerCase();
+    // Updated search string to include new fields
+    const searchStr = `${req.user.firstName} ${req.user.lastName} ${d.fullName || ''} ${d.ticketId || ''} ${d.ninNumber || ''} ${d.bvnNumber || ''}`.toLowerCase();
     return searchStr.includes(searchTerm.toLowerCase()) && (filterStatus === 'ALL' || req.status === filterStatus);
   });
 
@@ -125,7 +123,7 @@ export default function AdminBvnNibssClientPage({ initialRequests }: { initialRe
         <div className="relative flex-1 max-w-md">
            <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
            <input 
-             type="text" placeholder="Search Name or Ticket ID..." 
+             type="text" placeholder="Search Name, Ticket ID, BVN..." 
              className="pl-10 w-full rounded-lg border-gray-300 p-2.5 text-sm"
              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
            />
@@ -145,7 +143,7 @@ export default function AdminBvnNibssClientPage({ initialRequests }: { initialRe
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Agent</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Ticket Details</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Request Details</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
               </tr>
@@ -158,10 +156,15 @@ export default function AdminBvnNibssClientPage({ initialRequests }: { initialRe
                     <div className="text-sm font-bold text-gray-900">{req.user.firstName} {req.user.lastName}</div>
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-600">
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
+                      <p><strong className="text-gray-500">Name:</strong> {req.formData.fullName || 'N/A'}</p>
                       <p><strong className="text-gray-500">Ticket ID:</strong> {req.formData.ticketId || 'N/A'}</p>
+                      <p><strong className="text-gray-500">NIN:</strong> {req.formData.ninNumber || 'N/A'}</p>
+                      <p><strong className="text-gray-500">BVN:</strong> {req.formData.bvnNumber || 'N/A'}</p>
+                      
+                      {/* Only show slip if it exists (backward compatibility) */}
                       {req.vninSlipUrl && (
-                        <a href={req.vninSlipUrl} target="_blank" className="text-blue-600 underline flex items-center gap-1 w-fit">
+                        <a href={req.vninSlipUrl} target="_blank" className="text-blue-600 underline flex items-center gap-1 w-fit mt-1">
                           <PaperClipIcon className="h-3 w-3"/> View Slip
                         </a>
                       )}
@@ -193,7 +196,10 @@ export default function AdminBvnNibssClientPage({ initialRequests }: { initialRe
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Mark as {actionType}</h3>
-                <p className="text-sm text-gray-500">Ticket: {selectedReq.formData.ticketId}</p>
+                <div className="text-sm text-gray-500 mt-1">
+                    <p>Ticket: {selectedReq.formData.ticketId}</p>
+                    <p>Name: {selectedReq.formData.fullName}</p>
+                </div>
               </div>
               <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-full"><XCircleIcon className="h-6 w-6 text-gray-500"/></button>
             </div>
