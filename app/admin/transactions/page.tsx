@@ -14,7 +14,7 @@ export default async function AdminTransactionsPage() {
 
   // 1. Fetch Transactions (Increased Limit)
   const transactions = await prisma.transaction.findMany({
-    take: 500, // <--- INCREASED FROM 100 TO 500
+    take: 50000, // <--- INCREASED FROM 100 TO 500
     orderBy: { createdAt: 'desc' },
     include: {
       user: {
