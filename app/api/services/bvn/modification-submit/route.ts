@@ -4,8 +4,8 @@ import { getUserFromSession } from '@/lib/auth';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // --- Fee Constants ---
-const DOB_GAP_FEE_MEDIUM = new Decimal(35000);
-const DOB_GAP_FEE_HIGH = new Decimal(45000);   
+// UPDATED: Changed from 35000/45000 to 4000
+const DOB_GAP_FEE = new Decimal(4000); 
 const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
 
 const SPECIAL_BANK_FEE = new Decimal(1000);
@@ -17,7 +17,7 @@ async function calculateFee(
     bankType: string, 
     oldDob: string, 
     newDob: string,
-    needsNewspaper: boolean // <--- New Param
+    needsNewspaper: boolean 
 ): Promise<Decimal> {
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service) throw new Error('Service not found.');
@@ -46,11 +46,9 @@ async function calculateFee(
         if (NO_DOB_GAP_BANKS.includes(bankType)) {
           throw new Error("DOB modification over 5 years is not supported for this bank.");
         } 
-        if (diffYears > 10) {
-          price = price.plus(DOB_GAP_FEE_HIGH);
-        } else {
-          price = price.plus(DOB_GAP_FEE_MEDIUM);
-        }
+        
+        // UPDATED: Simply add the 4000 fee (removed the >10 years logic)
+        price = price.plus(DOB_GAP_FEE);
       }
     } catch (e: any) {
       if (e.message.includes("not supported")) throw e;
