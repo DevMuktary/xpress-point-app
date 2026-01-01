@@ -15,44 +15,37 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { phone, otp } = body;
+    const { phone } = body; // Removed 'otp' requirement
 
-    if (!phone || !otp) {
+    if (!phone) {
       return NextResponse.json(
-        { error: 'Phone number and OTP are required' }, { status: 400 }
+        { error: 'Phone number is required' }, { status: 400 }
       );
     }
 
-    // 1. Find the OTP
-    const otpRecord = await prisma.otp.findFirst({
-      where: {
-        code: otp,
-        user: { phoneNumber: phone },
-        expiresAt: { gt: new Date() }, 
-      },
-      include: {
-        user: true,
-      },
+    // --- BYPASS LOGIC START ---
+    // Instead of checking the OTP table, we find the user directly.
+    const user = await prisma.user.findFirst({
+      where: { phoneNumber: phone },
     });
 
-    if (!otpRecord) {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Invalid or expired OTP.' }, { status: 400 }
+        { error: 'User not found.' }, { status: 404 }
       );
     }
 
-    const user = otpRecord.user;
-
-    // 2. Mark user as verified
+    // 2. Mark user as phone verified (Auto-verify)
     await prisma.user.update({
       where: { id: user.id },
       data: { isPhoneVerified: true },
     });
 
-    // 3. Delete the used OTP
-    await prisma.otp.delete({
-      where: { id: otpRecord.id },
+    // Optional: Delete any pending OTPs for this user to keep DB clean
+    await prisma.otp.deleteMany({
+      where: { userId: user.id }
     });
+    // --- BYPASS LOGIC END ---
 
     // 4. Create the *login* token
     const loginToken = jwt.sign(
@@ -61,16 +54,13 @@ export async function POST(request: Request) {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    // --- THIS IS THE FIX ---
-    // We set the "session cookie"
+    // 5. Set the "session cookie"
     cookies().set('auth_token', loginToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      // 'maxAge' is REMOVED.
       path: '/',
     });
-    // -----------------------
     
     // 6. Send the Verification Email
     const emailVerifyToken = jwt.sign(
@@ -79,14 +69,19 @@ export async function POST(request: Request) {
       { expiresIn: '1h' }
     );
     
-    await sendVerificationEmail(user.email, user.firstName, emailVerifyToken);
+    // Wrap in try-catch so email failure doesn't block login
+    try {
+        await sendVerificationEmail(user.email, user.firstName, emailVerifyToken);
+    } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+    }
     
     return NextResponse.json(
       { message: 'Verification successful. User logged in.' }, { status: 200 }
     );
 
   } catch (error) {
-    console.error('OTP Verification Error:', error);
+    console.error('OTP Bypass Verification Error:', error);
     return NextResponse.json(
       { error: 'An internal server error occurred' }, { status: 500 }
     );
