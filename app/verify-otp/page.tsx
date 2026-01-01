@@ -1,86 +1,38 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './page.module.css';
 import Loading from '@/app/loading';
+import { CheckCircleIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
 export default function VerifyOtpPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const phone = searchParams.get('phone');
 
-  const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resendMessage, setResendMessage] = useState<string | null>(null);
-  
-  // --- NEW Timer States ---
-  const [countdown, setCountdown] = useState(60);
-  const [isResending, setIsResending] = useState(false);
 
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  // --- NEW Timer Logic ---
-  useEffect(() => {
-    // Only run the timer if countdown is greater than 0
-    if (countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      
-      // Cleanup function to clear the timeout
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]); // This effect re-runs every time 'countdown' changes
-
-  // Focus the first input on page load
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const { value } = e.target;
-    if (!/^[0-9]$/.test(value) && value !== "") return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setResendMessage(null);
-
-    const otpCode = otp.join("");
-    if (otpCode.length !== 6 || !phone) {
-      setError("Please enter the 6-digit code.");
+  const handleContinue = async () => {
+    if (!phone) {
+      setError("Phone number is missing.");
       return;
     }
 
     setIsLoading(true);
 
     try {
+      // Call the API to "finalize" the verification (set cookie, send email, etc.)
       const response = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone, otp: otpCode }),
+        body: JSON.stringify({ phone: phone, bypass: true }), // Sending phone only
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Invalid or expired OTP.');
+        throw new Error(data.error || 'Verification failed.');
       }
 
       // Success! Redirect to the dashboard.
@@ -92,86 +44,45 @@ export default function VerifyOtpPage() {
     }
   };
 
-  // --- NEW Resend Function ---
-  const handleResend = async () => {
-    if (countdown > 0 || isResending || !phone) return;
-
-    setIsResending(true);
-    setError(null);
-    setResendMessage(null);
-
-    try {
-      const response = await fetch('/api/auth/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to resend OTP.');
-      }
-
-      setResendMessage("A new code has been sent!");
-      setCountdown(60); // Restart the timer
-      
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsResending(false);
-    }
-  };
-
   return (
     <>
       {isLoading && <Loading />}
       <div className={styles.container}>
-        <h1 className={styles.title}>Verify Your Account</h1>
-        <p className={styles.subtitle}>
-          Enter the 6-digit code sent to your WhatsApp at <strong>{phone}</strong>
-        </p>
-        
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <div className={styles.otpGroup}>
-            {otp.map((digit, index) => (
-              <input
-                key={index}
-                type="tel" // Use "tel" for number pads on mobile
-                maxLength={1}
-                className={styles.otpInput}
-                value={digit}
-                onChange={(e) => handleChange(e, index)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                ref={(el) => { inputRefs.current[index] = el; }}
-                disabled={isLoading}
-              />
-            ))}
+        <div className="flex flex-col items-center justify-center space-y-6 text-center">
+          
+          {/* Success Icon */}
+          <div className="rounded-full bg-green-100 p-3">
+            <CheckCircleIcon className="h-16 w-16 text-green-600" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-gray-900">Verified Automatically</h1>
+          
+          <p className="text-gray-600 max-w-sm mx-auto">
+            Your WhatsApp number <strong>{phone}</strong> has been verified automatically.
+          </p>
+
+          {/* Email Notice */}
+          <div className="rounded-xl bg-blue-50 p-4 border border-blue-100 max-w-sm mx-auto flex items-start gap-3 text-left">
+            <EnvelopeIcon className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800">
+              <span className="font-bold block mb-1">Check Your Email</span>
+              We have sent a verification link to your inbox. Please check your spam folder if you don't see it. You can proceed to your dashboard now.
+            </div>
           </div>
 
           {error && (
-            <p style={{ color: '#e74c3c', textAlign: 'center' }}>{error}</p>
+            <p className="text-red-600 text-sm font-medium">{error}</p>
           )}
-          {resendMessage && (
-            <p style={{ color: '#2ecc71', textAlign: 'center' }}>{resendMessage}</p>
-          )}
-          
-          <button type="submit" className={styles.button} disabled={isLoading}>
-            {isLoading ? 'Verifying...' : 'Verify & Continue'}
-          </button>
 
-          {/* --- UPDATED Resend Button --- */}
+          {/* Continue Button */}
           <button 
-            type="button" 
-            className={styles.resendLink} 
-            onClick={handleResend}
-            disabled={countdown > 0 || isResending}
+            onClick={handleContinue}
+            className="w-full max-w-sm rounded-lg bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-all"
+            disabled={isLoading}
           >
-            {isResending 
-              ? 'Sending...' 
-              : (countdown > 0 ? `Resend Code (in ${countdown}s)` : 'Resend Code')
-            }
+            {isLoading ? 'Processing...' : 'Continue to Dashboard'}
           </button>
-        </form>
+        </div>
       </div>
     </>
   );
