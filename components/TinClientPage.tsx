@@ -8,8 +8,9 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   CalendarDaysIcon,
-  InformationCircleIcon,
-  MegaphoneIcon
+  MegaphoneIcon,
+  XMarkIcon,
+  MagnifyingGlassPlusIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -21,7 +22,7 @@ type Props = {
   availability: Record<string, boolean>; 
 };
 
-// --- Helper Component ---
+// --- Helper Component: Selection Button ---
 const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
   title: string, description: string, selected: boolean, onClick: () => void, disabled?: boolean
 }) => (
@@ -44,6 +45,7 @@ const ModTypeButton = ({ title, description, selected, onClick, disabled = false
   </button>
 );
 
+// --- Helper Component: Input Field ---
 const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired = true, placeholder = "" }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -87,41 +89,59 @@ const AnnouncementBox = () => (
   </div>
 );
 
-// --- Example Preview ---
-const ExamplePreview = () => (
+// --- Example Preview Component ---
+const ExamplePreview = ({ onPreview }: { onPreview: (src: string) => void }) => (
     <div className="mt-4 mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Personal Example */}
         <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
             <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
                 Personal Tax ID Example
             </div>
-            <div className="p-4 flex flex-col items-center justify-center min-h-[150px]">
-                {/* Replace src with your actual image path */}
-                <div className="text-center space-y-2">
-                    <span className="text-4xl">👤</span>
-                    <p className="text-xs text-gray-400">Image of First Name & Tax ID</p>
+            <div className="p-4 flex flex-col items-center justify-center min-h-[200px] relative group cursor-pointer" onClick={() => onPreview('/examples/personal_tax_example.jpg')}>
+                <div className="relative w-full h-[250px]">
+                    <Image 
+                      src="/examples/personal_tax_example.jpg" 
+                      alt="Personal Tax ID Sample"
+                      fill
+                      className="object-contain rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105"
+                    />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg">
+                    <span className="opacity-0 group-hover:opacity-100 bg-black/70 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 transition-opacity">
+                        <MagnifyingGlassPlusIcon className="h-4 w-4" /> Click to Enlarge
+                    </span>
                 </div>
             </div>
         </div>
+
+        {/* Business Example */}
         <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
             <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
                 Company Tax ID Example
             </div>
-            <div className="p-4 flex flex-col items-center justify-center min-h-[150px]">
-                {/* Replace src with your actual image path */}
-                 <div className="text-center space-y-2">
-                    <span className="text-4xl">🏢</span>
-                    <p className="text-xs text-gray-400">Image of Biz Name & Tax ID</p>
+            <div className="p-4 flex flex-col items-center justify-center min-h-[200px] relative group cursor-pointer" onClick={() => onPreview('/examples/business_tax_example.jpg')}>
+                <div className="relative w-full h-[250px]">
+                    <Image 
+                      src="/examples/business_tax_example.jpg" 
+                      alt="Business Tax ID Sample"
+                      fill
+                      className="object-contain rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105"
+                    />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg">
+                     <span className="opacity-0 group-hover:opacity-100 bg-black/70 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 transition-opacity">
+                        <MagnifyingGlassPlusIcon className="h-4 w-4" /> Click to Enlarge
+                    </span>
                 </div>
             </div>
         </div>
     </div>
-)
+);
 
 // --- MAIN COMPONENT ---
 export default function TinClientPage({ prices, availability }: Props) {
    
   // --- State Management ---
-  // Using 'REG' as the default underlying service type for the new Tax ID
   const [subType, setSubType] = useState<'PERSONAL' | 'BUSINESS' | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,7 +149,10 @@ export default function TinClientPage({ prices, availability }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-  // --- Form Data States (New Fields) ---
+  // Lightbox State
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // --- Form Data States ---
   // Personal
   const [nin, setNin] = useState('');
   const [dob, setDob] = useState('');
@@ -144,7 +167,6 @@ export default function TinClientPage({ prices, availability }: Props) {
   // --- Dynamic Fee Calculation ---
   const { serviceId, fee } = useMemo(() => {
     let id = '';
-    // We map the new structure to existing Service IDs to keep backend compatible
     if (subType === 'PERSONAL') id = 'TIN_REG_PERSONAL'; 
     else if (subType === 'BUSINESS') id = 'TIN_REG_BUSINESS'; 
     
@@ -184,7 +206,7 @@ export default function TinClientPage({ prices, availability }: Props) {
         body: JSON.stringify({ 
           serviceId, 
           formData, 
-          statusReportUrl: null // No longer needed
+          statusReportUrl: null 
         }),
       });
       
@@ -227,8 +249,9 @@ export default function TinClientPage({ prices, availability }: Props) {
         
         {/* --- NOTIFICATION BLOCK --- */}
         <AnnouncementBox />
-        <ExamplePreview />
-        {/* -------------------------- */}
+        
+        {/* --- EXAMPLE PREVIEW --- */}
+        <ExamplePreview onPreview={setPreviewImage} />
 
         <form onSubmit={handleOpenConfirmModal} className="space-y-8">
           
@@ -336,6 +359,31 @@ export default function TinClientPage({ prices, availability }: Props) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* --- LIGHTBOX MODAL --- */}
+      {previewImage && (
+        <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            onClick={() => setPreviewImage(null)} // Click background to close
+        >
+            <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+                <button 
+                    onClick={() => setPreviewImage(null)}
+                    className="absolute -top-12 right-0 md:-right-12 p-2 bg-white/20 hover:bg-white/40 rounded-full text-white transition-colors"
+                >
+                    <XMarkIcon className="h-8 w-8" />
+                </button>
+                <div className="relative w-full h-[80vh] rounded-lg overflow-hidden shadow-2xl">
+                    <Image 
+                        src={previewImage}
+                        alt="Enlarged Preview"
+                        fill
+                        className="object-contain"
+                    />
+                </div>
+            </div>
         </div>
       )}
     </div>
