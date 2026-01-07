@@ -10,7 +10,8 @@ import {
   CalendarDaysIcon,
   MegaphoneIcon,
   XMarkIcon,
-  MagnifyingGlassPlusIcon
+  PhotoIcon,         // Icon for the "View Sample" button
+  EyeIcon
 } from '@heroicons/react/24/outline';
 import Loading from '@/app/loading';
 import Link from 'next/link';
@@ -22,27 +23,51 @@ type Props = {
   availability: Record<string, boolean>; 
 };
 
-// --- Helper Component: Selection Button ---
-const ModTypeButton = ({ title, description, selected, onClick, disabled = false }: {
-  title: string, description: string, selected: boolean, onClick: () => void, disabled?: boolean
+// --- Helper Component: Selection Button with Sample Link ---
+const ModTypeButton = ({ 
+  title, 
+  description, 
+  selected, 
+  onClick, 
+  onViewSample, 
+  disabled = false 
+}: {
+  title: string, 
+  description: string, 
+  selected: boolean, 
+  onClick: () => void, 
+  onViewSample: (e: React.MouseEvent) => void,
+  disabled?: boolean
 }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    className={`rounded-lg p-4 text-left transition-all border-2 w-full
+  <div 
+    onClick={!disabled ? onClick : undefined}
+    className={`relative rounded-xl p-4 text-left transition-all border-2 cursor-pointer group
       ${disabled
         ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' 
         : selected
-          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500'
-          : 'border-gray-300 bg-white hover:border-gray-400'
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500 shadow-md'
+          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
       }`}
   >
-    <p className={`font-semibold ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
-    <p className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
-        {disabled ? 'Unavailable' : description}
-    </p>
-  </button>
+    <div className="flex justify-between items-start">
+      <div>
+        <p className={`font-bold text-lg ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+        <p className={`text-sm font-medium mt-1 ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+            {disabled ? 'Unavailable' : description}
+        </p>
+      </div>
+      
+      {/* View Sample Button (Stops propagation so it doesn't select the card) */}
+      <button
+        type="button"
+        onClick={onViewSample}
+        className="z-10 p-2 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-colors shadow-sm"
+        title="View Sample Image"
+      >
+        <PhotoIcon className="h-5 w-5" />
+      </button>
+    </div>
+  </div>
 );
 
 // --- Helper Component: Input Field ---
@@ -56,7 +81,7 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
       <input
         id={id} type={type} value={value} required={isRequired} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
       />
     </div>
   </div>
@@ -64,78 +89,21 @@ const DataInput = ({ label, id, value, onChange, Icon, type = "text", isRequired
 
 // --- Notification Component ---
 const AnnouncementBox = () => (
-  <div className="mb-8 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 p-6 border border-blue-100 animate-in fade-in slide-in-from-top-2">
-    <div className="flex items-start gap-4">
-      <div className="rounded-full bg-blue-100 p-2">
-        <MegaphoneIcon className="h-6 w-6 text-blue-700" />
+  <div className="mb-6 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-100 shadow-sm">
+    <div className="flex items-start gap-3">
+      <div className="rounded-full bg-white p-1.5 shadow-sm">
+        <MegaphoneIcon className="h-5 w-5 text-blue-600" />
       </div>
-      <div className="space-y-3">
-        <h3 className="font-bold text-blue-900 text-lg">
-          Important Update: Transition to The Nigeria Revenue Service
+      <div className="space-y-1">
+        <h3 className="font-bold text-blue-900 text-sm">
+          Transition to The Nigeria Revenue Service (NRS)
         </h3>
-        <div className="text-sm text-blue-800 space-y-2 leading-relaxed">
-          <p>
-            Please be informed that the Federal Inland Revenue Service has transitioned to 
-            <strong> The Nigeria Revenue Service (NRS)</strong>.
-          </p>
-          <p>
-            <span className="font-bold text-red-600">Note:</span> The old JTB-TIN Certificate is no longer issued. 
-            You will now receive a <strong>13-digit Tax ID</strong> and a digital image slip containing your details. 
-            This applies to both Individuals and Corporate entities.
-          </p>
-        </div>
+        <p className="text-xs text-blue-800 leading-relaxed">
+          The old JTB-TIN Certificate is no longer issued. You will now receive a <strong>13-digit Tax ID</strong> and a digital slip.
+        </p>
       </div>
     </div>
   </div>
-);
-
-// --- Example Preview Component ---
-const ExamplePreview = ({ onPreview }: { onPreview: (src: string) => void }) => (
-    <div className="mt-4 mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Personal Example */}
-        <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
-            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
-                Personal Tax ID Example
-            </div>
-            <div className="p-4 flex flex-col items-center justify-center min-h-[200px] relative group cursor-pointer" onClick={() => onPreview('/examples/personal_tax_example.jpg')}>
-                <div className="relative w-full h-[250px]">
-                    <Image 
-                      src="/examples/personal_tax_example.jpg" 
-                      alt="Personal Tax ID Sample"
-                      fill
-                      className="object-contain rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105"
-                    />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg">
-                    <span className="opacity-0 group-hover:opacity-100 bg-black/70 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 transition-opacity">
-                        <MagnifyingGlassPlusIcon className="h-4 w-4" /> Click to Enlarge
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        {/* Business Example */}
-        <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
-            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
-                Company Tax ID Example
-            </div>
-            <div className="p-4 flex flex-col items-center justify-center min-h-[200px] relative group cursor-pointer" onClick={() => onPreview('/examples/business_tax_example.jpg')}>
-                <div className="relative w-full h-[250px]">
-                    <Image 
-                      src="/examples/business_tax_example.jpg" 
-                      alt="Business Tax ID Sample"
-                      fill
-                      className="object-contain rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105"
-                    />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg">
-                     <span className="opacity-0 group-hover:opacity-100 bg-black/70 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 transition-opacity">
-                        <MagnifyingGlassPlusIcon className="h-4 w-4" /> Click to Enlarge
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
 );
 
 // --- MAIN COMPONENT ---
@@ -173,7 +141,12 @@ export default function TinClientPage({ prices, availability }: Props) {
     return { serviceId: id, fee: prices[id] || 0 };
   }, [subType, prices]);
 
-  // --- Step 1: Open Modal ---
+  // --- Handlers ---
+  const handleOpenSample = (e: React.MouseEvent, src: string) => {
+    e.stopPropagation(); // Prevent card selection when clicking "View Sample"
+    setPreviewImage(src);
+  };
+
   const handleOpenConfirmModal = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -186,7 +159,7 @@ export default function TinClientPage({ prices, availability }: Props) {
     setIsConfirmModalOpen(true);
   };
    
-  // --- Step 2: Final Submit ---
+  // --- Final Submit ---
   const handleFinalSubmit = async () => {
     setIsConfirmModalOpen(false);
     setIsSubmitting(true);
@@ -229,11 +202,11 @@ export default function TinClientPage({ prices, availability }: Props) {
   };
    
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {(isSubmitting) && <Loading />}
       
       {success && (
-        <div className="rounded-lg bg-green-50 p-4 border border-green-200 flex gap-3">
+        <div className="rounded-lg bg-green-50 p-4 border border-green-200 flex gap-3 animate-in slide-in-from-top-2">
           <CheckCircleIcon className="h-5 w-5 text-green-600" />
           <div>
             <h3 className="text-sm font-bold text-green-800">Success!</h3>
@@ -247,44 +220,46 @@ export default function TinClientPage({ prices, availability }: Props) {
 
       <div className="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
         
-        {/* --- NOTIFICATION BLOCK --- */}
+        {/* --- COMPACT NOTIFICATION --- */}
         <AnnouncementBox />
-        
-        {/* --- EXAMPLE PREVIEW --- */}
-        <ExamplePreview onPreview={setPreviewImage} />
 
         <form onSubmit={handleOpenConfirmModal} className="space-y-8">
           
-          {/* 1. Category */}
-          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* 1. Category Selection with Embedded Sample Buttons */}
+          <div>
             <h2 className="text-lg font-bold text-gray-900 mb-4">Select Category</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ModTypeButton
-                title="Personal Tax ID"
-                description={`For Individuals (Fee: ₦${prices[`TIN_REG_PERSONAL`]?.toLocaleString() || '...'})`}
-                selected={subType === 'PERSONAL'}
-                disabled={!availability[`TIN_REG_PERSONAL`]} 
-                onClick={() => setSubType('PERSONAL')}
-            />
-            <ModTypeButton
-                title="Non-Individual Tax ID"
-                description={`For Company/Biz Name (Fee: ₦${prices[`TIN_REG_BUSINESS`]?.toLocaleString() || '...'})`}
-                selected={subType === 'BUSINESS'}
-                disabled={!availability[`TIN_REG_BUSINESS`]}
-                onClick={() => setSubType('BUSINESS')}
-            />
+              <ModTypeButton
+                  title="Personal Tax ID"
+                  description={`Fee: ₦${prices[`TIN_REG_PERSONAL`]?.toLocaleString() || '...'}`}
+                  selected={subType === 'PERSONAL'}
+                  disabled={!availability[`TIN_REG_PERSONAL`]} 
+                  onClick={() => setSubType('PERSONAL')}
+                  onViewSample={(e) => handleOpenSample(e, '/examples/personal_tax_example.jpg')}
+              />
+              <ModTypeButton
+                  title="Non-Individual Tax ID"
+                  description={`Fee: ₦${prices[`TIN_REG_BUSINESS`]?.toLocaleString() || '...'}`}
+                  selected={subType === 'BUSINESS'}
+                  disabled={!availability[`TIN_REG_BUSINESS`]}
+                  onClick={() => setSubType('BUSINESS')}
+                  onViewSample={(e) => handleOpenSample(e, '/examples/business_tax_example.jpg')}
+              />
             </div>
           </div>
 
-          {/* 2. Form Fields */}
+          {/* 2. Form Fields (Appears without scrolling too much) */}
           {subType && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-300 border-t border-gray-100 pt-6 space-y-6">
-              <h3 className="text-lg font-bold text-gray-900">Enter Details</h3>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                {subType === 'PERSONAL' ? <UserIcon className="h-5 w-5 text-gray-500" /> : <BriefcaseIcon className="h-5 w-5 text-gray-500" />}
+                Enter {subType === 'PERSONAL' ? 'Personal' : 'Business'} Details
+              </h3>
               
               {/* === PERSONAL === */}
               {subType === 'PERSONAL' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DataInput label="NIN*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} type="tel" />
+                  <DataInput label="NIN Number*" id="nin" value={nin} onChange={setNin} Icon={IdentificationIcon} type="tel" />
                   <DataInput label="Date of Birth*" id="dob" value={dob} onChange={setDob} Icon={CalendarDaysIcon} type="date" />
                   
                   <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -309,7 +284,7 @@ export default function TinClientPage({ prices, availability }: Props) {
           {subType && (
             <div className="pt-6 border-t border-gray-100">
               <p className="text-sm font-medium text-red-600 text-center mb-4 bg-red-50 p-2 rounded">
-                Please confirm details are correct. This action is irreversible.
+                Please double-check your details. This action cannot be reversed.
               </p>
 
               {submitError && (
@@ -327,7 +302,7 @@ export default function TinClientPage({ prices, availability }: Props) {
         </form>
       </div>
 
-      {/* Confirmation Modal */}
+      {/* --- CONFIRMATION MODAL --- */}
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -337,7 +312,7 @@ export default function TinClientPage({ prices, availability }: Props) {
               </div>
               <h3 className="text-lg font-bold text-gray-900">Confirm Submission</h3>
               <p className="text-gray-500 mt-2 text-sm">
-                Please verify all details.
+                Are you sure the details provided are correct?
               </p>
               <div className="mt-6 p-4 bg-blue-50 rounded-xl">
                 <p className="text-sm text-blue-600 font-medium">Total Charge</p>
@@ -362,7 +337,7 @@ export default function TinClientPage({ prices, availability }: Props) {
         </div>
       )}
 
-      {/* --- LIGHTBOX MODAL --- */}
+      {/* --- LIGHTBOX MODAL (Full Screen Image) --- */}
       {previewImage && (
         <div 
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -383,6 +358,7 @@ export default function TinClientPage({ prices, availability }: Props) {
                         className="object-contain"
                     />
                 </div>
+                <p className="text-center text-white mt-4 text-sm font-medium">Click outside to close</p>
             </div>
         </div>
       )}
