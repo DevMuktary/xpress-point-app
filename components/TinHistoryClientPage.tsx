@@ -10,6 +10,7 @@ import {
   DocumentMagnifyingGlassIcon,
   PhotoIcon
 } from '@heroicons/react/24/outline';
+import CopyButton from '@/components/CopyButton'; // <--- Import the CopyButton
 
 type RequestItem = {
   id: string;
@@ -17,7 +18,7 @@ type RequestItem = {
   status: string;
   statusMessage: string | null;
   formData: any;
-  certificateUrl: string | null; // This now holds the Image URL
+  certificateUrl: string | null;
   createdAt: string;
 };
 
@@ -65,6 +66,8 @@ export default function TinHistoryClientPage({ initialRequests }: { initialReque
 
             return (
               <div key={req.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                
+                {/* Header: Service Name & Status */}
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="font-bold text-gray-900">{req.serviceName}</h3>
@@ -76,22 +79,41 @@ export default function TinHistoryClientPage({ initialRequests }: { initialReque
                   </span>
                 </div>
 
-                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mb-3 space-y-1">
+                {/* Details Section */}
+                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mb-3">
                   <p><strong>Subject:</strong> {d.bizName || `${d.firstName} ${d.surname}` || 'N/A'}</p>
-                  {d.assignedTin && (
-                      <p className="text-blue-800 font-mono"><strong>Tax ID:</strong> {d.assignedTin}</p>
-                  )}
                 </div>
+
+                {/* --- ELEGANT TAX ID DISPLAY --- */}
+                {d.assignedTin && (
+                   <div className="mb-4 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 shadow-inner">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">
+                            The Nigeria Revenue Service (NRS) ID
+                          </p>
+                          <p className="font-mono text-xl font-bold tracking-widest text-blue-900 mt-0.5">
+                            {d.assignedTin}
+                          </p>
+                        </div>
+                        {/* Copy Button */}
+                        <div className="shrink-0">
+                           <CopyButton textToCopy={d.assignedTin} />
+                        </div>
+                      </div>
+                   </div>
+                )}
+                {/* ----------------------------- */}
 
                 {/* Admin Message */}
                 {req.statusMessage && (
-                  <div className="mt-3 text-sm text-gray-600 bg-blue-50 p-2 rounded border border-blue-100">
-                    <span className="font-bold text-xs text-blue-500 uppercase block">Update</span>
+                  <div className="mt-3 text-sm text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-100">
+                    <span className="font-bold text-xs text-yellow-600 uppercase block">Status Update</span>
                     {req.statusMessage}
                   </div>
                 )}
 
-                {/* Download Button */}
+                {/* Download Button (Image) */}
                 {req.status === 'COMPLETED' && req.certificateUrl && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <a href={req.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-green-700 hover:underline">
