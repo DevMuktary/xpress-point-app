@@ -13,13 +13,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { 
       serviceId, 
-      formData, 
-      statusReportUrl
+      formData
     } = body;
 
     if (!serviceId || !formData) {
       return NextResponse.json({ error: 'Service ID and Form Data are required.' }, { status: 400 });
     }
+
+    // --- NEW VALIDATION LOGIC ---
+    if (serviceId === 'TIN_REG_PERSONAL') {
+        if (!formData.nin || !formData.dob || !formData.firstName || !formData.surname) {
+             return NextResponse.json({ error: 'Missing required Personal fields.' }, { status: 400 });
+        }
+    }
+    if (serviceId === 'TIN_REG_BUSINESS') {
+        if (!formData.bizName || !formData.rcNumber) {
+             return NextResponse.json({ error: 'Missing required Business fields.' }, { status: 400 });
+        }
+    }
+    // ----------------------------
 
     // 1. Get Service
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
@@ -38,15 +50,13 @@ export async function POST(request: Request) {
     const priceAsString = price.toString();
     const negatedPriceAsString = price.negated().toString();
 
-    // 3. Execute Transaction (No Commission Here)
+    // 3. Execute Transaction
     await prisma.$transaction(async (tx) => {
       // a) Charge User
       await tx.wallet.update({
         where: { userId: user.id },
         data: { balance: { decrement: priceAsString } },
       });
-
-      // NOTE: Commission is NOT paid here. Paid by Admin on Completion.
 
       // b) Create Request
       await tx.tinRequest.create({
@@ -56,7 +66,7 @@ export async function POST(request: Request) {
           status: 'PENDING',
           statusMessage: 'Request submitted. Awaiting admin review.',
           formData: formData as any,
-          statusReportUrl: statusReportUrl || null,
+          statusReportUrl: null, // No longer used
         },
       });
 
