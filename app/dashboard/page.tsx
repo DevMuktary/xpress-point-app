@@ -3,18 +3,17 @@ import { redirect } from "next/navigation";
 import { getUserFromSession } from "@/lib/auth"; 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { PlusIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
 import EmailVerifyAlert from "@/components/EmailVerifyAlert";
 import ServiceItemCard from "@/components/ServiceItemCard";
 import QuickActions from "@/components/QuickActions";
 import NotificationBanner from "@/components/NotificationBanner"; 
-import CommunityChat from "@/components/CommunityChat";          
+import CommunityChat from "@/components/CommunityChat";           
 
 // --- COMPLETE FLATTENED SERVICE LIST ---
 const allServices = [
   // --- NIN SERVICES ---
-  // Added "By Demographic" at the top as requested
   { title: "By Demographic", href: "/dashboard/services/nin/verify-by-demographic", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "VNIN Slip (Instant)", href: "/dashboard/services/nin/vnin-slip", logo: "/logos/nin.png", color: "bg-green-50" },
   { title: "Verify by NIN", href: "/dashboard/services/nin/verify-by-nin", logo: "/logos/nin.png", color: "bg-green-50" },
@@ -45,7 +44,8 @@ const allServices = [
 
   // --- CORPORATE / OTHER ---
   { title: "CAC Registration/Retrieval", href: "/dashboard/services/cac", logo: "/logos/cac.png", color: "bg-emerald-50" },
-  { title: "Tin Certificate/Retrieval", href: "/dashboard/services/tin", logo: "/logos/tin.png", color: "bg-blue-50" },
+  // UPDATED: Renamed to TAX ID
+  { title: "TAX ID", href: "/dashboard/services/tin", logo: "/logos/tin.png", color: "bg-blue-50" },
   { title: "Newspaper Pub", href: "/dashboard/services/newspaper", logo: "/logos/news.png", color: "bg-gray-50" },
   { title: "NPC Attestation", href: "/dashboard/services/npc", logo: "/logos/npc.png", color: "bg-orange-50" },
   
@@ -79,24 +79,6 @@ export default async function DashboardPage() {
       
       {bannerContent && <NotificationBanner content={bannerContent} />}
       {!user.isEmailVerified && <EmailVerifyAlert />}
-
-      {/* --- NEW YEAR WIDGET --- */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-500 p-1 shadow-lg animate-fade-in-down">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-        <div className="relative flex items-center justify-between rounded-lg bg-white/10 backdrop-blur-md px-4 py-3 text-white">
-          <div className="flex flex-col">
-            <h1 className="flex items-center gap-2 text-lg font-bold">
-              <span>🎉</span> Happy New Year, {user.firstName}!
-            </h1>
-            <p className="text-xs text-white/90 font-medium">
-              We wish you a prosperous year ahead filled with success.
-            </p>
-          </div>
-          <div className="hidden sm:block">
-             <SparklesIcon className="h-8 w-8 text-yellow-200 animate-pulse" />
-          </div>
-        </div>
-      </div>
 
       {/* --- Wallet Card --- */}
       <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-6 text-white shadow-xl transition-all hover:shadow-2xl hover:scale-[1.01] duration-300">
@@ -142,69 +124,20 @@ export default async function DashboardPage() {
         </div>
         
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {allServices.map((service) => {
-            const titleLower = service.title.toLowerCase();
-            
-            // LOGIC FOR "NEW" TAG
-            const isNew = service.title === 'By Demographic';
-
-            // LOGIC FOR "PROMO" TAG
-            const isElectricity = titleLower.includes('electricity');
-            const isExam = titleLower.includes('exam') || titleLower.includes('waec') || titleLower.includes('neco') || titleLower.includes('nabteb') || titleLower.includes('jamb');
-            const isPersonalization = titleLower.includes('personalization');
-            
-            // Only show promo if it's NOT New, NOT Electricity, NOT Exam, NOT Personalization
-            const showPromo = !isNew && !isElectricity && !isExam && !isPersonalization;
-
-            return (
-              <div key={service.title} className="relative group">
-                
-                {/* "NEW" BADGE (Specific for Demographic) */}
-                {isNew && (
-                  <div className="absolute -top-3 -right-2 z-20 flex animate-bounce">
-                    <span className="relative inline-flex h-6 items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-2 text-[10px] font-extrabold text-white shadow-lg ring-2 ring-white">
-                      <span className="animate-pulse absolute inline-flex h-full w-full rounded-lg bg-cyan-400 opacity-20"></span>
-                      NEW 🚀
-                    </span>
-                  </div>
-                )}
-
-                {/* "PROMO" BADGE (General) */}
-                {showPromo && (
-                  <div className="absolute -top-2 -right-1 z-20 flex animate-bounce">
-                    <span className="relative inline-flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-600 px-2 text-[10px] font-bold text-white shadow-sm ring-1 ring-white">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-20"></span>
-                      PROMO
-                    </span>
-                  </div>
-                )}
-
-                {/* Card Wrapper */}
-                <div className="transition-transform duration-200 hover:-translate-y-1">
-                  <ServiceItemCard
-                    title={service.title}
-                    logo={service.logo}
-                    href={service.href}
-                    color={service.color}
-                  />
-                </div>
-              </div>
-            );
-          })}
+          {allServices.map((service) => (
+            <div key={service.title} className="relative group transition-transform duration-200 hover:-translate-y-1">
+              <ServiceItemCard
+                title={service.title}
+                logo={service.logo}
+                href={service.href}
+                color={service.color}
+              />
+            </div>
+          ))}
         </div>
       </div>
 
       <CommunityChat currentUser={user} />
-
-      <style>{`
-        @keyframes fade-in-down {
-          0% { opacity: 0; transform: translateY(-10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-down {
-          animation: fade-in-down 0.8s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 }
