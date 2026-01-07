@@ -3,22 +3,17 @@
 import React, { useState } from 'react';
 import { 
   MagnifyingGlassIcon, 
-  XCircleIcon, 
-  CheckCircleIcon, 
-  ArrowPathIcon, 
-  UserIcon, 
+  XMarkIcon, 
   EyeIcon,
-  XMarkIcon,
-  BriefcaseIcon,
-  DocumentArrowDownIcon
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 
 type AdminRequest = {
   id: string;
   status: string;
   formData: any;
-  statusReportUrl: string | null; // User upload (Business)
-  certificateUrl: string | null;  // Admin upload (Result)
+  statusReportUrl: string | null; 
+  certificateUrl: string | null;  
   createdAt: string;
   user: {
     firstName: string;
@@ -46,6 +41,7 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
   
   // Action Inputs
   const [adminNote, setAdminNote] = useState('');
+  const [assignedTin, setAssignedTin] = useState(''); // <--- New State
   const [shouldRefund, setShouldRefund] = useState(false);
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -53,7 +49,7 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
   // Filtering
   const filteredRequests = requests.filter(req => {
     const d = req.formData;
-    const searchStr = `${req.user.firstName} ${req.user.lastName} ${d.firstName || ''} ${d.bizName || ''} ${d.bvn || ''}`.toLowerCase();
+    const searchStr = `${req.user.firstName} ${req.user.lastName} ${d.firstName || ''} ${d.bizName || ''} ${d.nin || ''} ${d.assignedTin || ''}`.toLowerCase();
     return searchStr.includes(searchTerm.toLowerCase()) && (filterStatus === 'ALL' || req.status === filterStatus);
   });
 
@@ -61,6 +57,7 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
     setSelectedReq(req);
     setActionType(action);
     setAdminNote('');
+    setAssignedTin(''); // Reset TIN
     setShouldRefund(false);
     setCertificateFile(null);
   };
@@ -104,17 +101,26 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
           action: actionType,
           refund: shouldRefund,
           note: adminNote,
-          certificateUrl: certUrl
+          certificateUrl: certUrl,
+          assignedTin: assignedTin // <--- Sending TIN
         })
       });
 
       if (!res.ok) throw new Error("Failed");
 
-      setRequests(prev => prev.map(r => r.id === selectedReq.id ? { 
-        ...r, 
-        status: actionType,
-        certificateUrl: certUrl || r.certificateUrl
-      } : r));
+      // Update Local State
+      setRequests(prev => prev.map(r => {
+        if (r.id === selectedReq.id) {
+           const updatedFormData = r.formData ? { ...r.formData, assignedTin: assignedTin } : r.formData;
+           return { 
+             ...r, 
+             status: actionType,
+             certificateUrl: certUrl || r.certificateUrl,
+             formData: updatedFormData
+           };
+        }
+        return r;
+      }));
       
       closeModal();
 
@@ -145,43 +151,30 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
         {/* Personal Info */}
         {isPersonal && (
            <div className="bg-blue-50 p-3 rounded border border-blue-200">
-             <p className="font-bold text-blue-900 border-b border-blue-200 pb-1 mb-2">Personal Info</p>
-             <div className="grid grid-cols-2 gap-2">
-                <p><strong>Name:</strong> {d.firstName || d.fullName} {d.lastName} {d.middleName}</p>
-                <p><strong>Phone:</strong> {d.phone}</p>
-                <p><strong>Email:</strong> {d.email}</p>
-                {d.bvn && <p><strong>BVN:</strong> {d.bvn}</p>}
-                {d.nin && <p><strong>NIN:</strong> {d.nin}</p>}
-                {d.bvnOrNin && <p><strong>BVN/NIN:</strong> {d.bvnOrNin}</p>}
-                {d.dob && <p><strong>DOB:</strong> {d.dob}</p>}
+             <p className="font-bold text-blue-900 border-b border-blue-200 pb-1 mb-2">Personal Details</p>
+             <div className="space-y-1">
+                <p><strong>First Name:</strong> {d.firstName}</p>
+                <p><strong>Middle Name:</strong> {d.middleName}</p>
+                <p><strong>Surname:</strong> {d.surname}</p>
+                <p><strong>NIN:</strong> {d.nin}</p>
+                <p><strong>DOB:</strong> {d.dob}</p>
              </div>
-             {d.address && (
-               <div className="mt-2 pt-2 border-t border-blue-200">
-                  <p><strong>Address:</strong> {d.address}</p>
-                  <p>{d.lga}, {d.state}</p>
-               </div>
-             )}
            </div>
         )}
 
         {/* Business Info */}
         {isBusiness && (
            <div className="bg-teal-50 p-3 rounded border border-teal-200">
-             <p className="font-bold text-teal-900 border-b border-teal-200 pb-1 mb-2">Business Info</p>
+             <p className="font-bold text-teal-900 border-b border-teal-200 pb-1 mb-2">Non-Individual Details</p>
              <p><strong>Business Name:</strong> {d.bizName}</p>
-             <p><strong>RC/BN Number:</strong> {d.bizNumber}</p>
-             {d.incorpDate && <p><strong>Incorp Date:</strong> {d.incorpDate}</p>}
+             <p><strong>RC/BN Number:</strong> {d.rcNumber}</p>
            </div>
         )}
-
-        {/* User Uploads */}
-        {req.statusReportUrl && (
-           <div className="mt-4 pt-4 border-t border-gray-100">
-             <h5 className="text-sm font-bold text-gray-700 mb-2">User Documents</h5>
-             <a href={req.statusReportUrl} target="_blank" className="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 w-fit">
-               <DocumentArrowDownIcon className="h-4 w-4"/> View Status Report
-             </a>
-           </div>
+        
+        {d.assignedTin && (
+            <div className="bg-green-50 p-3 rounded border border-green-200">
+                <p className="font-bold text-green-800">Assigned Tax ID: {d.assignedTin}</p>
+            </div>
         )}
       </div>
     );
@@ -194,7 +187,7 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
         <div className="relative flex-1 max-w-md">
            <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
            <input 
-             type="text" placeholder="Search Name, Biz Name, BVN..." 
+             type="text" placeholder="Search Name, Biz Name, Tax ID..." 
              className="pl-10 w-full rounded-lg border-gray-300 p-2.5 text-sm"
              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
            />
@@ -229,7 +222,7 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-600">{req.service.name}</td>
                   <td className="px-6 py-4 text-xs font-medium text-gray-800">
-                    {req.formData.firstName || req.formData.bizName || req.formData.fullName || 'N/A'}
+                    {req.formData.firstName || req.formData.bizName || 'N/A'}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(req.status)}`}>{req.status}</span>
@@ -258,7 +251,7 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative my-8 animate-in fade-in zoom-in-95 duration-200">
              <div className="flex justify-between items-center border-b border-gray-200 p-5">
-               <h3 className="text-xl font-bold text-gray-900">TIN Details</h3>
+               <h3 className="text-xl font-bold text-gray-900">Request Details</h3>
                <button onClick={() => setViewReq(null)} className="p-1 rounded-full hover:bg-gray-100"><XMarkIcon className="h-6 w-6 text-gray-600"/></button>
              </div>
              <div className="p-6 max-h-[70vh] overflow-y-auto">
@@ -281,10 +274,24 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
             </div>
             <div className="space-y-4">
               {actionType === 'COMPLETED' && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Upload Certificate (PDF)</label>
-                  <input type="file" onChange={e => setCertificateFile(e.target.files?.[0] || null)} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-50 file:text-green-700"/>
-                </div>
+                <>
+                    {/* TIN Input Box */}
+                    <div className="space-y-1">
+                        <label className="block text-sm font-bold text-gray-700">Enter Tax ID (13 Digits)</label>
+                        <input 
+                            type="text" 
+                            value={assignedTin} 
+                            onChange={(e) => setAssignedTin(e.target.value)}
+                            placeholder="e.g 1234567890123"
+                            className="w-full border border-gray-300 rounded-lg p-2 font-mono text-gray-900"
+                        />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">Upload Tax ID Image</label>
+                        <input type="file" onChange={e => setCertificateFile(e.target.files?.[0] || null)} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-50 file:text-green-700"/>
+                    </div>
+                </>
               )}
               {actionType === 'FAILED' && (
                  <div className="flex items-center justify-between bg-red-50 p-3 rounded-lg border border-red-100">
@@ -305,4 +312,3 @@ export default function AdminTinClientPage({ initialRequests }: { initialRequest
     </div>
   );
 }
-
