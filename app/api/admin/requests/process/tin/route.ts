@@ -2,29 +2,26 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromSession } from '@/lib/auth';
 import { processCommission } from '@/lib/commission';
-import { sendStatusNotification } from '@/lib/whatsapp'; // <--- Import
+import { sendStatusNotification } from '@/lib/whatsapp'; 
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
   
-  // Security: Admin Only
   if (!user || user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const body = await request.json();
-    const { requestId, action, refund, note, certificateUrl } = body; 
-    // action: 'PROCESSING' | 'COMPLETED' | 'FAILED'
+    const { requestId, action, refund, note, certificateUrl, assignedTin } = body; 
 
     if (!requestId || !action) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // 1. Get the request & include User to get phone number
     const tinRequest = await prisma.tinRequest.findUnique({
       where: { id: requestId },
-      include: { user: true } // <--- Ensure user is included
+      include: { user: true }
     });
 
     if (!tinRequest) {
@@ -44,16 +41,20 @@ export async function POST(request: Request) {
       } 
       
       else if (action === 'COMPLETED') {
+        // --- Merge new Assigned TIN into existing formData ---
+        const existingData = tinRequest.formData as Record<string, any>;
+        const updatedFormData = { ...existingData, assignedTin: assignedTin };
+
         await tx.tinRequest.update({
           where: { id: requestId },
           data: {
             status: 'COMPLETED',
-            statusMessage: note || 'TIN Generated Successfully',
-            certificateUrl: certificateUrl || null // Save the Admin's file here
+            statusMessage: note || 'Tax ID Generated Successfully',
+            certificateUrl: certificateUrl || null,
+            formData: updatedFormData // <--- Save the Tax ID
           }
         });
 
-        // --- PAY COMMISSION ---
         await processCommission(tx, tinRequest.userId, tinRequest.serviceId);
       } 
       
@@ -66,7 +67,6 @@ export async function POST(request: Request) {
           }
         });
 
-        // --- Refund Logic ---
         if (refund) {
           const transaction = await tx.transaction.findFirst({
             where: {
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
                 userId: tinRequest.userId,
                 type: 'REFUND',
                 amount: refundAmount,
-                description: `Refund: TIN Service Failed`,
+                description: `Refund: Tax ID Service Failed`,
                 reference: `REF-${Date.now()}`,
                 status: 'COMPLETED'
               }
@@ -100,19 +100,18 @@ export async function POST(request: Request) {
       }
     });
 
-    // --- SEND WHATSAPP NOTIFICATION (After DB Transaction) ---
+    // --- SEND WHATSAPP NOTIFICATION ---
     if (tinRequest?.user?.phoneNumber) {
         let statusText = action;
-        if (action === 'COMPLETED') statusText = 'COMPLETED (Certificate Ready)';
+        if (action === 'COMPLETED') statusText = 'COMPLETED (Tax ID Ready)';
         if (action === 'FAILED') statusText = 'FAILED (Please check dashboard)';
         
         await sendStatusNotification(
             tinRequest.user.phoneNumber, 
-            "JTB-TIN Service", 
+            "Tax ID Service", 
             statusText
         );
     }
-    // ---------------------------------------------------------
 
     return NextResponse.json({ success: true });
 
