@@ -8,7 +8,7 @@ import {
   ClockIcon, 
   MagnifyingGlassIcon, 
   DocumentMagnifyingGlassIcon,
-  DocumentArrowDownIcon
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 
 type RequestItem = {
@@ -17,7 +17,7 @@ type RequestItem = {
   status: string;
   statusMessage: string | null;
   formData: any;
-  certificateUrl: string | null;
+  certificateUrl: string | null; // This now holds the Image URL
   createdAt: string;
 };
 
@@ -27,7 +27,7 @@ export default function TinHistoryClientPage({ initialRequests }: { initialReque
 
   const filteredRequests = requests.filter(req => {
     const d = req.formData || {};
-    const searchStr = `${req.serviceName} ${d.firstName || ''} ${d.bizName || ''}`.toLowerCase();
+    const searchStr = `${req.serviceName} ${d.firstName || ''} ${d.bizName || ''} ${d.assignedTin || ''}`.toLowerCase();
     return searchStr.includes(searchTerm.toLowerCase());
   });
 
@@ -46,7 +46,7 @@ export default function TinHistoryClientPage({ initialRequests }: { initialReque
       <div className="relative">
         <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
         <input
-          type="text" placeholder="Search by Business or Name..." value={searchTerm}
+          type="text" placeholder="Search by Name, Biz or Tax ID..." value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full rounded-lg border border-gray-300 p-2.5 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
@@ -76,8 +76,11 @@ export default function TinHistoryClientPage({ initialRequests }: { initialReque
                   </span>
                 </div>
 
-                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mb-3">
-                  <p><strong>Subject:</strong> {d.bizName || `${d.firstName} ${d.lastName}` || 'N/A'}</p>
+                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mb-3 space-y-1">
+                  <p><strong>Subject:</strong> {d.bizName || `${d.firstName} ${d.surname}` || 'N/A'}</p>
+                  {d.assignedTin && (
+                      <p className="text-blue-800 font-mono"><strong>Tax ID:</strong> {d.assignedTin}</p>
+                  )}
                 </div>
 
                 {/* Admin Message */}
@@ -92,7 +95,7 @@ export default function TinHistoryClientPage({ initialRequests }: { initialReque
                 {req.status === 'COMPLETED' && req.certificateUrl && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <a href={req.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-green-700 hover:underline">
-                      <DocumentArrowDownIcon className="h-4 w-4" /> Download Certificate
+                      <PhotoIcon className="h-4 w-4" /> View Tax ID Image
                     </a>
                   </div>
                 )}
@@ -104,4 +107,3 @@ export default function TinHistoryClientPage({ initialRequests }: { initialReque
     </div>
   );
 }
-
