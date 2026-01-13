@@ -9,7 +9,6 @@ const DOB_GAP_FEE = new Decimal(4000);
 const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
 
 const SPECIAL_BANK_FEE = new Decimal(1000);
-const SPECIAL_BANKS = ['FCMB', 'Keystone Bank'];
 const NEWSPAPER_FEE = new Decimal(1500); // New Fee for Newspaper service
 
 async function calculateFee(
