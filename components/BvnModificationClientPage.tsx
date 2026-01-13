@@ -29,7 +29,7 @@ type ModType = 'BVN_MOD_NAME' | 'BVN_MOD_DOB' | 'BVN_MOD_PHONE' | 'BVN_MOD_NAME_
 
 const banksList: BankType[] = [
   'Agency BVN', 'B.O.A', 'NIBSS Microfinance', 'Enterprise Bank', 
-  'Heritage Bank', 'FCMB', 'First Bank', 'Keystone Bank'
+  'Heritage Bank', 'First Bank'
 ];
 
 const modTypes: { id: ModType, name: string }[] = [
