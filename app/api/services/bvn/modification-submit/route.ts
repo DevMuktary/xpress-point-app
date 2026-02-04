@@ -7,7 +7,6 @@ import { Decimal } from '@prisma/client/runtime/library';
 // UPDATED: Changed from 35000/45000 to 4000
 const DOB_GAP_FEE = new Decimal(4000); 
 const NO_DOB_GAP_BANKS = ['FCMB', 'First Bank', 'Keystone Bank'];
-
 const NEWSPAPER_FEE = new Decimal(1500); // New Fee for Newspaper service
 
 async function calculateFee(
@@ -22,10 +21,6 @@ async function calculateFee(
   
   let price = new Decimal(service.defaultAgentPrice);
 
-  // 1. Apply Special Bank Fee
-  if (SPECIAL_BANKS.includes(bankType)) {
-    price = price.plus(SPECIAL_BANK_FEE);
-  }
 
   // 2. Apply Newspaper Fee
   if (needsNewspaper) {
