@@ -11,21 +11,29 @@ if (!API_KEY) {
   console.error("CRITICAL: CHEAPDATASALES_API_KEY is not set.");
 }
 
+// --- UPDATED ERROR HANDLER TO SHOW EXACT RAW ERRORS ---
 function parseApiError(error: any): string {
+  // Log the absolute raw data from the server to your terminal
+  if (error.response) {
+    console.error("==== RAW API ERROR RESPONSE ====");
+    console.error("Status:", error.response.status);
+    console.error("Data:", JSON.stringify(error.response.data, null, 2));
+    console.error("Payload Sent:", error.config?.data); // Show exactly what we sent
+    console.error("================================");
+    
+    const data = error.response.data;
+    
+    // Return whatever string is available, or stringify the whole error object
+    return data.server_message || data.message || data.error || JSON.stringify(data);
+  }
+  
   if (error.code === 'ECONNABORTED') {
     return 'The service timed out. Please try again.';
   }
-  if (error.response && error.response.data) {
-    const data = error.response.data;
-    if (data.server_message && typeof data.server_message === 'string') {
-      return data.server_message;
-    }
-  }
-  if (error.message) {
-    return error.message;
-  }
-  return 'An internal server error occurred.';
+  
+  return error.message || 'An internal server error occurred.';
 }
+// --------------------------------------------------------
 
 export async function POST(request: Request) {
   const user = await getUserFromSession();
@@ -133,7 +141,7 @@ export async function POST(request: Request) {
     // --- 4. Call External API (CheapDataSales) ---
     const response = await axios.post(VEND_ENDPOINT, apiPayload, {
       headers: { 
-        'Bearer': API_KEY, // Changed to match the specific 'Bearer': 'YOUR_API_KEY' requirement from their docs
+        'Bearer': API_KEY, // Set custom bearer requirement
         'Content-Type': 'application/json' 
       },
       timeout: 45000,
