@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   // --- We must get these from the transaction ---
   let service: any = null;
   let totalPrice: Decimal = new Decimal(0);
-  let userReference: string = `XPS-FAILED-${Date.now()}`;
+  let userReference: string = `XPSFAILED${Date.now()}`; // Made alphanumeric
 
   try {
     const body = await request.json();
@@ -57,7 +57,10 @@ export async function POST(request: Request) {
     }
     
     let apiPayload: any;
-    userReference = `XPS-${service.productCode.toUpperCase()}-${Date.now()}`;
+    
+    // GENERATE STRICTLY ALPHANUMERIC REFERENCE
+    const rawReference = `XPS${service.productCode.toUpperCase()}${Date.now()}`;
+    userReference = rawReference.replace(/[^a-zA-Z0-9]/g, ''); 
     
     // --- 2. Calculate Price (Standardized - No Earnings for Aggregators) ---
     // We use defaultAgentPrice for everyone.
@@ -76,7 +79,7 @@ export async function POST(request: Request) {
       apiPayload = {
         product_code: service.productCode,
         phone_number: phoneNumber,
-        amount: amount, 
+        amount: Number(amount), // CRITICAL: Ensure this is a number, not a string
         action: 'vend',
         user_reference: userReference,
         bypass_network: 'yes'
@@ -130,7 +133,7 @@ export async function POST(request: Request) {
     // --- 4. Call External API (CheapDataSales) ---
     const response = await axios.post(VEND_ENDPOINT, apiPayload, {
       headers: { 
-        'Authorization': API_KEY,
+        'Bearer': API_KEY, // Changed to match the specific 'Bearer': 'YOUR_API_KEY' requirement from their docs
         'Content-Type': 'application/json' 
       },
       timeout: 45000,
