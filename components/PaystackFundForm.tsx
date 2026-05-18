@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { CreditCardIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon } from '@heroicons/react/24/outline';
 
 export default function PaystackFundForm({ email }: { email: string }) {
   const [amount, setAmount] = useState('');
@@ -22,7 +22,7 @@ export default function PaystackFundForm({ email }: { email: string }) {
       const data = await res.json();
       
       if (data.authorization_url) {
-        // Redirect user to Paystack's secure checkout
+        // Redirect user to Paystack
         window.location.href = data.authorization_url;
       } else {
         alert(data.error || 'Failed to initialize payment');
@@ -37,12 +37,12 @@ export default function PaystackFundForm({ email }: { email: string }) {
   return (
     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center">
-          <CreditCardIcon className="h-5 w-5 text-indigo-600" />
+        <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center">
+          <BanknotesIcon className="h-5 w-5 text-blue-600" />
         </div>
         <div>
-          <h3 className="font-bold text-gray-900">Fund with Card / USSD</h3>
-          <p className="text-xs text-gray-500">Instant funding via Paystack</p>
+          <h3 className="font-bold text-gray-900">Pay with Paystack</h3>
+          <p className="text-xs text-gray-500">Fund your wallet securely online</p>
         </div>
       </div>
 
@@ -56,15 +56,15 @@ export default function PaystackFundForm({ email }: { email: string }) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="Enter amount (e.g. 1000)"
-            className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="bg-indigo-600 text-white font-medium px-6 py-3 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="bg-blue-600 text-white font-medium px-6 py-3 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? 'Processing...' : 'Pay Now'}
+          {loading ? 'Processing...' : 'Pay with Paystack'}
         </button>
       </form>
     </div>
