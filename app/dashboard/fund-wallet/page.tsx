@@ -2,96 +2,106 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { InformationCircleIcon, ShieldCheckIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon, BuildingLibraryIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { VirtualAccount } from '@prisma/client';
 import AccountCard from '@/components/AccountCard';
 import GenerateAccountControls from '@/components/GenerateAccountControls';
-import PaystackFundForm from '@/components/PaystackFundForm'; // ADDED IMPORT
+import PaystackFundForm from '@/components/PaystackFundForm';
 
 async function getVirtualAccounts(userId: string) {
-  const accounts = await prisma.virtualAccount.findMany({
+  return await prisma.virtualAccount.findMany({
     where: { userId: userId },
     orderBy: { bankName: 'asc' },
   });
-  return accounts;
 }
 
 export default async function FundWalletPage() {
   const user = await getUserFromSession();
-  if (!user) {
-    redirect('/login');
-  }
+  if (!user) redirect('/login');
 
   const virtualAccounts: VirtualAccount[] = await getVirtualAccounts(user.id);
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-6">
+    <div className="w-full max-w-6xl mx-auto px-4 py-8">
       
+      {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Fund Wallet</h1>
-        <p className="text-gray-500 text-sm">Top up your wallet to pay for services seamlessly.</p>
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Fund Your Wallet</h1>
+        <p className="text-gray-500 mt-1 text-lg">Choose how you want to top up your balance.</p>
       </div>
 
-      <div className="mb-8 flex items-start gap-4 rounded-xl bg-orange-50 p-4 border border-orange-100">
-        <InformationCircleIcon className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
+      {/* Modern Warning Banner */}
+      <div className="mb-8 flex items-start gap-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 p-5 border border-orange-100 shadow-sm">
+        <div className="p-2 bg-orange-100 rounded-full">
+          <InformationCircleIcon className="h-6 w-6 text-orange-600" />
+        </div>
         <div>
-          <h3 className="text-sm font-bold text-orange-900">Important Policy</h3>
-          <p className="mt-1 text-sm text-orange-800 leading-relaxed">
-            Funds deposited into this wallet are strictly for service payments. 
-            <span className="font-bold ml-1">Money cannot be withdrawn back to your bank account.</span> 
-            Please ensure you only fund what you plan to use.
+          <h3 className="text-sm font-bold text-orange-900 uppercase tracking-wider mb-1">Strict Policy Notice</h3>
+          <p className="text-sm text-orange-800 leading-relaxed">
+            Funds deposited are strictly for processing services on this platform. 
+            <span className="font-bold underline ml-1">Withdrawals back to banks are not permitted.</span> 
+            Fund only what you intend to use.
           </p>
         </div>
       </div>
 
-      <div className="space-y-8">
+      {/* Grid Layout: Left (Paystack) | Right (Bank Transfer) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         
-        {/* NEW: PAYSTACK FORM SECTION */}
-        <PaystackFundForm email={user.email} />
-
-        <div className="relative flex items-center py-4">
-          <div className="flex-grow border-t border-gray-200"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-400 text-sm font-medium">OR FUND VIA BANK TRANSFER</span>
-          <div className="flex-grow border-t border-gray-200"></div>
+        {/* LEFT COLUMN: Paystack Instant Funding */}
+        <div className="lg:col-span-5 flex flex-col">
+          <PaystackFundForm email={user.email} />
         </div>
-        
-        {virtualAccounts.length > 0 ? (
-          <div>
-            {virtualAccounts.map((account) => (
-              <div key={account.id} className="mb-6">
-                <AccountCard
-                  bankName={account.bankName}
-                  accountNumber={account.accountNumber}
-                  accountName={account.accountName}
-                />
+
+        {/* RIGHT COLUMN: Bank Transfers */}
+        <div className="lg:col-span-7 flex flex-col">
+          
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-xl shadow-gray-200/40">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Bank Transfer</h3>
+                <p className="text-sm text-gray-500 mt-1">Send money to your dedicated accounts.</p>
               </div>
-            ))}
-            
-            <div className="flex items-center justify-center gap-6 text-xs text-gray-400 mt-4">
-              <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Secure Transfer</span>
-              <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Instant Credit</span>
-              <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Automated</span>
+              <div className="h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
+                <BuildingLibraryIcon className="h-6 w-6 text-gray-400" />
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
-            <div className="mx-auto h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-              <BuildingLibraryIcon className="h-8 w-8 text-blue-500" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">No Account Generated Yet</h3>
-            <p className="text-gray-500 text-sm mb-6">Create a dedicated virtual account to start funding your wallet.</p>
-            
-            <GenerateAccountControls existingAccounts={virtualAccounts} />
-          </div>
-        )}
 
-        {virtualAccounts.length > 0 && (
-           <div className="mt-8 pt-8 border-t border-gray-100">
-             <GenerateAccountControls existingAccounts={virtualAccounts} />
-           </div>
-        )}
+            {virtualAccounts.length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {virtualAccounts.map((account) => (
+                    <div key={account.id} className="transition-transform hover:-translate-y-1 duration-300">
+                      <AccountCard
+                        bankName={account.bankName}
+                        accountNumber={account.accountNumber}
+                        accountName={account.accountName}
+                      />
+                    </div>
+                  ))}
+                </div>
 
+                <div className="pt-6 mt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                   <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
+                     <ArrowPathIcon className="h-4 w-4 animate-spin-slow" />
+                     Auto-credits in seconds
+                   </div>
+                   <GenerateAccountControls existingAccounts={virtualAccounts} />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-10 px-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                <BuildingLibraryIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-gray-900">No Accounts Generated</h3>
+                <p className="text-gray-500 text-sm mb-6 mt-1">Create a dedicated virtual account to accept bank transfers.</p>
+                <GenerateAccountControls existingAccounts={virtualAccounts} />
+              </div>
+            )}
+          </div>
+
+        </div>
       </div>
+      
     </div>
   );
 }
