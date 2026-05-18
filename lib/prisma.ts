@@ -16,8 +16,9 @@ declare global {
 export const prisma =
   global.prisma ||
   new PrismaClient({
-    // We add more logs so we can see what's happening
-    log: ['query', 'info', 'warn', 'error'],
+    // CRITICAL FIX: Only print detailed logs in local development. 
+    // Printing everything to Railway logs spikes CPU usage.
+    log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
   })
 
 // In development, we save the client to the global object.
