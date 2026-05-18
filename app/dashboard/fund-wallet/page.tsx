@@ -6,8 +6,8 @@ import { InformationCircleIcon, ShieldCheckIcon, BuildingLibraryIcon } from '@he
 import { VirtualAccount } from '@prisma/client';
 import AccountCard from '@/components/AccountCard';
 import GenerateAccountControls from '@/components/GenerateAccountControls';
+import PaystackFundForm from '@/components/PaystackFundForm'; // ADDED IMPORT
 
-// Helper to get user's virtual accounts
 async function getVirtualAccounts(userId: string) {
   const accounts = await prisma.virtualAccount.findMany({
     where: { userId: userId },
@@ -27,13 +27,11 @@ export default async function FundWalletPage() {
   return (
     <div className="w-full max-w-2xl mx-auto px-4 py-6">
       
-      {/* 1. Page Title */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Fund Wallet</h1>
-        <p className="text-gray-500 text-sm">Transfer to your dedicated account below to top up instantly.</p>
+        <p className="text-gray-500 text-sm">Top up your wallet to pay for services seamlessly.</p>
       </div>
 
-      {/* 2. Important Notice (The "No Withdraw" Warning) */}
       <div className="mb-8 flex items-start gap-4 rounded-xl bg-orange-50 p-4 border border-orange-100">
         <InformationCircleIcon className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
         <div>
@@ -48,7 +46,15 @@ export default async function FundWalletPage() {
 
       <div className="space-y-8">
         
-        {/* 3. The Account Card (Hero Section) */}
+        {/* NEW: PAYSTACK FORM SECTION */}
+        <PaystackFundForm email={user.email} />
+
+        <div className="relative flex items-center py-4">
+          <div className="flex-grow border-t border-gray-200"></div>
+          <span className="flex-shrink-0 mx-4 text-gray-400 text-sm font-medium">OR FUND VIA BANK TRANSFER</span>
+          <div className="flex-grow border-t border-gray-200"></div>
+        </div>
+        
         {virtualAccounts.length > 0 ? (
           <div>
             {virtualAccounts.map((account) => (
@@ -61,7 +67,6 @@ export default async function FundWalletPage() {
               </div>
             ))}
             
-            {/* Trust Badges */}
             <div className="flex items-center justify-center gap-6 text-xs text-gray-400 mt-4">
               <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Secure Transfer</span>
               <span className="flex items-center gap-1"><ShieldCheckIcon className="h-4 w-4"/> Instant Credit</span>
@@ -69,8 +74,6 @@ export default async function FundWalletPage() {
             </div>
           </div>
         ) : (
-          
-          /* 4. Empty State / Generator */
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
             <div className="mx-auto h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
               <BuildingLibraryIcon className="h-8 w-8 text-blue-500" />
@@ -78,12 +81,10 @@ export default async function FundWalletPage() {
             <h3 className="text-lg font-bold text-gray-900">No Account Generated Yet</h3>
             <p className="text-gray-500 text-sm mb-6">Create a dedicated virtual account to start funding your wallet.</p>
             
-            {/* The Generator Component - Passed Correctly */}
             <GenerateAccountControls existingAccounts={virtualAccounts} />
           </div>
         )}
 
-        {/* 5. Generator (Always visible if they can generate more) */}
         {virtualAccounts.length > 0 && (
            <div className="mt-8 pt-8 border-t border-gray-100">
              <GenerateAccountControls existingAccounts={virtualAccounts} />
