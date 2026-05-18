@@ -23,17 +23,18 @@ export async function POST(request: Request) {
   let failed = 0;
 
   try {
-    // --- 2. Get all PROCESSING requests ---
-    // --- THIS IS THE FIX ---
+    // --- 2. Get PROCESSING requests (FIXED: PAGINATION ADDED) ---
     const pendingRequests = await prisma.personalizationRequest.findMany({
       where: { status: 'PROCESSING' },
+      take: 30, // CRITICAL FIX: Only process 30 at a time to prevent RAM crash
+      orderBy: { updatedAt: 'asc' } // Process the oldest requests first
     });
 
     if (pendingRequests.length === 0) {
       return NextResponse.json({ message: 'No processing jobs to check.' });
     }
 
-    console.log(`CRON JOB: Found ${pendingRequests.length} processing requests.`);
+    console.log(`CRON JOB: Found ${pendingRequests.length} processing requests in this batch.`);
 
     // --- 3. Loop and check each one ---
     for (const request of pendingRequests) {
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const message = `Cron job complete. Checked: ${pendingRequests.length}, Updated: ${updated}, Failed: ${failed}.`;
+    const message = `Cron job complete. Batch Checked: ${pendingRequests.length}, Updated: ${updated}, Failed: ${failed}.`;
     console.log(message);
     return NextResponse.json({ message });
 
