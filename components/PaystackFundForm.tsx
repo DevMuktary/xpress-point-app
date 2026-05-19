@@ -28,22 +28,24 @@ export default function PaystackFundForm({ email }: { email: string }) {
       return alert("CRITICAL ERROR: Paystack Public Key is missing! If you added it to Railway, you MUST click 'Redeploy' for the frontend to see it.");
     }
 
-    if (typeof window.PaystackPop === 'undefined') {
+    // THE TYPESCRIPT FIX: Use (window as any) to bypass strict type checking
+    if (typeof (window as any).PaystackPop === 'undefined') {
       return alert("Paystack script is still loading. Please wait a second and try again.");
     }
 
     // 2. INITIALIZE PAYSTACK
-    // @ts-ignore
-    const handler = window.PaystackPop.setup({
+    const handler = (window as any).PaystackPop.setup({
       key: publicKey.trim(),
       email: email.trim(),
       amount: payAmount * 100, 
       currency: 'NGN',
       ref: `XPRESS_${Math.floor(Math.random() * 1000000000)}_${Date.now()}`,
       callback: function (response: any) {
+        // Trigger the success modal overlay
         setAmount('');
         setIsSuccess(true);
 
+        // Redirect to dashboard after 3 seconds so the webhook has time to update the database
         setTimeout(() => {
           router.push('/dashboard');
           router.refresh(); 
