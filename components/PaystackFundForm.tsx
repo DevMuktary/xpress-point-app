@@ -14,30 +14,43 @@ export default function PaystackFundForm({ email }: { email: string }) {
     e.preventDefault();
     const payAmount = Number(amount);
     
+    // 1. STRICT VALIDATION CHECKS
     if (!payAmount || payAmount < 100) {
       return alert("Minimum funding amount is ₦100");
     }
 
+    if (!email || email.trim() === '') {
+      return alert("CRITICAL ERROR: User email is missing. Paystack requires an email.");
+    }
+
+    const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
+    if (!publicKey || publicKey.trim() === '') {
+      return alert("CRITICAL ERROR: Paystack Public Key is missing! If you added it to Railway, you MUST click 'Redeploy' for the frontend to see it.");
+    }
+
+    if (typeof window.PaystackPop === 'undefined') {
+      return alert("Paystack script is still loading. Please wait a second and try again.");
+    }
+
+    // 2. INITIALIZE PAYSTACK
     // @ts-ignore
     const handler = window.PaystackPop.setup({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-      email: email,
+      key: publicKey.trim(),
+      email: email.trim(),
       amount: payAmount * 100, 
       currency: 'NGN',
       ref: `XPRESS_${Math.floor(Math.random() * 1000000000)}_${Date.now()}`,
       callback: function (response: any) {
-        // 1. Clear the amount and trigger the success modal
         setAmount('');
         setIsSuccess(true);
 
-        // 2. Wait 3 seconds to let the webhook hit the database, then redirect to the dashboard
         setTimeout(() => {
           router.push('/dashboard');
-          router.refresh(); // Forces Next.js to fetch the new wallet balance
+          router.refresh(); 
         }, 3000);
       },
       onClose: function () {
-        // Optional: Do nothing if they just close the Paystack window manually
+        console.log("Payment modal closed");
       }
     });
 
@@ -46,6 +59,7 @@ export default function PaystackFundForm({ email }: { email: string }) {
 
   return (
     <>
+      {/* Load Paystack Script safely */}
       <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
 
       {/* --- CUSTOM SUCCESS MODAL --- */}
@@ -60,8 +74,7 @@ export default function PaystackFundForm({ email }: { email: string }) {
               Your transaction was successful. Redirecting to your dashboard to update your balance...
             </p>
             <div className="flex justify-center">
-              {/* Spinning Loader */}
-              <div className="h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="h-6 w-6 border-2 border-[#001232] border-t-transparent rounded-full animate-spin"></div>
             </div>
           </div>
         </div>
@@ -70,8 +83,6 @@ export default function PaystackFundForm({ email }: { email: string }) {
 
       {/* COMPACT FINTECH CARD */}
       <div className="relative overflow-hidden bg-gradient-to-br from-[#001232] to-blue-900 rounded-2xl p-5 sm:p-6 shadow-md text-white">
-        
-        {/* Subtle Background Glow */}
         <div className="absolute top-0 right-0 -mr-4 -mt-4 w-32 h-32 rounded-full bg-white/5 blur-xl"></div>
 
         <div className="relative z-10">
