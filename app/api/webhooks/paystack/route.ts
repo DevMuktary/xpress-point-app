@@ -54,16 +54,24 @@ export async function POST(req: Request) {
 
       // Execute Wallet Credit and Log Transaction Safely
       await prisma.$transaction([
-        prisma.wallet.update({
+        // FIX: Use upsert to guarantee a wallet exists before trying to update it
+        prisma.wallet.upsert({
           where: { userId: user.id },
-          data: { balance: { increment: amountInNaira.toString() } }
+          update: { 
+            balance: { increment: amountInNaira } 
+          },
+          create: { 
+            userId: user.id, 
+            balance: amountInNaira 
+          }
         }),
         
+        // FIX: Pass the raw number to the amount field, Prisma handles the Decimal conversion
         prisma.transaction.create({
           data: {
             userId: user.id,
             type: 'WALLET_FUNDING',
-            amount: amountInNaira.toString(),
+            amount: amountInNaira, 
             description: 'Wallet funding via Paystack',
             reference: reference,
             status: 'COMPLETED'
