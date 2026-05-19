@@ -9,10 +9,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Paystack is not configured' }, { status: 500 });
     }
 
-    // SMART FIX: Prevents "Bearer Bearer" errors if you added it manually to the .env file
     const authHeader = rawSecret.trim().startsWith('Bearer') 
       ? rawSecret.trim() 
       : `Bearer ${rawSecret.trim()}`;
+
+    // ENFORCE THE LIVE URL: Prevents any localhost fallback issues
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://xpresspoint.net';
 
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -23,7 +25,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         email,
         amount: amount * 100, 
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/fund-wallet`,
+        callback_url: `${baseUrl}/dashboard`,
       }),
     });
 
