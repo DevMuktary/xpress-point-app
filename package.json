@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "node .next/standalone/server.js",
+    "build": "prisma generate && next build && cp -R public .next/standalone/public && cp -R .next/static .next/standalone/.next/static",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "next lint",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:fixstatus": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/fixstatus.ts"
