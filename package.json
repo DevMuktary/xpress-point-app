@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --accept-data-loss && prisma generate && npm run seed && next build",
-    "start": "next start",
+    "build": "prisma generate && next build",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:fixstatus": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/fixstatus.ts"
@@ -16,6 +16,7 @@
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.2.0",
+    "csv-parser": "^3.0.0",
     "decimal.js": "^10.4.3",
     "jsonwebtoken": "^9.0.2",
     "libphonenumber-js": "^1.11.0",
@@ -25,7 +26,6 @@
     "qrcode": "^1.5.3",
     "react": "^18",
     "react-dom": "^18",
-    "csv-parser": "^3.0.0",
     "react-phone-number-input": "^3.4.1",
     "sharp": "^0.33.3"
   },
