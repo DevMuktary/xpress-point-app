@@ -2,10 +2,13 @@
 
 import React, { useState } from 'react';
 import Script from 'next/script';
-import { CreditCardIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { useRouter } from 'next/navigation';
+import { CreditCardIcon, SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
 
 export default function PaystackFundForm({ email }: { email: string }) {
   const [amount, setAmount] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
+  const router = useRouter();
 
   const handlePaystackPayment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +26,19 @@ export default function PaystackFundForm({ email }: { email: string }) {
       currency: 'NGN',
       ref: `XPRESS_${Math.floor(Math.random() * 1000000000)}_${Date.now()}`,
       callback: function (response: any) {
-        alert(`Payment Successful! Ref: ${response.reference}. Your wallet will reflect the balance momentarily.`);
+        // 1. Clear the amount and trigger the success modal
         setAmount('');
+        setIsSuccess(true);
+
+        // 2. Wait 3 seconds to let the webhook hit the database, then redirect to the dashboard
+        setTimeout(() => {
+          router.push('/dashboard');
+          router.refresh(); // Forces Next.js to fetch the new wallet balance
+        }, 3000);
       },
+      onClose: function () {
+        // Optional: Do nothing if they just close the Paystack window manually
+      }
     });
 
     handler.openIframe();
@@ -35,20 +48,40 @@ export default function PaystackFundForm({ email }: { email: string }) {
     <>
       <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
 
+      {/* --- CUSTOM SUCCESS MODAL --- */}
+      {isSuccess && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl scale-100 animate-in zoom-in-95 duration-300">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+              <CheckCircleIcon className="h-10 w-10 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Completed!</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Your transaction was successful. Redirecting to your dashboard to update your balance...
+            </p>
+            <div className="flex justify-center">
+              {/* Spinning Loader */}
+              <div className="h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ----------------------------- */}
+
       {/* COMPACT FINTECH CARD */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-600 rounded-2xl p-5 sm:p-6 shadow-md text-white">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#001232] to-blue-900 rounded-2xl p-5 sm:p-6 shadow-md text-white">
         
         {/* Subtle Background Glow */}
-        <div className="absolute top-0 right-0 -mr-4 -mt-4 w-32 h-32 rounded-full bg-white/10 blur-xl"></div>
+        <div className="absolute top-0 right-0 -mr-4 -mt-4 w-32 h-32 rounded-full bg-white/5 blur-xl"></div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
-              <CreditCardIcon className="h-5 w-5 text-white" />
+            <div className="p-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/10">
+              <CreditCardIcon className="h-5 w-5 text-[#FFB902]" />
             </div>
             <div>
               <h3 className="text-base font-bold tracking-tight">Pay with Card</h3>
-              <p className="text-blue-100 text-xs mt-0.5">Instant funding via Paystack</p>
+              <p className="text-blue-200 text-xs mt-0.5">Instant funding via Paystack</p>
             </div>
           </div>
 
@@ -62,13 +95,13 @@ export default function PaystackFundForm({ email }: { email: string }) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Amount (e.g. 1000)"
-                className="w-full pl-8 pr-3 py-2.5 bg-black/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm font-medium transition-all"
+                className="w-full pl-8 pr-3 py-2.5 bg-black/20 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#FFB902] text-sm font-medium transition-all"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-1.5 bg-white text-blue-600 font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-blue-50 active:scale-[0.98] transition-all shadow-sm"
+              className="w-full flex items-center justify-center gap-1.5 bg-[#FFB902] text-[#001232] font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-amber-400 active:scale-[0.98] transition-all shadow-sm"
             >
               <SparklesIcon className="h-4 w-4" />
               Pay Now
