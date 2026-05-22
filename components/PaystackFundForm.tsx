@@ -93,7 +93,7 @@ export default function PaystackFundForm({ email }: { email: string }) {
               <CreditCardIcon className="h-5 w-5 text-[#FFB902]" />
             </div>
             <div>
-              <h3 className="text-base font-bold tracking-tight">Pay with Paystack</h3>
+              <h3 className="text-base font-bold tracking-tight">Fund with Paystack</h3>
               <p className="text-blue-200 text-xs mt-0.5">Instant funding via Several Method</p>
             </div>
           </div>
@@ -117,7 +117,7 @@ export default function PaystackFundForm({ email }: { email: string }) {
               className="w-full flex items-center justify-center gap-1.5 bg-[#FFB902] text-[#001232] font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-amber-400 active:scale-[0.98] transition-all shadow-sm"
             >
               <SparklesIcon className="h-4 w-4" />
-              Pay Now
+              Fund Now
             </button>
           </form>
         </div>
