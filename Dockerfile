@@ -1,7 +1,6 @@
-FROM node:20-alpine AS base
-# CRITICAL FIX: Install Prisma's required system libraries globally 
-# so the final production runner has access to OpenSSL.
-RUN apk add --no-cache libc6-compat openssl
+FROM node:20-slim AS base
+# Install standard OpenSSL required by Prisma on Debian
+RUN apt-get update -y && apt-get install -y openssl
 
 # Install dependencies only when needed
 FROM base AS deps
