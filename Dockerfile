@@ -1,11 +1,13 @@
 FROM node:20-alpine AS base
+# CRITICAL FIX: Install Prisma's required system libraries globally 
+# so the final production runner has access to OpenSSL.
+RUN apk add --no-cache libc6-compat openssl
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* ./
-# We use npm ci for a clean, reproducible build
+# Use standard install since package-lock.json might be missing
 RUN npm install
 
 # Rebuild the source code only when needed
@@ -27,7 +29,6 @@ ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # COPY THE MISSING FOLDERS FOR STANDALONE MODE
-# This is what prevents your images and styling from breaking
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
