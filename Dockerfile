@@ -1,39 +1,47 @@
 FROM node:20-slim AS base
-# Install standard OpenSSL required by Prisma on Debian
-RUN apt-get update -y && apt-get install -y openssl
 
-# Install dependencies only when needed
+# Install Chromium, OpenSSL (for Prisma), and required fonts/libraries
+RUN apt-get update && apt-get install -y \
+    openssl \
+    chromium \
+    ca-certificates \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+# Force Puppeteer to use the system Chromium we just installed
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+# 1. Install dependencies
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json* yarn.lock* ./
-# Use standard install since package-lock.json might be missing
+COPY package.json package-lock.json* ./
 RUN npm install
 
-# Rebuild the source code only when needed
+# 2. Build the application
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Disable telemetry during build
-ENV NEXT_TELEMETRY_DISABLED 1
-# Generate Prisma client and build the standalone app
 RUN npx prisma generate
 RUN npm run build
 
-# Production image, copy all the files and run next
+# 3. Production runner
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# COPY THE MISSING FOLDERS FOR STANDALONE MODE
+# Restrict Node heap memory so Railway doesn't bill extra RAM
+ENV NODE_OPTIONS="--max-old-space-size=384"
+
+# Copy standalone output, static files, and public assets
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
 
 CMD ["node", "server.js"]
