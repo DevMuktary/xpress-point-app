@@ -25,7 +25,7 @@ export default function PaystackFundForm({ email }: { email: string }) {
 
     const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
     if (!publicKey || publicKey.trim() === '') {
-      return alert("CRITICAL ERROR: Paystack Public Key is missing! If you added it to Railway, you MUST click 'Redeploy' for the frontend to see it.");
+      return alert("CRITICAL ERROR: Paystack");
     }
 
     // THE TYPESCRIPT FIX: Use (window as any) to bypass strict type checking
