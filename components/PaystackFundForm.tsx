@@ -26,7 +26,7 @@ export default function PaystackFundForm({ email }: { email: string }) {
     
     // Check if the key is accidentally a secret key
     if (!publicKey || !publicKey.startsWith('pk_')) {
-      return alert("CRITICAL ERROR: Invalid Public Key. Your NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY must start with 'pk_test_' or 'pk_live_'.");
+      return alert("CRITICAL ERROR: Invalid Key.");
     }
 
     if (typeof (window as any).PaystackPop === 'undefined') {
