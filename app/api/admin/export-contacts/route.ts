@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma'; // Using your existing Prisma client
+import { prisma } from '@/lib/prisma'; // Notice the curly braces around { prisma }
 
 // Force the route to fetch fresh data every time (no caching)
 export const dynamic = 'force-dynamic';
